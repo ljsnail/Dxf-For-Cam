@@ -13,7 +13,7 @@ typedef struct NestResultData//存储所有的图元的单向链表。
 	TranLine tranline;
 	struct NestResultData*nextNode;//指向下一封闭环的地址
 	bool flag;//留着以后作为全局规划时候使用。
-};
+}NestResultData;
 class GeomForCut
 {
 public:

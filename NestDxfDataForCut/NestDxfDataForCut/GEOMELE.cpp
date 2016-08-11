@@ -16,7 +16,7 @@ GEOMELE::GEOMELE()
 GEOMELE::~GEOMELE()
 {
 }
-GeomStandData GEOMELE::ReadLineData(LINE line)//ReadLineData是GeomStandData 类型的函数，所以要在前面加GeomStandData
+GeomStandData GEOMELE::ReadLineData(GLINE line)//ReadLineData是GeomStandData 类型的函数，所以要在前面加GeomStandData
 {
 	//输入LINE的四个参数，输出GEOMELE的起始终止参数
 	m_geomstandData.GeoEle_start_x0 = line.x0;
@@ -27,7 +27,7 @@ GeomStandData GEOMELE::ReadLineData(LINE line)//ReadLineData是GeomStandData 类型
 	return m_geomstandData;
 }
 //输入ARC的五个参数，转换输出GEOMELE的起始终止参数
-GeomStandData GEOMELE::ReadARCData(ARC m_arc)
+GeomStandData GEOMELE::ReadARCData(GARC m_arc)
 {	
 	    double angle_start,angle_end;//转换角度使用
 		angle_start = PI*m_arc.m_ArcAngle_start / 180.0;
@@ -42,7 +42,7 @@ GeomStandData GEOMELE::ReadARCData(ARC m_arc)
 		return m_geomstandData;
 }
 //对于圆而言，因为已经是一个独立的封闭图元了，所以不需要给起止点，但要标识起始
-GeomStandData GEOMELE::ReadCIRCLE(CIRCLE m_circle)
+GeomStandData GEOMELE::ReadCIRCLE(GCIRCLE m_circle)
 {
 	
 	m_geomstandData.m_circle = m_circle;//保存原有的数据。
