@@ -40,7 +40,9 @@ public:
 	CString path;//保存打开的文件名
 	GEOMELE m_geomele;//因为要运用到图元的操作
 	GeomStandData m_geomstanddata;//实例化一个存储数据结构
-	GLINE m_line ;
+	GLINE m_line;//全局的m_line变量
+	GARC m_arc;//全局的m_arc变量
+	GCIRCLE m_circle;//全局的m_circle变量
 	int m_typegeomele = -1;//区分三种图元的类型
 	CString m_readgeomele;//存储读取到的dxf的数据
 	
@@ -48,5 +50,6 @@ public:
 public:
 	//三个参数的意义symbol：已经转为int型的dxf字符串数据，m_readgeomele：读取的dxf数据存储池，m_dxfofnestresult：从哪个文件里面读取
 	GLINE AcceptDxfLineData(int symbol, CString m_readgeomele, CStdioFile &m_dxfofnestresult);//输入DXF文件中的标识输入，输出GLINE的数据
-	GeomStandData ReadLineData(GLINE m_line);//输入读入的DXF数据，输出统一的图元数据
+	GARC AcceptDxfArcData(int symbol, CString m_readgeomele, CStdioFile &m_dxfofnestresult);//输入DXF文件中的标识输入，输出GARC的数据
+	GCIRCLE AcceptDxfCircleData(int symbol, CString m_readgeomele, CStdioFile &m_dxfofnestresult);//输入DXF文件中的标识输入，输出GCIRCLE的数据
 };

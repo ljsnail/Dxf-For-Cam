@@ -169,6 +169,14 @@ void CNestDxfDataForCutDlg::OnOpenFile()
 		path = hFileDlg.GetPathName();
 		switchkeyword(path);
 	}
+	//单元测试用例
+	int m_TotalGeomeleNum;
+	m_TotalGeomeleNum = m_geomstanddata.m_GeomEleID;
+	//我怀疑这并没有给每一个m_geomstanddata分配内存，只是在同一个内存里面后面的数值把前面的覆盖了,如果是这样，那么就得去分配内存了，然后这里就是一个单链表还是双链表
+	for (m_geomstanddata.m_GeomEleID = 0; m_geomstanddata.m_GeomEleID<m_TotalGeomeleNum; m_geomstanddata.m_GeomEleID++)
+	{
+		m_geomstanddata;
+	}
 }
 //按照打开的文件名路径去搜索LINE ARC CIRCLE
 void CNestDxfDataForCutDlg::switchkeyword(CString path)
@@ -187,7 +195,7 @@ void CNestDxfDataForCutDlg::switchkeyword(CString path)
 			switch (m_typegeomele)
 			{
 			case LINE://查到的关键字为LINE的时候，这事只是读到了LINE，但要往下走
-					m_dxfofnestresult.ReadString(m_readgeomele);//如果这里不读下一行，那么还是LINE，那么就进不去下面的while
+					m_dxfofnestresult.ReadString(m_readgeomele);//如果这里不读下一行，那么还是LINE，那么就进不去下面的while，且一直都是LINE,还会在上一个while形成死循环。
 					//每进入一次LINE之后除非遇到了下一个LINE，ARC,CIRCLE否则不能让它跳出这个LINE循环
 					//从外面往里只有不是LINE ,ARC,CIRCLE，ENDSEC才能进入，从里则遇到LINE ,ARC,CIRCLE，ENDSEC才能出来（把LINE ,ARC,CIRCLE，ENDSEC）排除出来
 					while ((strcmp(m_readgeomele, "LINE") != 0) && (strcmp(m_readgeomele, "ARC") != 0) && (strcmp(m_readgeomele, "CIRCLE") != 0)  && (strcmp(m_readgeomele, "ENDSEC") != 0))//真是加多了一个(strcmp(m_readgeomele, "ENDSEC") != 0)这个while才能跳出去。
@@ -199,6 +207,28 @@ void CNestDxfDataForCutDlg::switchkeyword(CString path)
 					//结果却是当到了这里的时候m_line为0了，之前的值全部没有保存起来，而且一次次被覆盖，要想个办法把中间的参数保存起来。
 					m_geomstanddata = m_geomele.ReadLineData(m_line);//输入源图元的起止坐标，输出一个标准的图元的数据格式
 					break;//跳出cade LINE的事件
+			case ARC:
+				m_dxfofnestresult.ReadString(m_readgeomele);
+				while ((strcmp(m_readgeomele, "LINE") != 0) && (strcmp(m_readgeomele, "ARC") != 0) && (strcmp(m_readgeomele, "CIRCLE") != 0) && (strcmp(m_readgeomele, "ENDSEC") != 0))//真是加多了一个(strcmp(m_readgeomele, "ENDSEC") != 0)这个while才能跳出去。
+				{
+					m_dxfofnestresult.ReadString(m_readgeomele);//将DXF里面的字符串信息读入m_readgeomele
+					symbol = atoi(m_readgeomele);//将m_readgeomele里面的字符串转为整形数值symbol
+					m_arc= AcceptDxfArcData(symbol, m_readgeomele, m_dxfofnestresult);//输入symbol，输出源图元的起止坐标，
+				}//离开这里的时候已经循环完一个LINE了
+				//结果却是当到了这里的时候m_line为0了，之前的值全部没有保存起来，而且一次次被覆盖，要想个办法把中间的参数保存起来。
+				m_geomstanddata = m_geomele.ReadArcData(m_arc);//输入源图元的起止坐标，输出一个标准的图元的数据格式
+				break;
+			case CIRCLE:
+				m_dxfofnestresult.ReadString(m_readgeomele);
+				while ((strcmp(m_readgeomele, "LINE") != 0) && (strcmp(m_readgeomele, "ARC") != 0) && (strcmp(m_readgeomele, "CIRCLE") != 0) && (strcmp(m_readgeomele, "ENDSEC") != 0))
+				{
+					m_dxfofnestresult.ReadString(m_readgeomele);//加不加这行代码取决于读取的数据结构模式，要看能不能加
+					symbol = atoi(m_readgeomele);
+					m_circle = AcceptDxfCircleData(symbol,m_readgeomele, m_dxfofnestresult);
+				}
+				m_geomstanddata = m_geomele.ReadCircleData(m_circle);
+				break;
+				
 			default:break;//跳出switch (m_typegeomele)事件
 			}
 			//下面也不应该break跳出，否则，再也进不来了。while是会自循环的，每一次都会去判断下（）里的值。
@@ -211,24 +241,24 @@ void CNestDxfDataForCutDlg::switchkeyword(CString path)
 
 }
 //输入dxf里面的符号，输出dxf里面直线的起止点
-GLINE CNestDxfDataForCutDlg::AcceptDxfLineData(int symbol, CString m_readgeomele, CStdioFile &m_dxfofnestresult)
+GLINE CNestDxfDataForCutDlg::AcceptDxfLineData(int symbol, CString m_readgeomele, CStdioFile &m_dxfofnestresult)//前面加上了CNestDxfDataForCutDlg是使得下面一些m_line可以被使用
 {
 	//GLINE m_line = {0.0,0.0,0.0,0.0};//每一次进来都初始化一次，初始化不应该在这里
 	switch (symbol)//只进来一次
 	{
-	case 10:
+	case 10://起始点x
 		m_dxfofnestresult.ReadString(m_readgeomele);
 		m_line.x0 = atof(m_readgeomele);
 		break;
-	case 20:
+	case 20://起始点y
 		m_dxfofnestresult.ReadString(m_readgeomele);
 		m_line.y0 = atof(m_readgeomele);
 		break;
-	case 11:
+	case 11://终止点x
 		m_dxfofnestresult.ReadString(m_readgeomele);
 		m_line.x1 = atof(m_readgeomele);
 		break;
-	case 21:
+	case 21://终止点y
 		m_dxfofnestresult.ReadString(m_readgeomele);
 		m_line.y1 = atof(m_readgeomele);
 		break;
@@ -236,5 +266,54 @@ GLINE CNestDxfDataForCutDlg::AcceptDxfLineData(int symbol, CString m_readgeomele
 		break;
 	}
 	return m_line;
-
+}
+GARC CNestDxfDataForCutDlg::AcceptDxfArcData(int symbol, CString m_readgeomele, CStdioFile &m_dxfofnestresult)
+{
+	switch (symbol)
+	{
+	case 10://圆心x
+		m_dxfofnestresult.ReadString(m_readgeomele);
+		m_arc.Arccent_x = atof(m_readgeomele);
+		break;
+	case 20://圆心y
+		m_dxfofnestresult.ReadString(m_readgeomele);
+		m_arc.Arccent_y = atof(m_readgeomele);
+		break;
+	case 40://半径r
+		m_dxfofnestresult.ReadString(m_readgeomele);
+		m_arc.m_Arc_r = atof(m_readgeomele);
+		break;
+	case 50://起始角
+		m_dxfofnestresult.ReadString(m_readgeomele);
+		m_arc.m_ArcAngle_start = atof(m_readgeomele);
+		break;
+	case 51://终止角
+		m_dxfofnestresult.ReadString(m_readgeomele);
+		m_arc.m_ArcAngle_end = atof(m_readgeomele);
+		break;
+	default:
+		break;
+	}
+	return m_arc;
+}
+GCIRCLE CNestDxfDataForCutDlg::AcceptDxfCircleData(int symbol, CString m_readgeomele, CStdioFile &m_dxfofnestresult)
+{
+	switch (symbol)
+	{
+	case 10://圆心x
+		m_dxfofnestresult.ReadString(m_readgeomele);
+		m_circle.m_Circent_x = atof(m_readgeomele);
+		break;
+	case 20://圆心y
+		m_dxfofnestresult.ReadString(m_readgeomele);
+		m_circle.m_Circent_y = atof(m_readgeomele);
+		break;
+	case 40://半径r
+		m_dxfofnestresult.ReadString(m_readgeomele);
+		m_circle.m_Circle_r = atof(m_readgeomele);
+		break;
+	default:
+		break;
+	}
+	return m_circle;
 }

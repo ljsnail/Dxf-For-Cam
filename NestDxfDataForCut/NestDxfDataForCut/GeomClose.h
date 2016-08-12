@@ -10,20 +10,38 @@ typedef struct//封闭环的起点，作为下一层次形成全局搜索路径时候的判断点。
 	double colse_start_x0, colse_start_y0;//这里寻找的时候应该要有的原则是按照最左和最下的原则去找。靠近原点
 
 }GEOMCCLOSTAPOINT;
-
-typedef struct SORTGEOM//保存每一个封闭环的结构，主要是让封闭环里面的每一个图元有序
+//将两个封闭图元的起点存到这里，使之形成一条过渡直线
+typedef struct//封闭图元之间的过渡线
 {
-	GEOMELE geomele;//输入每个基本图元的数据，存储
-	struct SORTGEOM*prorNode;
-	struct SORTGEOM*nextNode;
-}SORTGEOM;
-typedef struct HEAD
+	double prev_x, prev_y, next_x, next_y;//上一封闭图元的xy和下一封闭图元的起点xy
+}TranLine;
+//********************************************************************//
+//对于每一个读取进来的数据都应该划分一块内存来存放它，这个结点作为双向链表的结点
+//先把所有的结点挂在同一个链表上，并把头结点的地址传给一个HEAD结点，之后再对这些结点来划分不同的封闭环
+//********************************************************************//
+typedef struct GeomEleNode//所有的数据进来时候存放的结点
 {
-	GEOMCCLOSTAPOINT geomclose_startpoint;
-	int GEOMCLOSE_ID;//作为每一个封闭环的标识，在切割时候与类里面的标识对应，作为调用标志
-	struct SORTGEOM*first;//指向双向链表的头结点
-	bool flag;//如果以后要全局最优路径规划的时候，最为每一个封闭环时候已经被规划的标识
-}HEAD;
+	GeomStandData m_GeomStandData;//结点里面应该保存了每一个读取进来的数据
+	struct GeomEleNode* prevGeomeleNode;//指向前一个GeomeleNode结点
+	struct GeomEleNode* nextGeomeleNode;//指向后一个GeomeleNode结点
+	bool m_AccptGeomEleNode;//判断该结点是否已经被收录的,初始化为false
+}GeomEleNode;
+//********************************************************************//
+//将每个封闭环的双向链表的头结点保存起来。刚开始的时候保存整个DXF的图元的结点所形成的无序双向链表的头结点
+//这些头结点之间在更上一层还会形成以同一个排样dxf图形所有封闭环组成的双向链表，
+//所以这个结点应该保存该封闭环的一个起点（终点），用做更上一层的结点之间顺序和
+//********************************************************************//
+typedef struct GeomCloseHEAD
+{
+	TranLine m_tranline;//存储过渡直线
+	GEOMCCLOSTAPOINT m_geomclose_startpoint;//存储所指向双向链表的起止重合点
+	unsigned int m_NumGeomele;//该链表存有多少个基本图元
+	unsigned int GEOMCLOSE_ID;//作为每一个封闭环的标识，在切割时候与类里面的标识对应，作为调用标志
+	struct GeomEleNode*FirstGeomele;//指向双向链表GeomEleNode的头结点
+	struct GeomCloseHEAD*prevGeomcloseNode;//指向前一个封闭环GeomCloseHEAD结点
+	struct GeomCloseHEAD*nextGeomcloseNode;//指向后一个封闭环GeomCloseHEAD结点
+	bool m_AcceptGeomcloseHEAD;//如果以后要全局最优路径规划的时候，最为每一个封闭环时候已经被规划的标识
+}GeomCloseHEAD;
 class GeomClose
 {
 public:
@@ -33,15 +51,21 @@ public:
 	GEOMCCLOSTAPOINT geomclose_startpoint;
 	int GEOMCLOSE_ID;//作为每一个封闭环的标识，在下一层次遍历时候使用,设置给头结点，联合调用，通信协议。
 	GEOMELE geomele;//作为ARC 和CIRCLE的使用
+	//GeomStandData m_geomstandData;
 public://搜索封闭环，设置每一个封闭环的起点坐标
 	//输入每一个图元的ID遍历一遍数据，先对每一个出现的图元分别设置不同的IID，
 	//如果出现某个图元与其中两个IID有关系，那么就把这两个IID合并，这些图元有相同IID的时候放入同一个双向链表中
 	//输出GEOMCLOSE_ID，同时里面也把GEOMCLOSE_ID设置到GEOMELE预留的标志位了
 	int FindGeomClose(int ID);//输入LINE ARC CIRCLE 的ID，输入不同的封闭环ID
 	int MergerGeomClose(int ID1, int ID2);//输入与同一个图元的两个端点相关的ID,融合这些ID，减少一个，并合并。（其中一个ID的尾结点指向另一个ID的头结点）
-	HEAD*SetGeomeleOrder(HEAD*head);//输入每一个封闭环的头结点，使之内部的geomele排成序
+	GeomCloseHEAD*SetGeomeleOrder(GeomCloseHEAD*head);//输入每一个封闭环的头结点，使之内部的geomele排成序
 	void SetGeomCloseID(int GEOMCLOSE_ID);//设置HEAD头结点处的ID.
 	GEOMCCLOSTAPOINT SetGeomCloseStartpoint(int IID);//输入每一个封闭环的IID，输出每个封闭环的起始点,最终这个就要输入到头结点里面去。
 	GEOMCCLOSTAPOINT TranForCircle(GEOMELE geomele);//判断到是CIRCLE的时候，输入 封闭环的参数，输出转换后的circle中最左最下的那个坐标点为起点。
+	//存储数据的双向链表初始化
+	//CreatGeomEleNode这个函数可能有问题的,GeomStandData m_geomstandData这个参数并没有在这里定义
+	GeomEleNode*CreatGeomEleNode(GeomStandData m_geomstandData);//初始化这个结点的时候，是已经有了数据的，这里就是要把数据传进来放在一个固定的内存里面
+	GeomCloseHEAD*CreatGeomCloseHEAD(int GEOMCLOSE_ID);//划一块内存出来作为头指向结点存放基础图元双向链表的头结点
+	GeomCloseHEAD*AddGeomEleNode(GeomCloseHEAD*head, GeomEleNode*node);//第一个参数是说明挂在哪里，第二个参数是说明，挂什么。
 };
 
