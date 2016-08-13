@@ -24,7 +24,7 @@ BatchHEAD* GeomForCut::CreatBatchHEAD(int BatchHEAD_ID)//ÊµÀý»¯µÄÊ±ºò¾Í¸Ã×¢Ã÷ÕâÊ
 NestResultDataNode*GeomForCut::CreatNestResultNode(int NestResult_ID)
 {
 	NestResultDataNode*newNode = (NestResultDataNode*)malloc(sizeof(NestResultDataNode));
-	newNode->AcceptNestResultflag = false;//±íÃæÃ»ÓÐ±»ÊÕÂ¼
+	newNode->AcceptNestResultflag = false;//±íÃ÷Ã»ÓÐ±»ÊÕÂ¼
 	newNode->FirstGeomClose = NULL;
 	newNode->nextNestResultDataNode = NULL;
 	newNode->prevNestResultDataNode = NULL;

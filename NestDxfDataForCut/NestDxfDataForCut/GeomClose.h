@@ -24,6 +24,7 @@ typedef struct GeomEleNode//所有的数据进来时候存放的结点
 	GeomStandData m_GeomStandData;//结点里面应该保存了每一个读取进来的数据
 	struct GeomEleNode* prevGeomeleNode;//指向前一个GeomeleNode结点
 	struct GeomEleNode* nextGeomeleNode;//指向后一个GeomeleNode结点
+	unsigned int m_NumGeomEleID;//记录第几个图元
 	bool m_AccptGeomEleNode;//判断该结点是否已经被收录的,初始化为false
 }GeomEleNode;
 //********************************************************************//

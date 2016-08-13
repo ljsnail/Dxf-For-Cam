@@ -50,9 +50,16 @@ END_MESSAGE_MAP()
 
 
 CNestDxfDataForCutDlg::CNestDxfDataForCutDlg(CWnd* pParent /*=NULL*/)
-	: CDialogEx(CNestDxfDataForCutDlg::IDD, pParent)
+	: CDialogEx(CNestDxfDataForCutDlg::IDD, pParent)//构造函数
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	BatchHEAD_ID = 0;//初始化时候，还没有批次
+	NestResult_ID = 0;//初始化，还没有图纸导入
+	GEOMCLOSE_ID = 0;//初始化，还没有封闭环
+	m_pBatchHead = NULL;//未指向任何地方
+	m_pNestrsltdtND = NULL;
+	m_pGeomclsHead=NULL;
+	//Onstart();//放这里等效于点击了start的button
 	
 }
 
@@ -66,6 +73,7 @@ BEGIN_MESSAGE_MAP(CNestDxfDataForCutDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON1, &CNestDxfDataForCutDlg::OnOpenFile)
+	ON_BN_CLICKED(IDC_start, &CNestDxfDataForCutDlg::Onstart)
 END_MESSAGE_MAP()
 
 
@@ -155,11 +163,27 @@ HCURSOR CNestDxfDataForCutDlg::OnQueryDragIcon()
 }
 
 
-
-
-void CNestDxfDataForCutDlg::OnOpenFile()
+//启动生产,初始化一系列的链表结点
+void CNestDxfDataForCutDlg::Onstart()
 {
 	// TODO:  在此添加控件通知处理程序代码
+	BatchHEAD_ID++;//启动生产，那么产品批次就是一次
+	m_pBatchHead = m_GeomForCut.CreatBatchHEAD(BatchHEAD_ID);//输入批次进行初始化调用
+
+}
+
+void CNestDxfDataForCutDlg::OnOpenFile()//打开一次就是一张图纸
+{
+	// TODO:  在此添加控件通知处理程序代码
+	//打开图纸导入图纸结点
+	NestResult_ID++;
+	m_pNestrsltdtND = m_GeomForCut.CreatNestResultNode(NestResult_ID);//在初始化时候记录这是打开的第几张图纸
+	m_pBatchHead = m_GeomForCut.AddNestRsltDtNode(m_pBatchHead, m_pNestrsltdtND);//把新生成的结点挂在生产批次指向的图纸双向链表中
+	//创建记录图元结点的F头结点
+	GEOMCLOSE_ID++;
+	m_pGeomclsHead = m_GeomClose.CreatGeomCloseHEAD(GEOMCLOSE_ID);
+
+	//
 	OPENFILENAME ofn = { 0 };
 
 	ofn.Flags = OFN_FILEMUSTEXIST | OFN_READONLY | OFN_PATHMUSTEXIST;
@@ -170,17 +194,29 @@ void CNestDxfDataForCutDlg::OnOpenFile()
 		switchkeyword(path);
 	}
 	//单元测试用例
-	int m_TotalGeomeleNum;
-	m_TotalGeomeleNum = m_geomstanddata.m_GeomEleID;
-	//我怀疑这并没有给每一个m_geomstanddata分配内存，只是在同一个内存里面后面的数值把前面的覆盖了,如果是这样，那么就得去分配内存了，然后这里就是一个单链表还是双链表
-	for (m_geomstanddata.m_GeomEleID = 0; m_geomstanddata.m_GeomEleID<m_TotalGeomeleNum; m_geomstanddata.m_GeomEleID++)
+	//int m_TotalGeomeleNum;
+	//m_TotalGeomeleNum = m_geomstanddata.m_GeomEleID;
+	////我怀疑这并没有给每一个m_geomstanddata分配内存，只是在同一个内存里面后面的数值把前面的覆盖了,如果是这样，那么就得去分配内存了，然后这里就是一个单链表还是双链表
+	//for (m_geomstanddata.m_GeomEleID = 0; m_geomstanddata.m_GeomEleID<m_TotalGeomeleNum; m_geomstanddata.m_GeomEleID++)
+	//{
+	//	m_geomstanddata;
+	//}
+	//单元测试
+	GeomEleNode*temp;//过渡结点
+	temp = m_pGeomclsHead->FirstGeomele;
+	while (temp)//从头读取数据
 	{
-		m_geomstanddata;
+		double a;
+		//m_geomele.m_geomstandData;
+		temp->m_GeomStandData;
+		a = temp->m_GeomStandData.GeoEle_start_x0 + temp->m_GeomStandData.GeoEle_start_y0;
+		temp = temp->nextGeomeleNode;
 	}
 }
 //按照打开的文件名路径去搜索LINE ARC CIRCLE
 void CNestDxfDataForCutDlg::switchkeyword(CString path)
 {
+	
 	CStdioFile m_dxfofnestresult(path, CFile::modeRead);//输入文件路径，只读
 	m_dxfofnestresult.ReadString(m_readgeomele);//每次读一行，读取一次之后，指向下一行，放回bool
 	while (m_dxfofnestresult.ReadString(m_readgeomele))//如果不是空文件
@@ -206,6 +242,9 @@ void CNestDxfDataForCutDlg::switchkeyword(CString path)
 					}//离开这里的时候已经循环完一个LINE了
 					//结果却是当到了这里的时候m_line为0了，之前的值全部没有保存起来，而且一次次被覆盖，要想个办法把中间的参数保存起来。
 					m_geomstanddata = m_geomele.ReadLineData(m_line);//输入源图元的起止坐标，输出一个标准的图元的数据格式
+					//创立记录基本图元的双向链表,把获得的数据保存起来
+					m_pGeomEleND = m_GeomClose.CreatGeomEleNode(m_geomstanddata);//输入上面获得的数据，创立一个结点保存数据
+					m_pGeomclsHead = m_GeomClose.AddGeomEleNode(m_pGeomclsHead, m_pGeomEleND);//把创立的基本图元结点挂到由m_pGeomclsHead指向的双向链表中。
 					break;//跳出cade LINE的事件
 			case ARC:
 				m_dxfofnestresult.ReadString(m_readgeomele);
@@ -217,6 +256,9 @@ void CNestDxfDataForCutDlg::switchkeyword(CString path)
 				}//离开这里的时候已经循环完一个LINE了
 				//结果却是当到了这里的时候m_line为0了，之前的值全部没有保存起来，而且一次次被覆盖，要想个办法把中间的参数保存起来。
 				m_geomstanddata = m_geomele.ReadArcData(m_arc);//输入源图元的起止坐标，输出一个标准的图元的数据格式
+				//创立记录基本图元的双向链表,把获得的数据保存起来
+				m_pGeomEleND = m_GeomClose.CreatGeomEleNode(m_geomstanddata);//输入上面获得的数据，创立一个结点保存数据
+				m_pGeomclsHead = m_GeomClose.AddGeomEleNode(m_pGeomclsHead, m_pGeomEleND);//把创立的基本图元结点挂到由m_pGeomclsHead指向的双向链表中。
 				break;
 			case CIRCLE:
 				m_dxfofnestresult.ReadString(m_readgeomele);
@@ -227,8 +269,10 @@ void CNestDxfDataForCutDlg::switchkeyword(CString path)
 					m_circle = AcceptDxfCircleData(symbol,m_readgeomele, m_dxfofnestresult);
 				}
 				m_geomstanddata = m_geomele.ReadCircleData(m_circle);
+				//创立记录基本图元的双向链表,把获得的数据保存起来
+				m_pGeomEleND = m_GeomClose.CreatGeomEleNode(m_geomstanddata);//输入上面获得的数据，创立一个结点保存数据
+				m_pGeomclsHead = m_GeomClose.AddGeomEleNode(m_pGeomclsHead, m_pGeomEleND);//把创立的基本图元结点挂到由m_pGeomclsHead指向的双向链表中。
 				break;
-				
 			default:break;//跳出switch (m_typegeomele)事件
 			}
 			//下面也不应该break跳出，否则，再也进不来了。while是会自循环的，每一次都会去判断下（）里的值。
@@ -317,3 +361,6 @@ GCIRCLE CNestDxfDataForCutDlg::AcceptDxfCircleData(int symbol, CString m_readgeo
 	}
 	return m_circle;
 }
+
+
+

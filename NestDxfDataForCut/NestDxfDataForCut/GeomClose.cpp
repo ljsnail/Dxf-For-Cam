@@ -20,6 +20,7 @@ GeomEleNode* GeomClose::CreatGeomEleNode(GeomStandData m_geomstandData)
 	newNode->prevGeomeleNode = NULL;
 	newNode->nextGeomeleNode = NULL;
 	newNode->m_AccptGeomEleNode = false;
+	newNode->m_NumGeomEleID=m_geomstandData.m_GeomEleID;//这是这张排样图的第几个基本图元
 	return newNode;
 
 }
@@ -33,6 +34,7 @@ GeomCloseHEAD*GeomClose::CreatGeomCloseHEAD(int GEOMCLOSE_ID)
 	newNode->FirstGeomele = NULL;
 	newNode->prevGeomcloseNode = NULL;
 	newNode->nextGeomcloseNode = NULL;
+	newNode->m_AcceptGeomcloseHEAD = false;//起初时候并没有收录
 	return newNode;
 }
 GeomCloseHEAD*GeomClose::AddGeomEleNode(GeomCloseHEAD*head, GeomEleNode *node)
