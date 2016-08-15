@@ -37,5 +37,10 @@ public:
 	//先无规律的把结点挂上
 	NestResultDataNode*AddGeomCloseHeadNode(NestResultDataNode*head,GeomCloseHEAD*node);//输入每一个闭环的F头结点，把他们全部挂在一条链上。
 	BatchHEAD*AddNestRsltDtNode(BatchHEAD*head, NestResultDataNode*node);//把每一张排样图的地址挂到以BatchHEAD为头结点的双向链表中。
+	//把无规律的GeomEleNode找出其规律，转化成有规律的几个封闭环。
+	//*************************************************************************//
+	//步骤是先分封闭环，再在每一个封闭环里面对数据进行排序。
+	//*************************************************************************//
+	void SepDiffGeomCls(GeomCloseHEAD*head);//输入指向收录整张排样图全部基本图元的双向链表的F头结点
 };
 

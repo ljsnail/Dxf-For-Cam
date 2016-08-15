@@ -57,6 +57,8 @@ public://链表相关
 	NestResultDataNode*m_pNestrsltdtND;//指向封闭环双向链表的头结点
 	GeomCloseHEAD*m_pGeomclsHead;//指向基本图元双向链表的头结点
 	GeomEleNode*m_pGeomEleND;//基本图元双向链表的头结点
+	//对于圆而言应该是另外的一条路
+	GeomCloseHEAD*m_pGeomclsHead_forCircle;//指向基本图元双向链表的头结点
 public:
 	//三个参数的意义symbol：已经转为int型的dxf字符串数据，m_readgeomele：读取的dxf数据存储池，m_dxfofnestresult：从哪个文件里面读取
 	GLINE AcceptDxfLineData(int symbol, CString m_readgeomele, CStdioFile &m_dxfofnestresult);//输入DXF文件中的标识输入，输出GLINE的数据

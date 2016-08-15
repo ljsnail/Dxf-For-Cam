@@ -25,6 +25,7 @@ typedef struct GeomEleNode//所有的数据进来时候存放的结点
 	struct GeomEleNode* prevGeomeleNode;//指向前一个GeomeleNode结点
 	struct GeomEleNode* nextGeomeleNode;//指向后一个GeomeleNode结点
 	unsigned int m_NumGeomEleID;//记录第几个图元
+	unsigned int m_NumGeomCloseID;//记录第几个封闭环的。
 	bool m_AccptGeomEleNode;//判断该结点是否已经被收录的,初始化为false
 }GeomEleNode;
 //********************************************************************//
@@ -63,10 +64,19 @@ public://搜索封闭环，设置每一个封闭环的起点坐标
 	void SetGeomCloseID(int GEOMCLOSE_ID);//设置HEAD头结点处的ID.
 	GEOMCCLOSTAPOINT SetGeomCloseStartpoint(int IID);//输入每一个封闭环的IID，输出每个封闭环的起始点,最终这个就要输入到头结点里面去。
 	GEOMCCLOSTAPOINT TranForCircle(GEOMELE geomele);//判断到是CIRCLE的时候，输入 封闭环的参数，输出转换后的circle中最左最下的那个坐标点为起点。
+public:
 	//存储数据的双向链表初始化
 	//CreatGeomEleNode这个函数可能有问题的,GeomStandData m_geomstandData这个参数并没有在这里定义
 	GeomEleNode*CreatGeomEleNode(GeomStandData m_geomstandData);//初始化这个结点的时候，是已经有了数据的，这里就是要把数据传进来放在一个固定的内存里面
 	GeomCloseHEAD*CreatGeomCloseHEAD(int GEOMCLOSE_ID);//划一块内存出来作为头指向结点存放基础图元双向链表的头结点
-	GeomCloseHEAD*AddGeomEleNode(GeomCloseHEAD*head, GeomEleNode*node);//第一个参数是说明挂在哪里，第二个参数是说明，挂什么。
+	GeomCloseHEAD*InsertGeomEleNode(GeomCloseHEAD*head, GeomEleNode*node, GeomStandData m_geomstandData);//第一个参数是说明挂在哪里，第二个参数是说明，挂什么。
+public:
+	//需找数据结点之间的关系
+	
+	GeomEleNode*FindRelatGmElNd_xyStart(GeomCloseHEAD*head, GeomStandData m_geomstandData);//判断新进来的数据与原数据是否有起起相同
+	GeomEleNode*FindRelatGmElNd_xyEnd(GeomCloseHEAD*head, GeomStandData m_geomstandData);//判断新进来的数据与原数据是否有止止相同
+	GeomEleNode*FindRelatGmElNd_xySEnd(GeomCloseHEAD*head, GeomStandData m_geomstandData);//判断新进来的数据的起点与原数据的终点是否相同
+	GeomEleNode*FindRelatGmElNd_xyEStart(GeomCloseHEAD*head, GeomStandData m_geomstandData);//判断新进来的数据的终点与原数据的起点是否相同
+	GeomStandData DataSwap(GeomStandData m_geomstandData);//将起点和终点的数据调换
 };
 

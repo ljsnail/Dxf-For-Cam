@@ -29,7 +29,8 @@ typedef struct
 	unsigned int m_typegeomele;//1为LINE,2为ARC,3为CIRCLE,默认是1
 	int m_GeomEleID;//对每一个图元编号，将来为寻找封闭图元遍历用的，默认为0,那么有一个就是1
 	int m_GeomCloseID;//对每一个封闭环所属的图元进行编号，给将来封闭环之间判断使用，默认为0,那么有一个就是1
-	bool m_IsGeomeleAccept;//判断该图元是不是已经被收录，默认为NULL
+	bool m_IsGeomeleAccept;//判断该图元是不是已经被收录，默认为fales
+	bool m_IsTranData;//判断是否数据已经发生改变，在插入的时候就要判断数据是否需要调换方向。默认是fales
 }GeomStandData;//创建一个统一的数据结构，用来存放所有的类型，带着走
 
 

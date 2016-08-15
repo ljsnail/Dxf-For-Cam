@@ -5,10 +5,10 @@
 
 GEOMELE::GEOMELE() 
 {
-	 m_line = { 0.0, 0.0, 0.0, 0.0 };
-	 m_arc = { 0.0, 0.0, 0.0, 0.0, 0.0 };
-	 m_circle = { 0.0, 0.0, 0.0 };
-	 m_geomstandData = { 0.0, 0.0, 0.0, 0.0, m_line, m_arc, m_circle, 1, 0, 0, NULL };
+	 /////*m_line = { 0.0, 0.0, 0.0, 0.0 };
+	 ////m_arc = { 0.0, 0.0, 0.0, 0.0, 0.0 };
+	 ////m_circle = { 0.0, 0.0, 0.0 };
+	 ////m_geomstandData = { 0.0, 0.0, 0.0, 0.0, m_line, m_arc, m_circle, 1, 0, 0, NULL };*/
 
 }
 
@@ -19,6 +19,7 @@ GEOMELE::~GEOMELE()
 GeomStandData GEOMELE::ReadLineData(GLINE line)//ReadLineDataÊÇGeomStandData ÀàĞÍµÄº¯Êı£¬ËùÒÔÒªÔÚÇ°Ãæ¼ÓGeomStandData
 {
 	//ÊäÈëLINEµÄËÄ¸ö²ÎÊı£¬Êä³öGEOMELEµÄÆğÊ¼ÖÕÖ¹²ÎÊı
+	//Í¬Ê±³õÊ¼»¯
 	m_geomstandData.m_typegeomele = 1;
 	m_geomstandData.GeoEle_start_x0 = line.x0;
 	m_geomstandData.GeoEle_start_y0 = line.y0;
@@ -28,6 +29,9 @@ GeomStandData GEOMELE::ReadLineData(GLINE line)//ReadLineDataÊÇGeomStandData ÀàĞ
 	m_geomstandData.m_arc = { 0.0, 0.0, 0.0, 0.0, 0.0 };//¼ÙÈçÖ®Ç°¶ÁÈ¡¹ıARCÔòÇå¿ÕÖ®Ç°±£ÁôÔÚÕâÀïµÄÊıÖµ
 	m_geomstandData.m_circle = { 0.0, 0.0, 0.0 };//¼ÙÈçÖ®Ç°¶ÁÈ¡¹ıARCÔòÇå¿ÕÖ®Ç°±£ÁôÔÚÕâÀïµÄÊıÖµ
 	m_geomstandData.m_GeomEleID++;
+	m_geomstandData.m_GeomCloseID = 1;//LINE ARC ½øÀ´µÄÊ±ºò¶¼¹ÒÎªµÚÒ»¸ö·â±Õ»·
+	m_geomstandData.m_IsGeomeleAccept = false;
+	m_geomstandData.m_IsTranData = false;
 	return m_geomstandData;
 }
 //ÊäÈëARCµÄÎå¸ö²ÎÊı£¬×ª»»Êä³öGEOMELEµÄÆğÊ¼ÖÕÖ¹²ÎÊı
@@ -45,17 +49,30 @@ GeomStandData GEOMELE::ReadArcData(GARC m_arc)
 		m_geomstandData.m_typegeomele = 2;//2ÎªÔ²»¡
 		m_geomstandData.m_arc = m_arc;
 		m_geomstandData.m_GeomEleID++;
+		m_geomstandData.m_GeomCloseID = 1;//LINE ARC ½øÀ´µÄÊ±ºò¶¼¹ÒÎªµÚÒ»¸ö·â±Õ»·
+		m_geomstandData.m_IsGeomeleAccept = false;
+		m_geomstandData.m_IsTranData = false;
 		return m_geomstandData;
 }
 //¶ÔÓÚÔ²¶øÑÔ£¬ÒòÎªÒÑ¾­ÊÇÒ»¸ö¶ÀÁ¢µÄ·â±ÕÍ¼ÔªÁË£¬ËùÒÔ²»ĞèÒª¸øÆğÖ¹µã£¬µ«Òª±êÊ¶ÆğÊ¼
 GeomStandData GEOMELE::ReadCircleData(GCIRCLE m_circle)
-{
-	
+{	//ÇóÒÔÔ­µãºÍÔ²ĞÄÎªÁ½µãµÄÖ±ÏßÓëÔ²·½³ÌµÄ½»µã£¬È¡×î¿¿½üÔ­µãµÄÄÇ¸ö½»µã
+	double a, b, r;
+	a = m_circle.m_Circent_x;
+	b = m_circle.m_Circent_y;
+	r = m_circle.m_Circle_r;
+	m_geomstandData.GeoEle_start_x0 = a - ((a*r) / (sqrt(a*a + b*b)));//×ª»»µÃx½»µã
+	m_geomstandData.GeoEle_start_y0 = (b / a)*m_geomstandData.GeoEle_start_x0;//×ª»»µÃy½»µã
+	m_geomstandData.GeoEle_start_x1 = 99999.0;//ÌØÊâÖµÓÃÀ´ÓëLINE ARCÇø·Ö¿ª
+	m_geomstandData.GeoEle_start_y1 = 99999.0;//ÌØÊâÖµÓÃÀ´ÓëLINE ARCÇø·Ö¿ª
 	m_geomstandData.m_circle = m_circle;//±£´æÔ­ÓĞµÄÊı¾İ¡£
 	m_geomstandData.m_typegeomele = 3;//3ÎªÔ²£¬½«À´ÓÃ×÷switch
 	m_geomstandData.m_GeomEleID++;
+	m_geomstandData.m_GeomCloseID++;//Ã¿¸öÔ²¶¼¿ÉÒÔ¶ÀÁ¢ÎªÒ»¸ö·â±Õ»·
 	m_geomstandData.m_line = { 0.0, 0.0, 0.0, 0.0 };
 	m_geomstandData.m_arc = { 0.0, 0.0, 0.0, 0.0, 0.0 };
+	m_geomstandData.m_IsGeomeleAccept = false;
+	m_geomstandData.m_IsTranData = false;
 	return m_geomstandData;
 }
 //ÖÁ´Ë£¬Õû¸öÅÅÑù½á¹ûDXFÍ¼µÄÔªËØ¾Í¶ÁÍêÁË£¬µÚÒ»ÊÖ²ÄÁÏ×¼±¸ÍêÈ«¡£
