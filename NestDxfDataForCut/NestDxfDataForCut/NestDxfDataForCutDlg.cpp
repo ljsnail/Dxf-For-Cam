@@ -9,11 +9,18 @@
 #include "afxdialogex.h" 
 #include "io.h" 
 #include "fcntl.h"
+#include"stdio.h"
+//输出相关
+#include <fstream>
+
+#include <iostream>
+
+#include <conio.h>
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
-
+using namespace std;
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
 class CAboutDlg : public CDialogEx
@@ -74,6 +81,7 @@ BEGIN_MESSAGE_MAP(CNestDxfDataForCutDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON1, &CNestDxfDataForCutDlg::OnOpenFile)
 	ON_BN_CLICKED(IDC_start, &CNestDxfDataForCutDlg::Onstart)
+	ON_BN_CLICKED(IDC_savefile, &CNestDxfDataForCutDlg::OnSavefile)
 END_MESSAGE_MAP()
 
 
@@ -193,29 +201,9 @@ void CNestDxfDataForCutDlg::OnOpenFile()//打开一次就是一张图纸
 		path = hFileDlg.GetPathName();
 		switchkeyword(path);
 	}
-	//单元测试用例
-	int m_TotalGeomeleNum;
-	//m_TotalGeomeleNum = m_geomstanddata.m_GeomEleID;
-	////我怀疑这并没有给每一个m_geomstanddata分配内存，只是在同一个内存里面后面的数值把前面的覆盖了,如果是这样，那么就得去分配内存了，然后这里就是一个单链表还是双链表
-	//for (m_geomstanddata.m_GeomEleID = 0; m_geomstanddata.m_GeomEleID<m_TotalGeomeleNum; m_geomstanddata.m_GeomEleID++)
-	//{
-	//	m_geomstanddata;
-	//}
-	//单元测试
-	GeomCloseHEAD *temp;//过渡结点
-	unsigned int Geomclosetype;
-	temp = m_pNestrsltdtND->FirstGeomClose;
-	//Geomclosetype = temp->m_GeomStandData.m_typegeomele;
-	while (10!=temp->GEOMCLOSE_ID)//从头直到读到这个不是2为止,也放置出现temp为NULL 还读取这个值的现象
-	{
-		
-		double a;
-		m_geomele.m_geomstandData;
-		temp->GEOMCLOSE_ID;
-		a = temp->GEOMCLOSE_ID;
-		temp = temp->nextGeomcloseNode;
-	}
-	Geomclosetype=0;
+	//以上已经把排样结果DXF里面的数据全部读取了，接下来要对数据进行：封闭环分开挂到不同的封闭环头结点上
+	AdjustGeomCloseNode(m_pNestrsltdtND);
+
 }
 //按照打开的文件名路径去搜索LINE ARC CIRCLE
 void CNestDxfDataForCutDlg::switchkeyword(CString path)
@@ -274,12 +262,20 @@ void CNestDxfDataForCutDlg::switchkeyword(CString path)
 				}
 				m_geomstanddata = m_geomele.ReadCircleData(m_circle);
 				//创立记录基本图元的双向链表,把获得的数据保存起来
-				//圆的特殊性是因为它本身就是一个封闭环
+				//圆的特殊性是因为它本身就是一个封闭环,先让它挂到另一张排样结果图中，读取完数据之后再挂回来
 				GEOMCLOSE_ID++;//自己就可以增加一个封闭环
+				//生成一个排样结果图结点
+				m_pNestNode_forCircle = m_GeomForCut.CreatNestResultNode(NestResult_ID);//输入上一张图纸的ID，因为这里只是先划一块区域来挂圆，ID不需要改变
+				//把图结点挂到生产批次结点上
+				m_pBatchHead = m_GeomForCut.AddNestRsltDtNode(m_pBatchHead, m_pNestNode_forCircle);//新的图纸双向链表结点挂在同一生产批次F头结点上
+				//生成一个封闭环结点
 				m_pGeomclsHead_forCircle = m_GeomClose.CreatGeomCloseHEAD(GEOMCLOSE_ID);
+				//把封闭环结点挂到排样结果图结点上
+				m_pNestNode_forCircle = m_GeomForCut.AddGeomCloseHeadNode(m_pNestNode_forCircle, m_pGeomclsHead_forCircle);//输入指向封闭环结点的排样dxf结果图结点，和封闭环结点，把封闭环结点挂到排样dxf结果图上，这里已经包含了三层结构
+				//生成一个数据结点
 				m_pGeomEleND = m_GeomClose.CreatGeomEleNode(m_geomstanddata);//输入上面获得的数据，创立一个结点保存数据
+				//把数据结点挂到封闭环结点上
 				m_pGeomclsHead_forCircle = m_GeomClose.InsertGeomEleNode(m_pGeomclsHead_forCircle, m_pGeomEleND, m_geomstanddata);//把创立的基本图元结点挂到由m_pGeomclsHead指向的双向链表中。
-				m_pNestrsltdtND = m_GeomForCut.AddGeomCloseHeadNode(m_pNestrsltdtND, m_pGeomclsHead_forCircle);//输入指向封闭环结点的排样dxf结果图结点，和封闭环结点，把封闭环结点挂到排样dxf结果图上，这里已经包含了三层结构
 				break;
 			default:break;//跳出switch (m_typegeomele)事件
 			}
@@ -369,6 +365,36 @@ GCIRCLE CNestDxfDataForCutDlg::AcceptDxfCircleData(int symbol, CString m_readgeo
 	}
 	return m_circle;
 }
-
-
-
+void CNestDxfDataForCutDlg::OnSavefile()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	
+	GeomEleNode*tempnode;
+	ofstream outfile("C:\\Users\\BIRL\\Desktop\\59282.txt");
+	tempnode = m_pGeomclsHead->FirstGeomele;
+	/*outfile << "起点x0,起点y0,终点x1,终点y1" << endl;*/
+	while (tempnode)//遍历完所有结点
+	{
+		
+		double x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
+		double x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
+		double y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
+		double y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
+		//outfile << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
+		outfile << x0 << "    " << y0 << endl;
+		outfile << x1 << "    " << y1 << endl; 
+		tempnode = tempnode->nextGeomeleNode;
+	}
+}
+void CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
+{
+	//以上已经把排样结果DXF里面的数据全部读取了，接下来要对数据进行：封闭环分开挂到不同的封闭环头结点上
+	int m_GeomCloseID;//处理了的封闭环的个数
+	GeomCloseHEAD*m_Hclstemp;
+	for (m_GeomCloseID = 1; m_GeomCloseID <= GEOMCLOSE_ID; m_GeomCloseID++)//保证全部结点已经被处理一遍，且给以跳出的条件
+	{
+			m_pDiffGeomclsDataNode = m_GeomForCut.FindDiffGeomCloseNode(m_pNestrsltdtND);
+			m_GeomForCut.InsertGeomCloseHEAD(m_pNestrsltdtND, m_pDiffGeomclsDataNode);
+	}
+	
+}

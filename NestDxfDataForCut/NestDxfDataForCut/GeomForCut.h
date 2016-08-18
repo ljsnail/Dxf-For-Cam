@@ -28,7 +28,7 @@ public:
 	GeomForCut();
 	~GeomForCut();
 public:
-	GeomClose geomclose;
+	GeomClose m_geomclose;
 	NestResultDataNode m_nestrsltNode;
 public:
 	
@@ -37,10 +37,23 @@ public:
 	//先无规律的把结点挂上
 	NestResultDataNode*AddGeomCloseHeadNode(NestResultDataNode*head,GeomCloseHEAD*node);//输入每一个闭环的F头结点，把他们全部挂在一条链上。
 	BatchHEAD*AddNestRsltDtNode(BatchHEAD*head, NestResultDataNode*node);//把每一张排样图的地址挂到以BatchHEAD为头结点的双向链表中。
-	//把无规律的GeomEleNode找出其规律，转化成有规律的几个封闭环。
-	//*************************************************************************//
-	//步骤是先分封闭环，再在每一个封闭环里面对数据进行排序。
-	//*************************************************************************//
-	void SepDiffGeomCls(GeomCloseHEAD*head);//输入指向收录整张排样图全部基本图元的双向链表的F头结点
+		//***************************************************************************************//
+		/**///把无规律的GeomEleNode找出其规律，转化成有规律的几个封闭环。
+		/**///*************************************************************************//
+		/**///步骤是先分封闭环，再在每一个封闭环里面对数据进行排序。
+		/**///*************************************************************************//
+		/**///void SepDiffGeomCls(GeomCloseHEAD*head);//输入指向收录整张排样图全部基本图元的双向链表的F头结点
+		//***************************************************************************************//
+
+	//查找数据结点双向链表里面不是同一个封闭环的结点
+	GeomEleNode*FindDiffGeomCloseNode(NestResultDataNode*head);//输入排样结果图的头结点
+	//将一个双向链表上的不同封闭环挂到不同的链表头指向的双向链表中去。
+	void InsertGeomCloseHEAD(NestResultDataNode*head, GeomEleNode*node);//输入新的不同封闭环ID的结点，产生新F头结点，把同时F头结点指向node。
+	//对已经挂到不同封闭环双向链表结点的数据结点查看其是否是一个完整的封闭环
+	GeomCloseHEAD*JudgeGeomCloseIntact(NestResultDataNode*head);//输入排样结果图dxf头结点，一个个去排查封闭环结点下的数据是否完整
+	//将不完整的头结点输入进来，寻求配对的其他部分;直到所有的封闭环都被置位为完整。
+	NestResultDataNode*Find_Change_GeomCloseHEAD(NestResultDataNode*head, GeomCloseHEAD*node);
+	//将与之配对的头结点输进来，调整
+	NestResultDataNode*ChangeGeomCloseHEAD(NestResultDataNode*head, GeomCloseHEAD*node);
 };
 

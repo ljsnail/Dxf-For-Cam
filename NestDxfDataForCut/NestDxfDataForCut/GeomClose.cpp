@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "GeomClose.h"
 #include "math.h"
-
+#define EPSILON 0.018
 GeomClose::GeomClose()
 {
 	
@@ -21,7 +21,7 @@ GeomEleNode* GeomClose::CreatGeomEleNode(GeomStandData m_geomstandData)
 	newNode->nextGeomeleNode = NULL;
 	newNode->m_AccptGeomEleNode = false;
 	newNode->m_NumGeomEleID=m_geomstandData.m_GeomEleID;//这是这张排样图的第几个基本图元
-	newNode->m_NumGeomCloseID = 0.0;
+	newNode->m_NumGeomCloseID = 0;
 	return newNode;
 
 }
@@ -36,6 +36,7 @@ GeomCloseHEAD*GeomClose::CreatGeomCloseHEAD(int GEOMCLOSE_ID)
 	newNode->prevGeomcloseNode = NULL;
 	newNode->nextGeomcloseNode = NULL;
 	newNode->m_AcceptGeomcloseHEAD = false;//起初时候并没有收录
+	newNode->m_IfGeomCloseIntact = false;//默认为不完整。
 	return newNode;
 }
 GeomCloseHEAD*GeomClose::InsertGeomEleNode(GeomCloseHEAD*head, GeomEleNode *node, GeomStandData m_geomstandData)
@@ -57,9 +58,9 @@ GeomCloseHEAD*GeomClose::InsertGeomEleNode(GeomCloseHEAD*head, GeomEleNode *node
 		head->FirstGeomele->m_NumGeomCloseID++;//每新挂一个空表，说明是一个新的封闭环
 		return head;
 	}
-	//如果不是空表，那么要根据现在的数据和原来的数据之间的关系进行数据调换和找到插入点。
-	//判断是不是起起重合，往前插，如果是那么要将现有的数据前后调换，并插入到原有结点的前面
-	//往前插
+	/*如果不是空表，那么要根据现在的数据和原来的数据之间的关系进行数据调换和找到插入点。
+	判断是不是起起重合，往前插，如果是那么要将现有的数据前后调换，并插入到原有结点的前面
+	往前插*/
 	pStart = FindRelatGmElNd_xyStart(head, m_geomstandData);//单单是只有起起重合的关系
 	if (pStart)
 	{
@@ -138,7 +139,7 @@ GeomCloseHEAD*GeomClose::InsertGeomEleNode(GeomCloseHEAD*head, GeomEleNode *node
 			pEStrat->prevGeomeleNode->nextGeomeleNode = node;//与下面行不可调换
 			pEStrat->prevGeomeleNode = node;
 			head->m_NumGeomele++;//表示现在有了一个图元
-			node->m_NumGeomCloseID = pEnd->m_NumGeomCloseID;//这是重点，既然现在的数据跟原来的数据有相同的关系，那么就该是同属一个闭环
+			node->m_NumGeomCloseID = pEStrat->m_NumGeomCloseID;//这是重点，既然现在的数据跟原来的数据有相同的关系，那么就该是同属一个闭环
 			return head;
 		}
 	}
@@ -154,7 +155,7 @@ GeomCloseHEAD*GeomClose::InsertGeomEleNode(GeomCloseHEAD*head, GeomEleNode *node
 			node->prevGeomeleNode = pSEnd;
 			pSEnd->nextGeomeleNode = node;
 			head->m_NumGeomele++;//表示现在有了一个图元
-			node->m_NumGeomCloseID = pEnd->m_NumGeomCloseID;//这是重点，既然现在的数据跟原来的数据有相同的关系，那么就该是同属一个闭环
+			node->m_NumGeomCloseID = pSEnd->m_NumGeomCloseID;//这是重点，既然现在的数据跟原来的数据有相同的关系，那么就该是同属一个闭环
 			return head;
 		}
 		else
@@ -164,7 +165,7 @@ GeomCloseHEAD*GeomClose::InsertGeomEleNode(GeomCloseHEAD*head, GeomEleNode *node
 			pSEnd->nextGeomeleNode->prevGeomeleNode = node;
 			pSEnd->nextGeomeleNode = node;
 			head->m_NumGeomele++;//表示现在有了一个图元
-			node->m_NumGeomCloseID = pEnd->m_NumGeomCloseID;//这是重点，既然现在的数据跟原来的数据有相同的关系，那么就该是同属一个闭环
+			node->m_NumGeomCloseID = pSEnd->m_NumGeomCloseID;//这是重点，既然现在的数据跟原来的数据有相同的关系，那么就该是同属一个闭环
 			return head;
 		}
 	}
@@ -190,27 +191,8 @@ GeomEleNode*GeomClose::FindRelatGmElNd_xyStart(GeomCloseHEAD*head, GeomStandData
 	temp = head->FirstGeomele;//初始化为头结点
 	while (temp)//整个链表都遍历完，如果是temp->nextGeomeleNode,那么在最后一个结点处就停了，即不会对最后一个比较
 	{
-		//让圆从一开始就不参与这个循环，那么就不需要判断这些类型。
-		//switch (temp->m_GeomStandData.m_typegeomele)
-		//{
-		//case 1://直线类型
-		//	//重点代码，判断两个double类型的值是否相等不能用==，要用fabs
-		//	if (fabs(temp->m_GeomStandData.GeoEle_start_x0 - m_geomstandData.GeoEle_start_x0) && fabs(temp->m_GeomStandData.GeoEle_start_y0 -m_geomstandData.GeoEle_start_y0))//说明起点相同
-		//		return temp;
-		//	break;
-		//case 2://圆弧类型，已经转换为直线类型了
-		//	if (fabs(temp->m_GeomStandData.GeoEle_start_x0 - m_geomstandData.GeoEle_start_x0) && fabs(temp->m_GeomStandData.GeoEle_start_y0 - m_geomstandData.GeoEle_start_y0))//说明起点相同
-		//		return temp;
-		//	break;
-		//	//或者圆的类型，从一开始就该另外给它一个头结点，而不该让他来到这里。
-		//case 3://圆类型，对于这种类型，应该是直接让封闭环加1，并且从这里就划到别的封闭环了。
-		//	//应该是要创造一个GeomCloseHEAD,并把这个挂到它上面去。
-
-		//	break;
-		//default:
-		//	break;
-		//}
-		if (fabs(temp->m_GeomStandData.GeoEle_start_x0 - m_geomstandData.GeoEle_start_x0) && fabs(temp->m_GeomStandData.GeoEle_start_y0 - m_geomstandData.GeoEle_start_y0))//说明起点相同
+		
+		if ((fabs(temp->m_GeomStandData.GeoEle_start_x0 - m_geomstandData.GeoEle_start_x0)<EPSILON) && (fabs(temp->m_GeomStandData.GeoEle_start_y0 - m_geomstandData.GeoEle_start_y0)<EPSILON))//说明起点相同
 			return temp;
 		temp = temp->nextGeomeleNode;//遍历
 	}
@@ -223,8 +205,8 @@ GeomEleNode*GeomClose::FindRelatGmElNd_xyEnd(GeomCloseHEAD*head, GeomStandData m
 	temp = head->FirstGeomele;//初始化为头结点
 	while (temp)
 	{
-		if (fabs(temp->m_GeomStandData.GeoEle_start_x1 - m_geomstandData.GeoEle_start_x1) && fabs(temp->m_GeomStandData.GeoEle_start_y1 - m_geomstandData.GeoEle_start_y1))//说明起点相同
-			return temp;
+		if ((fabs(temp->m_GeomStandData.GeoEle_start_x1 - m_geomstandData.GeoEle_start_x1)<EPSILON) && (fabs(temp->m_GeomStandData.GeoEle_start_y1 - m_geomstandData.GeoEle_start_y1)<EPSILON))//说明终点相同
+				return temp;
 		temp = temp->nextGeomeleNode;//遍历
 	}
 	return NULL;
@@ -236,7 +218,7 @@ GeomEleNode*GeomClose::FindRelatGmElNd_xySEnd(GeomCloseHEAD*head, GeomStandData 
 	temp = head->FirstGeomele;//初始化为头结点
 	while (temp)
 	{
-		if (fabs(temp->m_GeomStandData.GeoEle_start_x1 - m_geomstandData.GeoEle_start_x0) && fabs(temp->m_GeomStandData.GeoEle_start_y1 - m_geomstandData.GeoEle_start_y0))//说明起点相同
+		if ((fabs(temp->m_GeomStandData.GeoEle_start_x1 - m_geomstandData.GeoEle_start_x0)<EPSILON) && (fabs(temp->m_GeomStandData.GeoEle_start_y1 - m_geomstandData.GeoEle_start_y0)<EPSILON))//说明现在起点和原来的终点相同
 			return temp;
 		temp = temp->nextGeomeleNode;//遍历
 	}
@@ -249,7 +231,7 @@ GeomEleNode*GeomClose::FindRelatGmElNd_xyEStart(GeomCloseHEAD*head, GeomStandDat
 	temp = head->FirstGeomele;//初始化为头结点
 	while (temp)
 	{
-		if (fabs(temp->m_GeomStandData.GeoEle_start_x0 - m_geomstandData.GeoEle_start_x1) && fabs(temp->m_GeomStandData.GeoEle_start_y0 - m_geomstandData.GeoEle_start_y1))//说明起点相同
+		if ((fabs(temp->m_GeomStandData.GeoEle_start_x0 - m_geomstandData.GeoEle_start_x1)<EPSILON) && (fabs(temp->m_GeomStandData.GeoEle_start_y0 - m_geomstandData.GeoEle_start_y1)<EPSILON))//说明现在的终点和原来的起点相同
 			return temp;
 		temp = temp->nextGeomeleNode;//遍历
 	}

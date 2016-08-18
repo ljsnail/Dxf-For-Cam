@@ -42,6 +42,7 @@ typedef struct GeomCloseHEAD
 	struct GeomEleNode*FirstGeomele;//指向双向链表GeomEleNode的头结点
 	struct GeomCloseHEAD*prevGeomcloseNode;//指向前一个封闭环GeomCloseHEAD结点
 	struct GeomCloseHEAD*nextGeomcloseNode;//指向后一个封闭环GeomCloseHEAD结点
+	bool m_IfGeomCloseIntact;//判断一个封闭环内的数据是否完整，标志是头结点的起点与尾结点的终点相同
 	bool m_AcceptGeomcloseHEAD;//如果以后要全局最优路径规划的时候，最为每一个封闭环时候已经被规划的标识
 }GeomCloseHEAD;
 class GeomClose
@@ -78,5 +79,6 @@ public:
 	GeomEleNode*FindRelatGmElNd_xySEnd(GeomCloseHEAD*head, GeomStandData m_geomstandData);//判断新进来的数据的起点与原数据的终点是否相同
 	GeomEleNode*FindRelatGmElNd_xyEStart(GeomCloseHEAD*head, GeomStandData m_geomstandData);//判断新进来的数据的终点与原数据的起点是否相同
 	GeomStandData DataSwap(GeomStandData m_geomstandData);//将起点和终点的数据调换
+	
 };
 
