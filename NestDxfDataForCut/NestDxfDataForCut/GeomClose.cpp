@@ -4,7 +4,7 @@
 #define EPSILON 0.018
 GeomClose::GeomClose()
 {
-	
+	m_NumGeomClose = 0;
 }
 
 
@@ -55,7 +55,8 @@ GeomCloseHEAD*GeomClose::InsertGeomEleNode(GeomCloseHEAD*head, GeomEleNode *node
 		head->m_geomclose_startpoint.colse_start_x0 = node->m_GeomStandData.GeoEle_start_x0;//既然是空表，那么这个就是头结点，所以就把头结点的起始点存放first结点里。
 		head->m_geomclose_startpoint.colse_start_y0 = node->m_GeomStandData.GeoEle_start_y0;
 		head->m_NumGeomele++;//表示现在有了一个图元
-		head->FirstGeomele->m_NumGeomCloseID++;//每新挂一个空表，说明是一个新的封闭环
+		m_NumGeomClose++;//每新挂一个空表，说明是一个新的封闭环
+		head->FirstGeomele->m_NumGeomCloseID = m_NumGeomClose;
 		return head;
 	}
 	/*如果不是空表，那么要根据现在的数据和原来的数据之间的关系进行数据调换和找到插入点。
@@ -180,7 +181,9 @@ GeomCloseHEAD*GeomClose::InsertGeomEleNode(GeomCloseHEAD*head, GeomEleNode *node
 		node->prevGeomeleNode = temp;
 		temp->nextGeomeleNode = node;//原来它的后向结点是NULL
 		head->m_NumGeomele++;//在原来的基础上加1，只有单条链表的时候这里跟node->m_GeomStandData.m_GeomCloseID是相等的。但是一旦有多条链表的时候这就不一样了。
-		head->FirstGeomele->m_NumGeomCloseID++; //那么应该是另一个封闭环
+		//head->FirstGeomele->m_NumGeomCloseID;//这样加就是错的。
+		m_NumGeomClose++;//那么应该是另一个封闭环,但注意是在node上加，而不是头结点上加
+		node->m_NumGeomCloseID = m_NumGeomClose;
 		return head;
 	}
 }

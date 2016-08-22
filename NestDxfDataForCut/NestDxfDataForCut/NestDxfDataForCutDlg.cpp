@@ -10,6 +10,7 @@
 #include "io.h" 
 #include "fcntl.h"
 #include"stdio.h"
+#include"afxdlgs.h"//for open file
 //输出相关
 #include <fstream>
 
@@ -66,6 +67,8 @@ CNestDxfDataForCutDlg::CNestDxfDataForCutDlg(CWnd* pParent /*=NULL*/)
 	m_pBatchHead = NULL;//未指向任何地方
 	m_pNestrsltdtND = NULL;
 	m_pGeomclsHead=NULL;
+	m_MaxNumOfGeomClose = 0;
+	m_IfDataDisposed = false;
 	//Onstart();//放这里等效于点击了start的button
 	
 }
@@ -190,15 +193,25 @@ void CNestDxfDataForCutDlg::OnOpenFile()//打开一次就是一张图纸
 	//创建记录图元结点的F头结点
 	GEOMCLOSE_ID++;
 	m_pGeomclsHead = m_GeomClose.CreatGeomCloseHEAD(GEOMCLOSE_ID);
+	//把封闭环结点挂到排样结果图结点上
+	m_pNestrsltdtND = m_GeomForCut.AddGeomCloseHeadNode(m_pNestrsltdtND, m_pGeomclsHead);//输入指向封闭环结点的排样dxf结果图结点，和封闭环结点，把封闭环结点挂到排样dxf结果图上，这里已经包含了三层结构
 
 	//
 	OPENFILENAME ofn = { 0 };
 
 	ofn.Flags = OFN_FILEMUSTEXIST | OFN_READONLY | OFN_PATHMUSTEXIST;
-	CFileDialog hFileDlg(TRUE, NULL, NULL, ofn.Flags, TEXT("DXF(*.*)|*.*|"), NULL);
-	if (hFileDlg.DoModal() == IDOK)
+	CFileDialog m_dlg(TRUE, NULL, NULL, ofn.Flags, TEXT("DXF(*.*)|*.*|"), NULL);
+	///////////////////////////////////////////
+	/*CFileDialog m_dlg(true);
+	m_dlg.m_ofn.nMaxFile = 511;
+	m_dlg.m_ofn.lpstrFilter = "DXF Files(*.dxf)\0*.dxf\0All Files(*.*)\0*.*\0\0";
+	m_dlg.m_ofn.lpstrTitle = "Open DXF Files";
+	CString m_filename;
+*/
+
+	if (m_dlg.DoModal() == IDOK)
 	{
-		path = hFileDlg.GetPathName();
+		path = m_dlg.GetPathName();
 		switchkeyword(path);
 	}
 	//以上已经把排样结果DXF里面的数据全部读取了，接下来要对数据进行：封闭环分开挂到不同的封闭环头结点上
@@ -208,13 +221,14 @@ void CNestDxfDataForCutDlg::OnOpenFile()//打开一次就是一张图纸
 //按照打开的文件名路径去搜索LINE ARC CIRCLE
 void CNestDxfDataForCutDlg::switchkeyword(CString path)
 {
-	
+	//bool a=false;
 	CStdioFile m_dxfofnestresult(path, CFile::modeRead);//输入文件路径，只读
-	m_dxfofnestresult.ReadString(m_readgeomele);//每次读一行，读取一次之后，指向下一行，放回bool
+	//a=m_dxfofnestresult.ReadString(m_readgeomele);//每次读一行，读取一次之后，指向下一行，放回bool
 	while (m_dxfofnestresult.ReadString(m_readgeomele))//如果不是空文件
+	//while (a)
 	{
 		//如果是LINE ARC CIRCLE这三个关键字之间的一个
-		
+		//a = m_dxfofnestresult.ReadString(m_readgeomele);
 		while ((strcmp(m_readgeomele, "LINE") == 0) || (strcmp(m_readgeomele, "ARC") == 0) || (strcmp(m_readgeomele, "CIRCLE") == 0))
 		{
 			if (strcmp(m_readgeomele, "LINE") == 0) m_typegeomele = 0;
@@ -365,36 +379,65 @@ GCIRCLE CNestDxfDataForCutDlg::AcceptDxfCircleData(int symbol, CString m_readgeo
 	}
 	return m_circle;
 }
-void CNestDxfDataForCutDlg::OnSavefile()
-{
-	// TODO:  在此添加控件通知处理程序代码
-	
-	GeomEleNode*tempnode;
-	ofstream outfile("C:\\Users\\BIRL\\Desktop\\59282.txt");
-	tempnode = m_pGeomclsHead->FirstGeomele;
-	/*outfile << "起点x0,起点y0,终点x1,终点y1" << endl;*/
-	while (tempnode)//遍历完所有结点
-	{
-		
-		double x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
-		double x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
-		double y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
-		double y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
-		//outfile << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
-		outfile << x0 << "    " << y0 << endl;
-		outfile << x1 << "    " << y1 << endl; 
-		tempnode = tempnode->nextGeomeleNode;
-	}
-}
-void CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
+
+bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 {
 	//以上已经把排样结果DXF里面的数据全部读取了，接下来要对数据进行：封闭环分开挂到不同的封闭环头结点上
 	int m_GeomCloseID;//处理了的封闭环的个数
-	GeomCloseHEAD*m_Hclstemp;
-	for (m_GeomCloseID = 1; m_GeomCloseID <= GEOMCLOSE_ID; m_GeomCloseID++)//保证全部结点已经被处理一遍，且给以跳出的条件
+	GeomEleNode*temp;
+	temp = head->FirstGeomClose->FirstGeomele;//最原始链表的第一个数据结点
+	while (temp->nextGeomeleNode)//找到最原始链表的最后一个数据结点
+		temp = temp->nextGeomeleNode;
+	m_MaxNumOfGeomClose = temp->m_NumGeomCloseID;//保存在最原始数据结点双向链表上最后一个结点的封闭环数是除了圆之外最大的封闭环数了
+	GeomCloseHEAD*m_NoIntactGeomCloseHead = NULL;
+	for (m_GeomCloseID = 1; m_GeomCloseID <= m_MaxNumOfGeomClose; m_GeomCloseID++)//保证全部结点已经被处理一遍，且给以跳出的条件
 	{
 			m_pDiffGeomclsDataNode = m_GeomForCut.FindDiffGeomCloseNode(m_pNestrsltdtND);
 			m_GeomForCut.InsertGeomCloseHEAD(m_pNestrsltdtND, m_pDiffGeomclsDataNode);
 	}
-	
+	//对已经分开不同封闭环的数据结点分析其封闭环完整性
+	for (m_GeomCloseID = 1; m_GeomCloseID <= m_MaxNumOfGeomClose; m_GeomCloseID++)//保证全部结点已经被处理一遍，且给以跳出的条件
+	{
+		m_NoIntactGeomCloseHead = m_GeomForCut.JudgeGeomCloseIntact(m_pNestrsltdtND);//判断封闭环是否完整
+		m_pNestrsltdtND = m_GeomForCut.Find_Change_GeomCloseHEAD(m_pNestrsltdtND, m_NoIntactGeomCloseHead);//输入不完整的封闭环结点，寻找配对的封闭环结点，并内部做调整
+	}
+	//以上应该是已经保证了封闭环挂在不同的封闭环F头结点指向的双向链表上，并且每一个封闭环结点内的数据结点都是完整的
+	//以下还有封闭环之间的排序问题，封闭环之间的过渡线问题，圆往回挂的问题。
+	//封闭环内的数据结点处理问题
+	m_GeomForCut.ChangeEleNodeOfGeomClosed(m_pNestrsltdtND);
+	m_IfDataDisposed = true;
+	return m_IfDataDisposed;
+}
+void CNestDxfDataForCutDlg::OnSavefile()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	if (m_IfDataDisposed)//数据处理完了，保存才有意义
+	{
+		GeomCloseHEAD*Htemp;
+		GeomEleNode*tempnode;
+		ofstream outfile("C:\\Users\\BIRL\\Desktop\\最低点.txt");
+		Htemp = m_pNestrsltdtND->FirstGeomClose;//第一个封闭环F结点
+		while (Htemp)//全部遍历
+		{
+			tempnode = Htemp->FirstGeomele;//封闭环里的第一个数据结点
+			while (tempnode)//全部遍历完
+			{
+				double x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
+				double x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
+				double y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
+				double y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
+				//outfile << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
+				outfile << x0 << "    " << y0 << endl;
+				outfile << x1 << "    " << y1 << endl;
+				tempnode = tempnode->nextGeomeleNode;
+			}
+			Htemp = Htemp->nextGeomcloseNode;
+		}
+		
+	}
+	else
+	{
+		AfxMessageBox((_T("请等待数据处理完毕！"), MB_YESNO) == IDYES);
+	}
+
 }

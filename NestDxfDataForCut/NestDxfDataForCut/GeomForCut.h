@@ -55,5 +55,9 @@ public:
 	NestResultDataNode*Find_Change_GeomCloseHEAD(NestResultDataNode*head, GeomCloseHEAD*node);
 	//将与之配对的头结点输进来，调整
 	NestResultDataNode*ChangeGeomCloseHEAD(NestResultDataNode*head, GeomCloseHEAD*node);
+	//以上已经把原始数据双向链表上的不同封闭环挂到不同的封闭环头结点上了，但是还涉及单一封闭环内部的数据如何处理，和各个封闭环之间的顺序确定
+	//对于单一封闭环内部而言，查找最左最下的那个起点所在的结点为头结点，然后改变封闭环内部顺序
+	void ChangeEleNodeOfGeomClosed(NestResultDataNode*head);//输入排样结果图头结点，把其内部所有的封闭环里面的基本数据结点按照最左最下的结点为头结点的原则重新排序，并把头结点的起始点放到F头结点中
+	
 };
 

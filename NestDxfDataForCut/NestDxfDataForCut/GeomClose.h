@@ -79,6 +79,7 @@ public:
 	GeomEleNode*FindRelatGmElNd_xySEnd(GeomCloseHEAD*head, GeomStandData m_geomstandData);//判断新进来的数据的起点与原数据的终点是否相同
 	GeomEleNode*FindRelatGmElNd_xyEStart(GeomCloseHEAD*head, GeomStandData m_geomstandData);//判断新进来的数据的终点与原数据的起点是否相同
 	GeomStandData DataSwap(GeomStandData m_geomstandData);//将起点和终点的数据调换
-	
+public:
+	int m_NumGeomClose;//统计封闭环个数
 };
 

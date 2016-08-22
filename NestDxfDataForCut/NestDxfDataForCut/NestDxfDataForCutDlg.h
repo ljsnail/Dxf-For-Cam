@@ -69,8 +69,10 @@ public:
 	afx_msg void OnSavefile();
 public:
 	//查找不同封闭环的数据结点，调整封闭环双向链表的挂接
-	void AdjustGeomCloseNode(NestResultDataNode*head);
+	bool AdjustGeomCloseNode(NestResultDataNode*head);//当数据处理完毕，才能保存和输出
 	GeomEleNode*m_pDiffGeomclsDataNode;//不同封闭环的数据结点
 	GeomEleNode*m_pTempGeomDataNode;
+	bool m_IfDataDisposed;//数据是否已经处理完毕
+	int m_MaxNumOfGeomClose;
 	
 };
