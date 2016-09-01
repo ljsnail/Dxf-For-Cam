@@ -6,6 +6,11 @@
 
 #include "GeomForCut.h"
 #include "GEOMELE.h"
+#include "DrawingViewStatic.h"
+#include <gl\gl.h>
+#include <gl\glu.h>
+#include "GLAUX.H"
+#include "afxwin.h"
 
 // CNestDxfDataForCutDlg 对话框
 class CNestDxfDataForCutDlg : public CDialogEx
@@ -75,4 +80,20 @@ public:
 	bool m_IfDataDisposed;//数据是否已经处理完毕
 	int m_MaxNumOfGeomClose;
 	
+	afx_msg void OnSimulation();
+	//opengl
+
+	BOOL SetWindowPixelFormat(HDC hDC); //设定象素格式
+	BOOL CreateViewGLContext(HDC hDC); //View GL Context
+	//void RenderScene(); //绘制场景
+	afx_msg void OnTimer(UINT nIDEvent);
+public:
+	CStatic m_Draw;
+	HDC		hrenderDC; //DC
+	HGLRC	hrenderRC; //RC
+	float m_yRotate; //转速
+	int PixelFormat;
+	GLINE ReadDataForOGL(GeomEleNode*node);
+	afx_msg void OnMouseHWheel(UINT nFlags, short zDelta, CPoint pt);
+	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 };

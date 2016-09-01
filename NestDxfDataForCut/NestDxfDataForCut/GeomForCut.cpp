@@ -270,18 +270,18 @@ void GeomForCut::ChangeEleNodeOfGeomClosed(NestResultDataNode*head)
 	pHtemp = head->FirstGeomClose;//第一个头结点
 	while (pHtemp)//所有封闭环头结点都处理完
 	{
-		//if (!(pHtemp->prevGeomcloseNode))//如果这是第一个封闭环
-		//{
-		//	//说明Htemp没有前一个封闭环，把机床原点赋给它
-		//	m_prevGeomCloseEnd_x = 0.0;//以机床原点为最开始的起点，以（0,0）为机床原点
-		//	m_prevGeomCloseEnd_y = 0.0;
-		//}
-		//else//说明不是头结点，那么就有前封闭环结点了，那么把前一个封闭环头结点保存的起止点数据传给它
-		//{
-		//	m_prevGeomCloseEnd_x = pHtemp->prevGeomcloseNode->m_geomclose_startpoint.colse_start_x0;
-		//	m_prevGeomCloseEnd_y = pHtemp->prevGeomcloseNode->m_geomclose_startpoint.colse_start_y0;
+		if (!(pHtemp->prevGeomcloseNode))//如果这是第一个封闭环
+		{
+			//说明Htemp没有前一个封闭环，把机床原点赋给它
+			m_prevGeomCloseEnd_x = 0.0;//以机床原点为最开始的起点，以（0,0）为机床原点
+			m_prevGeomCloseEnd_y = 0.0;
+		}
+		else//说明不是头结点，那么就有前封闭环结点了，那么把前一个封闭环头结点保存的起止点数据传给它
+		{
+			m_prevGeomCloseEnd_x = pHtemp->prevGeomcloseNode->m_geomclose_startpoint.colse_start_x0;
+			m_prevGeomCloseEnd_y = pHtemp->prevGeomcloseNode->m_geomclose_startpoint.colse_start_y0;
 
-		//}
+		}
 		m_prevGeomCloseEnd_x = 0.0;//以机床原点为最开始的起点，以（0,0）为机床原点
 		m_prevGeomCloseEnd_y = 0.0;
 

@@ -45,6 +45,9 @@
     <ClInclude Include="GeomForCut.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="DrawingViewStatic.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NestDxfDataForCut.cpp">
@@ -63,6 +66,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="GeomForCut.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DrawingViewStatic.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

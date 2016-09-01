@@ -70,12 +70,17 @@ CNestDxfDataForCutDlg::CNestDxfDataForCutDlg(CWnd* pParent /*=NULL*/)
 	m_MaxNumOfGeomClose = 0;
 	m_IfDataDisposed = false;
 	//Onstart();//放这里等效于点击了start的button
+	//opengl
+
 	
 }
 
 void CNestDxfDataForCutDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	//opengl
+	DDX_Control(pDX, IDC_OPENGL, m_Draw);
+
 }
 
 BEGIN_MESSAGE_MAP(CNestDxfDataForCutDlg, CDialogEx)
@@ -85,6 +90,10 @@ BEGIN_MESSAGE_MAP(CNestDxfDataForCutDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON1, &CNestDxfDataForCutDlg::OnOpenFile)
 	ON_BN_CLICKED(IDC_start, &CNestDxfDataForCutDlg::Onstart)
 	ON_BN_CLICKED(IDC_savefile, &CNestDxfDataForCutDlg::OnSavefile)
+	ON_BN_CLICKED(IDC_savefile2, &CNestDxfDataForCutDlg::OnSimulation)
+	ON_WM_TIMER()
+	ON_WM_MOUSEHWHEEL()
+	ON_WM_MOUSEMOVE()
 END_MESSAGE_MAP()
 
 
@@ -120,6 +129,44 @@ BOOL CNestDxfDataForCutDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO:  在此添加额外的初始化代码
+	//关于OpenGL
+	CRect rect;
+	// Get size and position of the picture control
+	//GetDlgItem(IDC_OPENGL)->GetWindowRect(rect);
+	// Convert screen coordinates to client coordinates
+	ScreenToClient(rect);
+	///////////////////////OPENGL INIT/////////////////////////
+	CWnd *wnd = GetDlgItem(IDC_OPENGL);
+
+	hrenderDC=::GetDC(wnd->m_hWnd);
+	//ScreenToClient(rect);
+	if (SetWindowPixelFormat(hrenderDC) == FALSE)
+		return 0;
+
+	if (CreateViewGLContext(hrenderDC) == FALSE)
+		return 0;
+
+	glPolygonMode(GL_FRONT, GL_FILL);
+	glPolygonMode(GL_BACK, GL_FILL);
+	///////////////////////////////////////////
+	glEnable(GL_TEXTURE_2D);
+	glShadeModel(GL_SMOOTH);
+	glViewport(0, 0, 259, 231);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(45, 1, 0.1, 100.0);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glShadeModel(GL_SMOOTH); // Enable Smooth Shading
+	glClearColor(0.0f, 0.0f, 0.0f, 0.5f); // Black Background
+	glClearDepth(1.0f); // Depth Buffer Setup
+	glEnable(GL_DEPTH_TEST); // Enables Depth Testing
+	glDepthFunc(GL_LEQUAL); // The Type Of Depth Testing To Do
+	/////////////////////////////////////////////////////////////////////////
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	//SetTimer(1, 10, 0);
+	////////////////////////////////////////////////////////////////
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -164,6 +211,8 @@ void CNestDxfDataForCutDlg::OnPaint()
 	{
 		CDialogEx::OnPaint();
 	}
+	//这里可能也会出问题
+	ValidateRect(NULL);
 }
 
 //当用户拖动最小化窗口时系统调用此函数取得光标
@@ -215,7 +264,7 @@ void CNestDxfDataForCutDlg::OnOpenFile()//打开一次就是一张图纸
 		switchkeyword(path);
 	}
 	//以上已经把排样结果DXF里面的数据全部读取了，接下来要对数据进行：封闭环分开挂到不同的封闭环头结点上
-	AdjustGeomCloseNode(m_pNestrsltdtND);
+	//AdjustGeomCloseNode(m_pNestrsltdtND);
 
 }
 //按照打开的文件名路径去搜索LINE ARC CIRCLE
@@ -404,18 +453,19 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	//以上应该是已经保证了封闭环挂在不同的封闭环F头结点指向的双向链表上，并且每一个封闭环结点内的数据结点都是完整的
 	//以下还有封闭环之间的排序问题，封闭环之间的过渡线问题，圆往回挂的问题。
 	//封闭环内的数据结点处理问题
-	m_GeomForCut.ChangeEleNodeOfGeomClosed(m_pNestrsltdtND);
+	//m_GeomForCut.ChangeEleNodeOfGeomClosed(m_pNestrsltdtND);
 	m_IfDataDisposed = true;
 	return m_IfDataDisposed;
 }
 void CNestDxfDataForCutDlg::OnSavefile()
 {
 	// TODO:  在此添加控件通知处理程序代码
+	m_IfDataDisposed = true;
 	if (m_IfDataDisposed)//数据处理完了，保存才有意义
 	{
 		GeomCloseHEAD*Htemp;
 		GeomEleNode*tempnode;
-		ofstream outfile("C:\\Users\\BIRL\\Desktop\\最低点.txt");
+		ofstream outfile("F:\\MATLAB\\最低点1.txt");
 		Htemp = m_pNestrsltdtND->FirstGeomClose;//第一个封闭环F结点
 		while (Htemp)//全部遍历
 		{
@@ -426,9 +476,12 @@ void CNestDxfDataForCutDlg::OnSavefile()
 				double x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
 				double y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
 				double y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
-				//outfile << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
-				outfile << x0 << "    " << y0 << endl;
-				outfile << x1 << "    " << y1 << endl;
+				outfile << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
+				/*outfile << x0 << "    " << y0 << endl;
+				outfile << x1 << "    " << y1 << endl;*/
+				//////////////opengl///////////////////////////
+			
+
 				tempnode = tempnode->nextGeomeleNode;
 			}
 			Htemp = Htemp->nextGeomcloseNode;
@@ -441,3 +494,187 @@ void CNestDxfDataForCutDlg::OnSavefile()
 	}
 
 }
+
+void CNestDxfDataForCutDlg::OnSimulation()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	// Setup the OpenGL Window's timer to render
+	SetTimer(1, 100, 0);
+
+}
+////////////////////////////////////////////////////////////////////////////////
+//opengl
+BOOL CNestDxfDataForCutDlg::SetWindowPixelFormat(HDC hDC)
+{
+	PIXELFORMATDESCRIPTOR pixelDesc;
+	pixelDesc.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+	pixelDesc.nVersion = 1;
+	pixelDesc.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER | PFD_TYPE_RGBA;
+	pixelDesc.iPixelType = PFD_TYPE_RGBA;
+	pixelDesc.cColorBits = 32;
+	pixelDesc.cRedBits = 0;
+	pixelDesc.cRedShift = 0;
+	pixelDesc.cGreenBits = 0;
+	pixelDesc.cGreenShift = 0;
+	pixelDesc.cBlueBits = 0;
+	pixelDesc.cBlueShift = 0;
+	pixelDesc.cAlphaBits = 0;
+	pixelDesc.cAlphaShift = 0;
+	pixelDesc.cAccumBits = 0;
+	pixelDesc.cAccumRedBits = 0;
+	pixelDesc.cAccumGreenBits = 0;
+	pixelDesc.cAccumBlueBits = 0;
+	pixelDesc.cAccumAlphaBits = 0;
+	pixelDesc.cDepthBits = 0;
+	pixelDesc.cStencilBits = 1;
+	pixelDesc.cAuxBuffers = 0;
+	pixelDesc.iLayerType = PFD_MAIN_PLANE;
+	pixelDesc.bReserved = 0;
+	pixelDesc.dwLayerMask = 0;
+	pixelDesc.dwVisibleMask = 0;
+	pixelDesc.dwDamageMask = 0;
+	PixelFormat = ChoosePixelFormat(hDC, &pixelDesc);
+
+	if (PixelFormat == 0) // Choose default
+	{
+		PixelFormat = 1;
+		if (DescribePixelFormat(hDC, PixelFormat,
+			sizeof(PIXELFORMATDESCRIPTOR), &pixelDesc) == 0)
+		{
+			return FALSE;
+		}
+	}
+	if (SetPixelFormat(hDC, PixelFormat, &pixelDesc) == FALSE)
+	{
+		return FALSE;
+	}
+	return TRUE;
+}
+BOOL CNestDxfDataForCutDlg::CreateViewGLContext(HDC hDC)
+{
+	hrenderRC = wglCreateContext(hDC);
+	if (hrenderRC == NULL)
+		return FALSE;
+	if (wglMakeCurrent(hDC, hrenderRC) == FALSE)
+		return FALSE;
+	return TRUE;
+}
+//void CNestDxfDataForCutDlg::RenderScene()
+//{
+//	/////////////////////////////////////////////////
+//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//	glLoadIdentity();
+//	glTranslatef(0.0f, 0.0f, -6.0f); // Move Left 1.5 Units And Into The Screen 6.0
+//	glRotated(m_yRotate, 0.0, 1.0, 0.0);
+//	glBegin(GL_TRIANGLES); // Drawing Using Triangles
+//	glVertex3f(0.0f, 1.0f, 0.0f); // Top
+//	glVertex3f(-1.0f, -1.0f, 0.0f); // Bottom Left
+//	glVertex3f(1.0f, -1.0f, 0.0f); // Bottom Right
+//	////////////////////////////////////////////
+//	//glVertex2f(-4.00, 0.00);
+//	//   glVertex2f(-3.00, 2.00);
+//	//   glVertex2f(-2.00, 0.00);
+//	//   glVertex2f(-1.00, 2.00);
+//	//   glVertex2f(0.0, 0.00);
+//	//   glVertex2f(1.00, 2.00);
+//	//   glVertex2f(2.00, 0.00);
+//	//   glVertex2f(3.00, 2.00);
+//	//   glVertex2f(4.00, 0.00);
+//	/////////////////////////
+//	////glColor3f (0.0, 0.0, 0.0);
+//	/* glBegin(GL_POLYGON);
+//	glVertex2i(2,2);
+//	glVertex2i(3,1);
+//	glVertex2i(10,5);
+//	glVertex2i(12,10);
+//	glVertex2i(5,12);
+//	glVertex2i(5,6);*/
+//
+//	glEnd(); // Finished Drawing The Triangle
+//	SwapBuffers(hrenderDC);
+//}
+
+void CNestDxfDataForCutDlg::OnTimer(UINT nIDEvent) //实时绘制场景
+{
+	
+	// TODO: Add your message handler code here and/or call default
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glLoadIdentity();
+	glTranslatef(0.0f, 0.0f, -6.0f); // Move Left 1.5 Units And Into The Screen 6.0
+	//glRotated(m_yRotate, 0.0, 1.0, 0.0);
+	//数据
+	GeomCloseHEAD*Htemp;
+	GeomEleNode*tempnode;
+	GLINE m_line;
+	Htemp = m_pNestrsltdtND->FirstGeomClose;//第一个封闭环F结点
+	while (Htemp)//全部遍历
+	{
+		tempnode = Htemp->FirstGeomele;//封闭环里的第一个数据结点
+		while (tempnode)//全部遍历完
+		{
+			//////////opengl///////////////////////////
+			m_line = ReadDataForOGL(tempnode);
+			glBegin(GL_LINE_STRIP);//折线
+			glVertex2f(m_line.x0, m_line.y0);
+			glVertex2f(m_line.x1, m_line.y1);
+			glEnd();
+			SwapBuffers(hrenderDC);
+			//SetTimer(1, 500, 0);
+			tempnode = tempnode->nextGeomeleNode;
+		}
+		Htemp = Htemp->nextGeomcloseNode;
+	}
+	CDialog::OnTimer(nIDEvent);
+}
+	GLINE CNestDxfDataForCutDlg::ReadDataForOGL(GeomEleNode*node)
+{
+	GLINE m_line;
+	m_line.x0 = node->m_GeomStandData.GeoEle_start_x0;
+	m_line.y0 = node->m_GeomStandData.GeoEle_start_y0;
+	m_line.x1 = node->m_GeomStandData.GeoEle_start_x1;
+	m_line.y1 = node->m_GeomStandData.GeoEle_start_y1;
+	return m_line;
+}
+
+
+	void CNestDxfDataForCutDlg::OnMouseHWheel(UINT nFlags, short zDelta, CPoint pt)
+	{
+		// 此功能要求 Windows Vista 或更高版本。
+		// _WIN32_WINNT 符号必须 >= 0x0600。
+		// TODO:  在此添加消息处理程序代码和/或调用默认值
+		CRect crectt;
+		m_Draw.GetWindowRect(&crectt);
+		// check whether the current cursor is on the material view window.
+		if (crectt.PtInRect(pt))
+			//m_Draw.ZoomViewPort(zDelta, pt);
+			m_Draw.IsZoomed();
+		CDialogEx::OnMouseHWheel(nFlags, zDelta, pt);
+	}
+
+
+	void CNestDxfDataForCutDlg::OnMouseMove(UINT nFlags, CPoint point)
+	{
+		// TODO:  在此添加消息处理程序代码和/或调用默认值
+		//CRect crecttt;
+		//m_Draw.GetWindowRect(&crecttt);
+		//ScreenToClient(&crecttt);
+		//if (crecttt.PtInRect(point))
+		//{
+		//	m_Draw.SetFocus();
+
+		//	if (nFlags & MK_MBUTTON)
+		//	{
+		//		CPoint ptOffSet = point - m_Draw.GetPanReferPt();
+		//		m_Draw.PanViewPort(ptOffSet.x, ptOffSet.y);
+		//		m_Draw.SetPanReferPt(point);
+		//	}
+
+		//	// display the current coordinate.
+		//	GlViewPortPtr pViewPort = m_matPreviewWnd.GetViewPort();
+		//	Point2D currentPt = pViewPort->GetCursorPos();
+		//	m_strCoordinate.Format(_T("x= %.4f,  y= %.4f"), currentPt.X(), currentPt.Y());
+		//	/*UpdateData(FALSE);*/
+		//	SetDlgItemText(IDC_EDIT_Coordinate, m_strCoordinate);
+		//}
+		CDialogEx::OnMouseMove(nFlags, point);
+	}

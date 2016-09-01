@@ -58,6 +58,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>opengl32.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -101,6 +102,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DrawingViewStatic.h" />
     <ClInclude Include="GeomClose.h" />
     <ClInclude Include="GEOMELE.h" />
     <ClInclude Include="GeomForCut.h" />
@@ -112,6 +114,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DrawingViewStatic.cpp" />
     <ClCompile Include="GeomClose.cpp" />
     <ClCompile Include="GEOMELE.cpp" />
     <ClCompile Include="GeomForCut.cpp" />
