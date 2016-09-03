@@ -211,6 +211,7 @@ NestResultDataNode*GeomForCut::Find_Change_GeomCloseHEAD(NestResultDataNode*head
 		if (!(Htemp->m_IfGeomCloseIntact))//如果没有被置位，说明这个可能是不完整的
 		{
 			//这里用if居然出错，因为没有else，如果不进入if，接下来就不知道怎么走了。
+			//如果这个不是封闭环的节点和前面找到的节点能够配对，那么就该把封闭环合并
 			while ((fabs(x1 - Htemp->FirstGeomele->m_GeomStandData.GeoEle_start_x0) < EPSILON) && (fabs(y1 - Htemp->FirstGeomele->m_GeomStandData.GeoEle_start_y0) < EPSILON))//说明Htemp与node配对,那么Htemp就没用了
 			{
 				temp->nextGeomeleNode = Htemp->FirstGeomele;//node的尾结点指向Htemp的头结点
@@ -252,17 +253,198 @@ NestResultDataNode*GeomForCut::Find_Change_GeomCloseHEAD(NestResultDataNode*head
 		//else//有这个else反而出错了
 		Htemp = Htemp->nextGeomcloseNode;
 	}
+	node->m_IfGeomCloseIntact = true;//这找了一圈了，还没有，只能说明它确实没有合拍的，但如果不给它置位将来会一直循环这个值
 	return head;//把原来的返回，说明并没有找到与它能配对的，这是最坏的情况！！！
 }
-
 //核心代码，请勿乱动！！
 //核心代码，请勿乱动！！
 //核心代码，请勿乱动！！
-//处理每一个封闭环里面的数据，寻找新的头结点
-void GeomForCut::ChangeEleNodeOfGeomClosed(NestResultDataNode*head)
+//先按照每个封闭环到机床原点之间的最短距离去寻找封闭环内的头结点
+//为下面处理整张图纸封闭环顺序打下基础
+void GeomForCut::ChangeEleNodeOfGeomClosed_origin(NestResultDataNode*head)
 {
 	GeomCloseHEAD*pHtemp;
-	GeomEleNode*phtemp,*paimnode=NULL,*ptemp;//重要的三个结点参数
+	GeomEleNode*phtemp, *paimnode = NULL, *ptemp;//重要的三个结点参数
+	double m_prevGeomCloseEnd_x, m_prevGeomCloseEnd_y;//上一个封闭环的起止点
+	double temp_end_x, temp_end_y;//当前封闭环数据结点的起点
+	double m_mindistant, m_tempmindistant;//保存两点之间最短距离
+
+	pHtemp = head->FirstGeomClose;//第一个头结点
+	while (pHtemp)//所有封闭环头结点都处理完
+	{
+		
+		m_prevGeomCloseEnd_x = 0.0;//以机床原点为最开始的起点，以（0,0）为机床原点
+		m_prevGeomCloseEnd_y = 0.0;
+	   //对于单个封闭环处理
+		//寻找所有数据结点的起点中与上一个封闭环链表中的起止点最靠近的那个结点
+		phtemp = pHtemp->FirstGeomele;//保存头结点
+		ptemp = pHtemp->FirstGeomele;//用来遍历的结点
+		//求下一个结点起点和上一个封闭环起止点的最短距离
+		//以头结点起点和上一个封闭环起止点的最短距离为首先参考
+		temp_end_x = phtemp->m_GeomStandData.GeoEle_start_x0;//保存起点数据
+		temp_end_y = phtemp->m_GeomStandData.GeoEle_start_y0;
+		m_mindistant = fabs(sqrt(((temp_end_x - m_prevGeomCloseEnd_x)*(temp_end_x - m_prevGeomCloseEnd_x)) + ((temp_end_y - m_prevGeomCloseEnd_y)*(temp_end_y - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+		while (ptemp)//把封闭环内所有的数据结点遍历一般,找出最理想的数据结点
+		{
+			if (!(ptemp->prevGeomeleNode))//如果ptemp是头结点那么目标结点就是头结点
+			{
+				paimnode = phtemp;//如果头结点的起止点是整个封闭环与和上一个封闭环起始点的最短距离的时候，头结点为目标结点
+
+			}
+			else//如果不是头结点了那么就要进行数据比较了
+			{
+				//求下一个结点起点和上一个封闭环起止点的最短距离
+				temp_end_x = ptemp->m_GeomStandData.GeoEle_start_x0;//保存起点数据
+				temp_end_y = ptemp->m_GeomStandData.GeoEle_start_y0;
+				m_tempmindistant = fabs(sqrt(((temp_end_x - m_prevGeomCloseEnd_x)*(temp_end_x - m_prevGeomCloseEnd_x)) + ((temp_end_y - m_prevGeomCloseEnd_y)*(temp_end_y - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+				if (m_tempmindistant < m_mindistant)
+				{
+					m_mindistant = m_tempmindistant;//把最小值也要更新
+					paimnode = ptemp;//说明现在这结点离上一个封闭环起止点的距离更近些
+
+				}
+			}
+			ptemp = ptemp->nextGeomeleNode;
+		}
+		//至此，一个封闭环链表里面的数据中距离最短的那个结点已经找到，接下来要对封闭环内的结点进行数据调换了
+		if (paimnode == phtemp)//说明找了一圈发现还是最开始的结点距离最短
+		{
+			//其实这约等于说明都没干
+			pHtemp->FirstGeomele = phtemp;
+			pHtemp->m_geomclose_startpoint.colse_start_x0 = phtemp->m_GeomStandData.GeoEle_start_x0;//把头结点的起点赋给封闭环头结点里保存，作为下一个封闭环判断的依据
+			pHtemp->m_geomclose_startpoint.colse_start_y0 = phtemp->m_GeomStandData.GeoEle_start_y0;
+		}
+		else//说明并不是头结点为最理想的结点
+		{
+			ptemp = phtemp;
+			while (ptemp->nextGeomeleNode)//找到最后一个结点
+				ptemp = ptemp->nextGeomeleNode;
+			ptemp->nextGeomeleNode = phtemp;//原来ptemp作为尾结点，它的后向指针是指向NULL的
+			phtemp->prevGeomeleNode = ptemp;//原来phtemp作为头结点，它的前向指针是指向NULL的
+			paimnode->prevGeomeleNode->nextGeomeleNode = NULL;//原来paimnode的前向指针是指向它的，但是从此就作为尾结点了
+			paimnode->prevGeomeleNode = NULL;//从此作为头结点
+			pHtemp->FirstGeomele = paimnode;//作为上面的工作，它已经是这个封闭环里的新头结点了
+			pHtemp->m_geomclose_startpoint.colse_start_x0 = paimnode->m_GeomStandData.GeoEle_start_x0;//把新头结点的起点赋给封闭环头结点里保存，作为下一个封闭环判断的依据
+			pHtemp->m_geomclose_startpoint.colse_start_y0 = paimnode->m_GeomStandData.GeoEle_start_y0;
+		}
+		pHtemp = pHtemp->nextGeomcloseNode;//第一个封闭环处理完之后，进入第二个封闭环，如此循环最后整个排样dxf里面的封闭环都处理完；除了圆
+	}
+}
+
+//核心代码
+//核心代码
+//核心代码
+//安装封闭环里的起止点到机床原点的距离由近到远
+//调整整个排样结果图的封闭环链接顺序
+void GeomForCut::ChangClosedNodeOfNRDXF(NestResultDataNode*head)
+{
+	GeomCloseHEAD*pHtemp;//保存封闭环双向链表的头结点
+	GeomCloseHEAD*phnowtemp;//保存封闭环双向链表结点
+	GeomCloseHEAD*phstarttemp=NULL;//保存封闭暂时应该是头结点
+	GeomCloseHEAD*ptemp = NULL;//保存封闭暂时应该是头结点
+
+	double m_prevGeomCloseEnd_x, m_prevGeomCloseEnd_y;//上一个封闭环的起止点
+	double m_tempGeomCloseEnd_x, m_tempGeomCloseEnd_y;//当前封闭环的起止点
+	double m_mindistant, m_tempmindistant;//保存两点之间最短距离
+	int m_GeomCloseID = 0;
+	pHtemp = head->FirstGeomClose;//第一个封闭环头结点
+	for (m_GeomCloseID = 1; m_GeomCloseID < 80;m_GeomCloseID++)//将全部循环封闭环的个数遍
+	{
+		
+		//找到第一个没有还没有被收编的头结点，以它到原点的距离为基准
+		ptemp = head->FirstGeomClose;
+		while (ptemp->m_AcceptGeomcloseHEAD)//找到第一个没有被置位的封闭环节点
+			ptemp = ptemp->nextGeomcloseNode;
+		m_prevGeomCloseEnd_x = 0.0;
+		m_prevGeomCloseEnd_y = 0.0;
+		m_tempGeomCloseEnd_x = ptemp->m_geomclose_startpoint.colse_start_x0;
+		m_tempGeomCloseEnd_y = ptemp->m_geomclose_startpoint.colse_start_y0;
+		m_mindistant = fabs(sqrt(((m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)*(m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)) + ((m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y)*(m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+		phstarttemp = ptemp;
+		//先要找到这个最后一个没有被置位的封闭环节点
+		phnowtemp = head->FirstGeomClose;
+		while (phnowtemp)//全部遍历一遍，需求和前一封闭环靠的最近的那个封闭环
+		{
+			if (!(phnowtemp->prevGeomcloseNode))//说明是头结点
+			{
+				if (!(phnowtemp->m_AcceptGeomcloseHEAD))//说明这个封闭环还没有被规划好，这段代码的目的是得到一个暂时的最小值
+				{
+					m_prevGeomCloseEnd_x = 0.0;
+					m_prevGeomCloseEnd_y = 0.0;
+					m_tempGeomCloseEnd_x = phnowtemp->m_geomclose_startpoint.colse_start_x0;
+					m_tempGeomCloseEnd_y = phnowtemp->m_geomclose_startpoint.colse_start_y0;
+					m_tempmindistant = fabs(sqrt(((m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)*(m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)) + ((m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y)*(m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+					if (m_tempmindistant < m_mindistant)//如果这个比所在的最小还要小，那么当前应该是它最小
+					{
+						m_mindistant = m_tempmindistant;
+						phstarttemp = phnowtemp;
+					}
+				}
+				
+			}
+			else//说明不是头结点了
+			{
+				if (!(phnowtemp->m_AcceptGeomcloseHEAD))//说明这个封闭环还没有被规划好
+				{
+					m_prevGeomCloseEnd_x = 0.0;
+					m_prevGeomCloseEnd_y = 0.0;
+					m_tempGeomCloseEnd_x = phnowtemp->m_geomclose_startpoint.colse_start_x0;
+					m_tempGeomCloseEnd_y = phnowtemp->m_geomclose_startpoint.colse_start_y0;
+					m_tempmindistant = fabs(sqrt(((m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)*(m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)) + ((m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y)*(m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+					if (m_tempmindistant < m_mindistant)//如果这个比所在的最小还要小，那么当前应该是它最小
+					{
+						m_mindistant = m_tempmindistant;
+						phstarttemp = phnowtemp;
+					}
+				}
+			}
+			
+			phnowtemp = phnowtemp->nextGeomcloseNode;
+		}
+		//以上是循环一遍之后找到的目前来说最小的一个封闭环头结点
+		if (!(phstarttemp ->prevGeomcloseNode))//如果是头结点，找了一遍发现还是头结点为最靠近的封闭环节节点
+		{
+			head->FirstGeomClose = phstarttemp;//还是它为头结点
+			phstarttemp->m_AcceptGeomcloseHEAD = true;//从此该节点就被固定了
+		}
+		else//说明不是头结点了，那么这个节点要挂的目前最后一个m_AcceptGeomcloseHEAD没有被设置为true的封闭环节点后面
+		{
+			//先要找到这个最后一个没有被置位的封闭环节点
+			phnowtemp = head->FirstGeomClose;
+			while (phnowtemp->nextGeomcloseNode->m_AcceptGeomcloseHEAD)//当phnowtemp的下一个封闭环头结点不再是true的时候，那么phnowtemp就应该是最后一个m_AcceptGeomcloseHEAD是true的，也就是已经被安排了顺序的
+				phnowtemp = phnowtemp->nextGeomcloseNode;
+			//经过上面的寻找，现在phnowtemp是最后一个是true的节点，而phstarttemp就是要挂到phnowtemp后面
+			//本来是每次调整双向链表的节点位置时候，都要考虑该节点是不是头尾还是一般节点的，但这里可以不用考虑头结点了
+			if (!(phstarttemp->nextGeomcloseNode))//如果是尾节点
+			{
+				phnowtemp->nextGeomcloseNode->prevGeomcloseNode = phstarttemp;
+				phstarttemp->prevGeomcloseNode->nextGeomcloseNode = NULL;
+				phstarttemp->nextGeomcloseNode = phnowtemp->nextGeomcloseNode;
+				phnowtemp->nextGeomcloseNode = phstarttemp;
+				phstarttemp->prevGeomcloseNode = phnowtemp;
+				phstarttemp->m_AcceptGeomcloseHEAD = true;
+			}
+			else//一般节点
+			{
+				phstarttemp->prevGeomcloseNode->nextGeomcloseNode = phstarttemp->nextGeomcloseNode;//它原来前面的后面本来是它的，但它走了，自然就变成了它后面的那个
+				phstarttemp->nextGeomcloseNode->prevGeomcloseNode = phstarttemp->prevGeomcloseNode;//它原来后面的前面本来是它的，但它走了，自然就变成了它前面的那个
+				phnowtemp->nextGeomcloseNode->prevGeomcloseNode = phstarttemp;
+				phstarttemp->nextGeomcloseNode = phnowtemp->nextGeomcloseNode;
+				phnowtemp->nextGeomcloseNode = phstarttemp;
+				phstarttemp->prevGeomcloseNode = phnowtemp;
+				phstarttemp->m_AcceptGeomcloseHEAD = true;
+			}
+		}
+	}
+}
+//核心代码，请勿乱动！！
+//核心代码，请勿乱动！！
+//核心代码，请勿乱动！！
+//按照已经确定的顺序封闭环顺序去处理每一个封闭环里面的数据，寻找新的头结点
+void GeomForCut::ChangeEleNodeOfGeomClosed_order(NestResultDataNode*head)
+{
+	GeomCloseHEAD*pHtemp;
+	GeomEleNode*phtemp, *paimnode = NULL, *ptemp;//重要的三个结点参数
 	double m_prevGeomCloseEnd_x, m_prevGeomCloseEnd_y;//上一个封闭环的起止点
 	double temp_end_x, temp_end_y;//当前封闭环数据结点的起点
 	double m_mindistant, m_tempmindistant;//保存两点之间最短距离
@@ -282,8 +464,6 @@ void GeomForCut::ChangeEleNodeOfGeomClosed(NestResultDataNode*head)
 			m_prevGeomCloseEnd_y = pHtemp->prevGeomcloseNode->m_geomclose_startpoint.colse_start_y0;
 
 		}
-		m_prevGeomCloseEnd_x = 0.0;//以机床原点为最开始的起点，以（0,0）为机床原点
-		m_prevGeomCloseEnd_y = 0.0;
 
 		//对于单个封闭环处理
 		//寻找所有数据结点的起点中与上一个封闭环链表中的起止点最靠近的那个结点
@@ -308,12 +488,16 @@ void GeomForCut::ChangeEleNodeOfGeomClosed(NestResultDataNode*head)
 				temp_end_y = ptemp->m_GeomStandData.GeoEle_start_y0;
 				m_tempmindistant = fabs(sqrt(((temp_end_x - m_prevGeomCloseEnd_x)*(temp_end_x - m_prevGeomCloseEnd_x)) + ((temp_end_y - m_prevGeomCloseEnd_y)*(temp_end_y - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
 				if (m_tempmindistant < m_mindistant)
+				{
+					m_mindistant = m_tempmindistant;//把最小值也要更新
 					paimnode = ptemp;//说明现在这结点离上一个封闭环起止点的距离更近些
+
+				}
 			}
 			ptemp = ptemp->nextGeomeleNode;
 		}
 		//至此，一个封闭环链表里面的数据中距离最短的那个结点已经找到，接下来要对封闭环内的结点进行数据调换了
-		if (paimnode==phtemp)//说明找了一圈发现还是最开始的结点距离最短
+		if (paimnode == phtemp)//说明找了一圈发现还是最开始的结点距离最短
 		{
 			//其实这约等于说明都没干
 			pHtemp->FirstGeomele = phtemp;

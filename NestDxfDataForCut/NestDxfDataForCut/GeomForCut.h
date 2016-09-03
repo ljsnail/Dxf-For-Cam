@@ -57,7 +57,12 @@ public:
 	NestResultDataNode*ChangeGeomCloseHEAD(NestResultDataNode*head, GeomCloseHEAD*node);
 	//以上已经把原始数据双向链表上的不同封闭环挂到不同的封闭环头结点上了，但是还涉及单一封闭环内部的数据如何处理，和各个封闭环之间的顺序确定
 	//对于单一封闭环内部而言，查找最左最下的那个起点所在的结点为头结点，然后改变封闭环内部顺序
-	void ChangeEleNodeOfGeomClosed(NestResultDataNode*head);//输入排样结果图头结点，把其内部所有的封闭环里面的基本数据结点按照最左最下的结点为头结点的原则重新排序，并把头结点的起始点放到F头结点中
-	
+	void ChangeEleNodeOfGeomClosed_origin(NestResultDataNode*head);//输入排样图头结点，按照每个封闭环内部数据到00的最短距离寻找头结点，并把这个头结点给以指向封闭环头结点的F节点里。
+	//经过上面之后单一封闭环内部的数据调整已经完毕，现在每一个封闭环里的头结点都是离远点最近的那个点。
+	//确定封闭环顺序之后再确定一遍封闭环内部的头结点，前面先按照到机床原点来确定封闭环的起始数据点
+	void ChangClosedNodeOfNRDXF(NestResultDataNode*head);
+	//经过上面之后，排样结果内的封闭环已经调整好顺序，那么为了使空行程更短，这次应该根据到上一个封闭环最短距离来设置每个封闭环内部的头结点
+	void ChangeEleNodeOfGeomClosed_order(NestResultDataNode*head);//输入排样结果图头结点，按照已经排好的封闭环
+
 };
 

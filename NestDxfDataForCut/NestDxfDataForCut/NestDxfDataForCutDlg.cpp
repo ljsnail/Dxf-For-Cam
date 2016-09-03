@@ -130,42 +130,42 @@ BOOL CNestDxfDataForCutDlg::OnInitDialog()
 
 	// TODO:  在此添加额外的初始化代码
 	//关于OpenGL
-	CRect rect;
-	// Get size and position of the picture control
-	//GetDlgItem(IDC_OPENGL)->GetWindowRect(rect);
-	// Convert screen coordinates to client coordinates
-	ScreenToClient(rect);
-	///////////////////////OPENGL INIT/////////////////////////
-	CWnd *wnd = GetDlgItem(IDC_OPENGL);
-
-	hrenderDC=::GetDC(wnd->m_hWnd);
+	//CRect rect;
+	//// Get size and position of the picture control
+	////GetDlgItem(IDC_OPENGL)->GetWindowRect(rect);
+	//// Convert screen coordinates to client coordinates
 	//ScreenToClient(rect);
-	if (SetWindowPixelFormat(hrenderDC) == FALSE)
-		return 0;
+	///////////////////////OPENGL INIT/////////////////////////
+	//CWnd *wnd = GetDlgItem(IDC_OPENGL);
 
-	if (CreateViewGLContext(hrenderDC) == FALSE)
-		return 0;
+	//hrenderDC=::GetDC(wnd->m_hWnd);
+	////ScreenToClient(rect);
+	//if (SetWindowPixelFormat(hrenderDC) == FALSE)
+	//	return 0;
 
-	glPolygonMode(GL_FRONT, GL_FILL);
-	glPolygonMode(GL_BACK, GL_FILL);
-	///////////////////////////////////////////
-	glEnable(GL_TEXTURE_2D);
-	glShadeModel(GL_SMOOTH);
-	glViewport(0, 0, 259, 231);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(45, 1, 0.1, 100.0);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glShadeModel(GL_SMOOTH); // Enable Smooth Shading
-	glClearColor(0.0f, 0.0f, 0.0f, 0.5f); // Black Background
-	glClearDepth(1.0f); // Depth Buffer Setup
-	glEnable(GL_DEPTH_TEST); // Enables Depth Testing
-	glDepthFunc(GL_LEQUAL); // The Type Of Depth Testing To Do
-	/////////////////////////////////////////////////////////////////////////
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	//SetTimer(1, 10, 0);
+	//if (CreateViewGLContext(hrenderDC) == FALSE)
+	//	return 0;
+
+	//glPolygonMode(GL_FRONT, GL_FILL);
+	//glPolygonMode(GL_BACK, GL_FILL);
+	/////////////////////////////////////////////
+	//glEnable(GL_TEXTURE_2D);
+	//glShadeModel(GL_SMOOTH);
+	//glViewport(0, 0, 259, 231);
+	//glMatrixMode(GL_PROJECTION);
+	//glLoadIdentity();
+	//gluPerspective(45, 1, 0.1, 100.0);
+	//glMatrixMode(GL_MODELVIEW);
+	//glLoadIdentity();
+	//glShadeModel(GL_SMOOTH); // Enable Smooth Shading
+	//glClearColor(0.0f, 0.0f, 0.0f, 0.5f); // Black Background
+	//glClearDepth(1.0f); // Depth Buffer Setup
+	////glEnable(GL_DEPTH_TEST); // Enables Depth Testing
+	//glDepthFunc(GL_LEQUAL); // The Type Of Depth Testing To Do
+	///////////////////////////////////////////////////////////////////////////
+	//glEnableClientState(GL_VERTEX_ARRAY);
+	//glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	////SetTimer(1, 10, 0);
 	////////////////////////////////////////////////////////////////
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
@@ -211,8 +211,8 @@ void CNestDxfDataForCutDlg::OnPaint()
 	{
 		CDialogEx::OnPaint();
 	}
-	//这里可能也会出问题
-	ValidateRect(NULL);
+	////这里可能也会出问题
+	//ValidateRect(NULL);//这里就让窗口一开始就不能显示任何东西
 }
 
 //当用户拖动最小化窗口时系统调用此函数取得光标
@@ -264,7 +264,7 @@ void CNestDxfDataForCutDlg::OnOpenFile()//打开一次就是一张图纸
 		switchkeyword(path);
 	}
 	//以上已经把排样结果DXF里面的数据全部读取了，接下来要对数据进行：封闭环分开挂到不同的封闭环头结点上
-	//AdjustGeomCloseNode(m_pNestrsltdtND);
+	AdjustGeomCloseNode(m_pNestrsltdtND);
 
 }
 //按照打开的文件名路径去搜索LINE ARC CIRCLE
@@ -450,22 +450,30 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 		m_NoIntactGeomCloseHead = m_GeomForCut.JudgeGeomCloseIntact(m_pNestrsltdtND);//判断封闭环是否完整
 		m_pNestrsltdtND = m_GeomForCut.Find_Change_GeomCloseHEAD(m_pNestrsltdtND, m_NoIntactGeomCloseHead);//输入不完整的封闭环结点，寻找配对的封闭环结点，并内部做调整
 	}
+	//再将封闭环清理一遍，将不同的分出去
+	for (m_GeomCloseID = 1; m_GeomCloseID <= m_MaxNumOfGeomClose; m_GeomCloseID++)//保证全部结点已经被处理一遍，且给以跳出的条件
+	{
+		m_pDiffGeomclsDataNode = m_GeomForCut.FindDiffGeomCloseNode(m_pNestrsltdtND);
+		m_GeomForCut.InsertGeomCloseHEAD(m_pNestrsltdtND, m_pDiffGeomclsDataNode);
+	}
+	//对已经分开不同封闭环的数据结点分析其封闭环完整性
 	//以上应该是已经保证了封闭环挂在不同的封闭环F头结点指向的双向链表上，并且每一个封闭环结点内的数据结点都是完整的
 	//以下还有封闭环之间的排序问题，封闭环之间的过渡线问题，圆往回挂的问题。
 	//封闭环内的数据结点处理问题
-	//m_GeomForCut.ChangeEleNodeOfGeomClosed(m_pNestrsltdtND);
+	m_GeomForCut.ChangeEleNodeOfGeomClosed_origin(m_pNestrsltdtND);//可惜这代码没有起到任何效果，原因之一可能是封闭环本身就没有分清楚，其二是处理的算法有问题。
+	m_GeomForCut.ChangClosedNodeOfNRDXF(m_pNestrsltdtND);
+	m_GeomForCut.ChangeEleNodeOfGeomClosed_order(m_pNestrsltdtND);
 	m_IfDataDisposed = true;
 	return m_IfDataDisposed;
 }
 void CNestDxfDataForCutDlg::OnSavefile()
 {
 	// TODO:  在此添加控件通知处理程序代码
-	m_IfDataDisposed = true;
 	if (m_IfDataDisposed)//数据处理完了，保存才有意义
 	{
 		GeomCloseHEAD*Htemp;
 		GeomEleNode*tempnode;
-		ofstream outfile("F:\\MATLAB\\最低点1.txt");
+		ofstream outfile("I:\\MATLAB\\最低点1.txt"); 
 		Htemp = m_pNestrsltdtND->FirstGeomClose;//第一个封闭环F结点
 		while (Htemp)//全部遍历
 		{
@@ -476,9 +484,9 @@ void CNestDxfDataForCutDlg::OnSavefile()
 				double x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
 				double y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
 				double y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
-				outfile << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
-				/*outfile << x0 << "    " << y0 << endl;
-				outfile << x1 << "    " << y1 << endl;*/
+				//outfile << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
+				outfile << x0 << "    " << y0 << endl;
+				outfile << x1 << "    " << y1 << endl;
 				//////////////opengl///////////////////////////
 			
 
