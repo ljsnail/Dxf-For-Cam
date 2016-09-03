@@ -469,11 +469,12 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 void CNestDxfDataForCutDlg::OnSavefile()
 {
 	// TODO:  在此添加控件通知处理程序代码
+
 	if (m_IfDataDisposed)//数据处理完了，保存才有意义
 	{
 		GeomCloseHEAD*Htemp;
 		GeomEleNode*tempnode;
-		ofstream outfile("I:\\MATLAB\\最低点1.txt"); 
+		ofstream outfile("I:\\MATLAB\\最低点11.txt"); 
 		Htemp = m_pNestrsltdtND->FirstGeomClose;//第一个封闭环F结点
 		while (Htemp)//全部遍历
 		{
