@@ -22,6 +22,14 @@ typedef struct BatchHEAD
 	unsigned int m_NumNestrsltDtNode;//这个批次有多少张排样结果图
 	struct NestResultDataNode*FirstNestRsltNode;//指向第一张加工的排样图头结点
 }BatchHEAD;
+//用在禁忌搜索和贪婪算法上的数据结构
+//用来保存最短距离和封闭环内图元节点的数据结构
+typedef struct 
+{
+	GeomCloseHEAD*pminhead;
+	GeomEleNode *pminnode;
+	double m_mindistant;
+}Mindistant_EleNode;
 class GeomForCut
 {
 public:
@@ -31,7 +39,7 @@ public:
 	GeomClose m_geomclose;
 	NestResultDataNode m_nestrsltNode;
 public:
-	
+	GEOMELE m_geomele;
 	BatchHEAD*CreatBatchHEAD(int BatchHEAD_ID);//初始化一块内存为头结点存放，无需参数传入
 	NestResultDataNode*CreatNestResultNode(int NestResult_ID);//初始化一块内存来存放链表结点，无需参数传入
 	//先无规律的把结点挂上
@@ -63,6 +71,54 @@ public:
 	void ChangClosedNodeOfNRDXF(NestResultDataNode*head);
 	//经过上面之后，排样结果内的封闭环已经调整好顺序，那么为了使空行程更短，这次应该根据到上一个封闭环最短距离来设置每个封闭环内部的头结点
 	void ChangeEleNodeOfGeomClosed_order(NestResultDataNode*head);//输入排样结果图头结点，按照已经排好的封闭环
+	//开辟新的算法，将以上三个函数合在一个函数里面
+	//基于禁忌搜索的贪婪算法
+	//输入排样结果DXF的头结点，然后用每一步都在寻找最优的方式来一次性解决封闭环顺序和封闭环过渡点问题
+	void BaseTS_GR_forChangeClosedNodeOfNRDXF(NestResultDataNode*head);
+	void BaseTS_GR_forChangeClosedNodeOfNRDXF1(NestResultDataNode*head);
+
+	//寻找两个封闭之间距离最近的那个过渡节点
+	Mindistant_EleNode *FindMinDstGeomeleNode(NestResultDataNode*head, GeomCloseHEAD*pGMCLSHead);//输入没有置位的第一个封闭环头结点，输出与上一个已经置位的封闭环头结点之间的最短距离的过渡节点
+	//输入一个封闭环的头结点和目标图元节点，调整封闭环内部节点的顺序
+	void ChangeEleNodeForAloneClse(GeomCloseHEAD*pHtemp, GeomEleNode *paimnode);
+	//寻找一个排样dxf中，第一个没有被置位的封闭环头结点
+	GeomCloseHEAD*FindNotAcceptClosedNode(NestResultDataNode*head);
+	//创造一个用来存放离最后一个已经被置位的封闭环最近的内图元结点和最短距离
+	Mindistant_EleNode*CreatMindistant_EleNode(GeomEleNode* pmindst,double m_mindstant);
+
+public:
+	int i,j,a;
+////////////////////////////////////for taiji controller////////////////
+public:
+	//回机床原点
+	bool reback_origin_point(bool gobackorigin);
+	//标定工件坐标原点,可人工控制机床点动
+	bool demarcate(double x, double y, double z, double A, double B, double C);//判断是否到达工件坐标系原点，其中xyz可以人工手动调节机床沿xyz方向运动
+	void RunForXaixs(double x);//人工调节x轴方向的运动；
+	void RunForYaixs(double y);//人工调节Y轴方向的运动；
+	void RunForZaixs(double z);//人工调节Z轴方向的运动；
+	void RunForAaix(double x); //人工调节A轴方向的运动；
+	void RunForBaix(double x); //人工调节B轴方向的运动；
+	void RunForCaix(double x); //人工调节C轴方向的运动；
+	double GetDemarcatePoint(double x, double y, double z, double A, double B, double C);//保存工件坐标系原点相对于机床原点的坐标值
+	
+	//运动过程速度可调节
+	double GetSpeed(double v);//这个是本地API,非太极控制卡提供
+	double SetSpeed(double v);//把本地的获取的速度值传给控制卡
+	double ReceiveEncodeSpeed();//获取机床运动的实际速度值
+	void ChangeSpeed(double v);//这个是本地API,计算所需要改变后的速度值
+	//运动控制
+	bool RunLine(double x0, double y0, double x1, double y1, double v);//输入DXF里面的直线的起始终止点，驱动控制卡发送指令控制机床走直线,其中xy坐标均是原始坐标，没有经过标定后转化，v为速度
+	bool RunArc(double Angle_start, double Angle_end, double r, double Arccent_x, double Arccent_y, double v);//输入DXF里面的ARC的起始角度，终止角度，半径，圆心坐标，运动速度（均为原始参数），驱动控制卡发送指令控制机床走ARC。
+	bool RunCircle( double Arccent_x, double Arccent_y,double R, double v);//输入DXF里面的CIRCLE的圆心坐标，半径，运动速度（均为原始参数），驱动控制卡发送指令控制机床走circle。
+	void Suspend();//运动暂停
+	void ReStart();//运动继续
+	//外围电路
+	bool OpenWaterJet();//开高压水柱
+	bool OpenSandValve();//开沙阀
+	bool OpenWaterPump();//开水泵
+
+
 
 };
 

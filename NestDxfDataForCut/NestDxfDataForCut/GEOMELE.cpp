@@ -20,8 +20,8 @@ GeomStandData GEOMELE::ReadLineData(GLINE line)//ReadLineDataÊÇGeomStandData ÀàĞ
 {
 	//ÊäÈëLINEµÄËÄ¸ö²ÎÊı£¬Êä³öGEOMELEµÄÆğÊ¼ÖÕÖ¹²ÎÊı
 	//Í¬Ê±³õÊ¼»¯
-	m_geomstandData.m_typegeomele = 1;
 	m_geomstandData.GeoEle_start_x0 = line.x0;
+	m_geomstandData.m_typegeomele = 1;
 	m_geomstandData.GeoEle_start_y0 = line.y0;
 	m_geomstandData.GeoEle_start_x1 = line.x1;
 	m_geomstandData.GeoEle_start_y1 = line.y1;
@@ -57,15 +57,18 @@ GeomStandData GEOMELE::ReadArcData(GARC m_arc)
 //¶ÔÓÚÔ²¶øÑÔ£¬ÒòÎªÒÑ¾­ÊÇÒ»¸ö¶ÀÁ¢µÄ·â±ÕÍ¼ÔªÁË£¬ËùÒÔ²»ĞèÒª¸øÆğÖ¹µã£¬µ«Òª±êÊ¶ÆğÊ¼
 GeomStandData GEOMELE::ReadCircleData(GCIRCLE m_circle)
 {	//ÇóÒÔÔ­µãºÍÔ²ĞÄÎªÁ½µãµÄÖ±ÏßÓëÔ²·½³ÌµÄ½»µã£¬È¡×î¿¿½üÔ­µãµÄÄÇ¸ö½»µã
-	double a, b, r;
+	double a, b, r,inter_x,inter_y;
 	a = m_circle.m_Circent_x;
 	b = m_circle.m_Circent_y;
 	r = m_circle.m_Circle_r;
-	m_geomstandData.GeoEle_start_x0 = a - ((a*r) / (sqrt(a*a + b*b)));//×ª»»µÃx½»µã
-	m_geomstandData.GeoEle_start_y0 = (b / a)*m_geomstandData.GeoEle_start_x0;//×ª»»µÃy½»µã
-	m_geomstandData.GeoEle_start_x1 = 99999.0;//ÌØÊâÖµÓÃÀ´ÓëLINE ARCÇø·Ö¿ª
-	m_geomstandData.GeoEle_start_y1 = 99999.0;//ÌØÊâÖµÓÃÀ´ÓëLINE ARCÇø·Ö¿ª
+	inter_x = a - ((a*r) / (sqrt(a*a + b*b)));//×ª»»µÃx½»µã
+	inter_y = (b / a)*inter_x;//×ª»»µÃy½»µã
+	m_geomstandData.GeoEle_start_x0 = inter_x;//Ô²µÄ´ò¿×µãx×ø±ê
+	m_geomstandData.GeoEle_start_y0 = inter_y;//Ô²µÄ´ò¿×µãx×ø±ê
+	m_geomstandData.GeoEle_start_x1 = inter_x;//Ô²µÄÌØÊâĞÔÊ¹µÃÆä¿ªÊ¼½áÊø¶¼ÔÚÍ¬Ò»µã
+	m_geomstandData.GeoEle_start_y1 = inter_y;//Ô²µÄÌØÊâĞÔÊ¹µÃÆä¿ªÊ¼½áÊø¶¼ÔÚÍ¬Ò»µã
 	m_geomstandData.m_circle = m_circle;//±£´æÔ­ÓĞµÄÊı¾İ¡£
+	m_geomstandData.m_circle.m_Circle_Start_Angle = ForCircleStartAngle(inter_x, inter_y, m_circle);
 	m_geomstandData.m_typegeomele = 3;//3ÎªÔ²£¬½«À´ÓÃ×÷switch
 	m_geomstandData.m_GeomEleID++;
 	m_geomstandData.m_GeomCloseID++;//Ã¿¸öÔ²¶¼¿ÉÒÔ¶ÀÁ¢ÎªÒ»¸ö·â±Õ»·
@@ -74,5 +77,46 @@ GeomStandData GEOMELE::ReadCircleData(GCIRCLE m_circle)
 	m_geomstandData.m_IsGeomeleAccept = false;
 	m_geomstandData.m_IsTranData = false;
 	return m_geomstandData;
+}
+double GEOMELE::ForCircleStartAngle(double inter_x, double inter_y, GCIRCLE m_circle)
+{
+	//Òª°´ÕÕËÄ¸öÏóÏŞÈ¥Çø·ÖÊı¾İ
+	double a, b, r;
+	double m_CircleStartAngle, m_abs_y;
+	a = m_circle.m_Circent_x;
+	b = m_circle.m_Circent_y;
+	r = m_circle.m_Circle_r;
+	//Èç¹ûÊÇµÚÒ»ÏóÏŞ
+	if ((a <= inter_x) && (inter_x <= (a + r)) && (b <= inter_y)&&(inter_y <= (b + r)))
+	{
+		m_abs_y = inter_y - b;
+		m_CircleStartAngle = asin((m_abs_y/r)) * 180 / PI;
+
+	}
+	//Èç¹ûÊÇµÚ¶şÏóÏŞ
+	else if (((a - r) <= inter_x) && (inter_x<a) && (b <= inter_y)&&( inter_y <= (b + r)))
+	{
+		m_abs_y = inter_y - b;
+		m_CircleStartAngle = asin((m_abs_y / r)) * 180 / PI;
+		m_CircleStartAngle = 180 - m_CircleStartAngle;
+
+	}
+	//Èç¹ûÊÇµÚÈıÏóÏŞ
+	else if (((a - r) <= inter_x) && (inter_x<a) && ((b - r) <= inter_y)&&(inter_y <b))
+	{
+		m_abs_y = b-inter_y ;
+		m_CircleStartAngle = asin((m_abs_y / r)) * 180 / PI;
+		m_CircleStartAngle = 180 + m_CircleStartAngle;
+
+	}
+	//Èç¹ûÊÇµÚËÄÏóÏŞ
+	else if ((a <= inter_x) && (inter_x <= (a + r)) && ((b - r) <= inter_y)&&(inter_y <b))
+	{
+		m_abs_y = b-inter_y;
+		m_CircleStartAngle = asin((m_abs_y / r)) * 180 / PI;
+		m_CircleStartAngle = 360 - m_CircleStartAngle;
+
+	}
+	return m_CircleStartAngle;
 }
 //ÖÁ´Ë£¬Õû¸öÅÅÑù½á¹ûDXFÍ¼µÄÔªËØ¾Í¶ÁÍêÁË£¬µÚÒ»ÊÖ²ÄÁÏ×¼±¸ÍêÈ«¡£

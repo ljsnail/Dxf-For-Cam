@@ -1,11 +1,14 @@
 #include "stdafx.h"
 #include "GeomForCut.h"
 #define EPSILON 0.018
-#define WEIGHT_ORIGIN 1//封闭环到机床原点距离的权重
-#define WEIGHT_PTP 0//封闭环到另一个封闭环之间距离的权重
+#define WEIGHT_ORIGIN 0.04//封闭环到机床原点距离的权重
+#define WEIGHT_PTP 0.96//封闭环到另一个封闭环之间距离的权重
 GeomForCut::GeomForCut()
 {
 	//BatchHEAD m_batchHead = { 0, NULL };//结构体初始化
+	i = 0;
+	j = 0;
+	a = 0;
 	m_nestrsltNode = { NULL, NULL, NULL, false };//用来作为每次存储值的全局变量，但每次之后都会被重写
 }
 
@@ -104,6 +107,7 @@ BatchHEAD*GeomForCut::AddNestRsltDtNode(BatchHEAD*head, NestResultDataNode*node)
 //寻找不是同一个封闭环的结点,要具有通用性
 GeomEleNode*GeomForCut::FindDiffGeomCloseNode(NestResultDataNode*head)
 {
+	i++;
 	GeomCloseHEAD*Htemp=NULL;
 	GeomEleNode*temp = NULL;
 	int m_CloseID=-1;//初始化
@@ -196,6 +200,7 @@ GeomCloseHEAD* GeomForCut::JudgeGeomCloseIntact(NestResultDataNode*head)
 //判断跟哪个结点是完整的配对,这必须要找得到，否则就出现不封闭的图形了。
 NestResultDataNode*GeomForCut::Find_Change_GeomCloseHEAD(NestResultDataNode*head, GeomCloseHEAD*node)
 {
+	j++;
 	double x0,y0, x1, y1;
 	GeomCloseHEAD*Htemp;
 	GeomEleNode*temp;
@@ -230,8 +235,8 @@ NestResultDataNode*GeomForCut::Find_Change_GeomCloseHEAD(NestResultDataNode*head
 				else if (!(Htemp->nextGeomcloseNode))
 				{
 					Htemp->prevGeomcloseNode->nextGeomcloseNode = NULL;
-					head->FirstGeomClose = Htemp->nextGeomcloseNode;//从此第二个结点才是头结点
 					head->m_NumGeomClose--;//封闭环数要减少一个
+					free(Htemp);//删除这个结点，经过上面的调整，它前后也已经连接上了，已经没用了
 				}
 				else if (Htemp->nextGeomcloseNode)//一般结点
 				{
@@ -256,6 +261,116 @@ NestResultDataNode*GeomForCut::Find_Change_GeomCloseHEAD(NestResultDataNode*head
 	}
 	node->m_IfGeomCloseIntact = true;//这找了一圈了，还没有，只能说明它确实没有合拍的，但如果不给它置位将来会一直循环这个值
 	return head;//把原来的返回，说明并没有找到与它能配对的，这是最坏的情况！！！
+}
+//输入排样dxf头结点，输出封闭环头结点中，最后一个被置位的封闭环头结点
+GeomCloseHEAD*GeomForCut::FindNotAcceptClosedNode(NestResultDataNode*head)
+{
+	GeomCloseHEAD*phtemp=NULL ,*phhtemp= NULL;
+	phtemp = head->FirstGeomClose;
+	//phhtemp = head->FirstGeomClose;
+	//while (phhtemp->nextGeomcloseNode)//找到最后一个封闭环节点
+	//{
+	//	phhtemp = phhtemp->nextGeomcloseNode;
+	//}
+	if( !(phtemp->m_AcceptGeomcloseHEAD))//头结点没有被置位，那么肯定没有被置位的封闭环头结点了
+	{
+		return NULL;
+	}
+	//else if (phhtemp->m_AcceptGeomcloseHEAD)//如果最后一个封闭环节点也是被置位了，那么说明这个双向链表以及处理完了
+	//{
+	//	return phhtemp;
+	//}
+	else
+	{
+		while (phtemp->m_AcceptGeomcloseHEAD)
+		{
+			phtemp = phtemp->nextGeomcloseNode;
+		}
+		return phtemp;
+	}
+}
+//寻找已经置位和没有置位的封闭环节点中的最短距离过渡节点
+//输入封闭排样结果头结点，和一个没有被置位的封闭环头结点
+//输出当前封闭环头结点下，与前面最后一个被置位的封闭头结点中的最短距离的那个图元节点
+Mindistant_EleNode* GeomForCut::FindMinDstGeomeleNode(NestResultDataNode*head, GeomCloseHEAD*pGMCLSHead)//输入一个未置位的封闭环节点
+{
+	Mindistant_EleNode*m_mintempnode=NULL;
+	GeomCloseHEAD*phtemp;//前面最后一个被置位的封闭头结点
+	GeomCloseHEAD*pMINhtemp;//前面最后一个被置位的封闭头结点
+	GeomEleNode* ptempminds;//遍历点
+	GeomEleNode* pmindst;//保存头结点
+	double m_prevGeomCloseEnd_x, m_prevGeomCloseEnd_y;//上一个封闭环的起止点
+	double m_tempGeomCloseEnd_x, m_tempGeomCloseEnd_y;//当前封闭环的暂时起止点
+	double m_mindstant;
+	double m_tempmindstant;
+	ptempminds = pGMCLSHead->FirstGeomele;
+	pmindst = pGMCLSHead->FirstGeomele;
+	//找整个封闭环头结点双向链表里的最后一个被置位的封闭环头结点
+	//phtemp = FindNotAcceptClosedNode(head);
+	phtemp = head->FirstGeomClose;
+	while (phtemp->m_AcceptGeomcloseHEAD)
+		phtemp = phtemp->nextGeomcloseNode;
+	if (!phtemp)//说明这个封闭环里面所有的头结点都还是没有被置位的
+	{
+		m_prevGeomCloseEnd_x = 0.0;//机床原点
+		m_prevGeomCloseEnd_y = 0.0;
+	}
+	else
+	{
+		m_prevGeomCloseEnd_x = phtemp->m_geomclose_startpoint.colse_start_x0;
+		m_prevGeomCloseEnd_y = phtemp->m_geomclose_startpoint.colse_start_y0;
+	}
+	m_tempGeomCloseEnd_x = pGMCLSHead->FirstGeomele->m_GeomStandData.GeoEle_start_x0;
+	m_tempGeomCloseEnd_y = pGMCLSHead->FirstGeomele->m_GeomStandData.GeoEle_start_y0;
+	//pMINhtemp = pGMCLSHead;
+	m_mindstant = fabs(sqrt(((m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)*(m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)) + ((m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y)*(m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+	while (ptempminds)//全部遍历完
+	{
+		m_tempGeomCloseEnd_x = ptempminds->m_GeomStandData.GeoEle_start_x0;
+		m_tempGeomCloseEnd_y = ptempminds->m_GeomStandData.GeoEle_start_y0;
+		m_tempmindstant = fabs(sqrt(((m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)*(m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)) + ((m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y)*(m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+		if (m_tempmindstant<m_mindstant)
+		{
+			m_mindstant = m_tempmindstant;
+			pmindst = ptempminds;
+			//pMINhtemp=
+		}
+		else
+		{
+			;
+		}
+		ptempminds=ptempminds->nextGeomeleNode;
+	}
+	m_mintempnode=CreatMindistant_EleNode(pmindst, m_mindstant);
+	return m_mintempnode;
+}
+//对单个封闭环内部进行节点顺序调整
+void GeomForCut::ChangeEleNodeForAloneClse(GeomCloseHEAD*pHtemp, GeomEleNode*paimnode)
+{
+	
+	GeomEleNode*phtemp,*ptemp;
+	phtemp = pHtemp->FirstGeomele;
+	if (paimnode == phtemp)//说明找了一圈发现还是最开始的结点距离最短
+	{
+		//其实这约等于说明都没干
+		pHtemp->FirstGeomele = phtemp;
+		pHtemp->m_geomclose_startpoint.colse_start_x0 = phtemp->m_GeomStandData.GeoEle_start_x0;//把头结点的起点赋给封闭环头结点里保存，作为下一个封闭环判断的依据
+		pHtemp->m_geomclose_startpoint.colse_start_y0 = phtemp->m_GeomStandData.GeoEle_start_y0;
+	}
+	else 
+		{
+		ptemp = phtemp;
+		while (ptemp->nextGeomeleNode)//找到最后一个结点
+			ptemp = ptemp->nextGeomeleNode;
+		ptemp->nextGeomeleNode = phtemp;//原来ptemp作为尾结点，它的后向指针是指向NULL的
+		phtemp->prevGeomeleNode = ptemp;//原来phtemp作为头结点，它的前向指针是指向NULL的
+		paimnode->prevGeomeleNode->nextGeomeleNode = NULL;//原来paimnode的前向指针是指向它的，但是从此就作为尾结点了
+		paimnode->prevGeomeleNode = NULL;//从此作为头结点
+		pHtemp->FirstGeomele = paimnode;//作为上面的工作，它已经是这个封闭环里的新头结点了
+		pHtemp->m_geomclose_startpoint.colse_start_x0 = paimnode->m_GeomStandData.GeoEle_start_x0;//把新头结点的起点赋给封闭环头结点里保存，作为下一个封闭环判断的依据
+		pHtemp->m_geomclose_startpoint.colse_start_y0 = paimnode->m_GeomStandData.GeoEle_start_y0;
+		}
+		
 }
 //核心代码，请勿乱动！！
 //核心代码，请勿乱动！！
@@ -308,26 +423,8 @@ void GeomForCut::ChangeEleNodeOfGeomClosed_origin(NestResultDataNode*head)
 			ptemp = ptemp->nextGeomeleNode;
 		}
 		//至此，一个封闭环链表里面的数据中距离最短的那个结点已经找到，接下来要对封闭环内的结点进行数据调换了
-		if (paimnode == phtemp)//说明找了一圈发现还是最开始的结点距离最短
-		{
-			//其实这约等于说明都没干
-			pHtemp->FirstGeomele = phtemp;
-			pHtemp->m_geomclose_startpoint.colse_start_x0 = phtemp->m_GeomStandData.GeoEle_start_x0;//把头结点的起点赋给封闭环头结点里保存，作为下一个封闭环判断的依据
-			pHtemp->m_geomclose_startpoint.colse_start_y0 = phtemp->m_GeomStandData.GeoEle_start_y0;
-		}
-		else//说明并不是头结点为最理想的结点
-		{
-			ptemp = phtemp;
-			while (ptemp->nextGeomeleNode)//找到最后一个结点
-				ptemp = ptemp->nextGeomeleNode;
-			ptemp->nextGeomeleNode = phtemp;//原来ptemp作为尾结点，它的后向指针是指向NULL的
-			phtemp->prevGeomeleNode = ptemp;//原来phtemp作为头结点，它的前向指针是指向NULL的
-			paimnode->prevGeomeleNode->nextGeomeleNode = NULL;//原来paimnode的前向指针是指向它的，但是从此就作为尾结点了
-			paimnode->prevGeomeleNode = NULL;//从此作为头结点
-			pHtemp->FirstGeomele = paimnode;//作为上面的工作，它已经是这个封闭环里的新头结点了
-			pHtemp->m_geomclose_startpoint.colse_start_x0 = paimnode->m_GeomStandData.GeoEle_start_x0;//把新头结点的起点赋给封闭环头结点里保存，作为下一个封闭环判断的依据
-			pHtemp->m_geomclose_startpoint.colse_start_y0 = paimnode->m_GeomStandData.GeoEle_start_y0;
-		}
+		
+		ChangeEleNodeForAloneClse(pHtemp, paimnode);
 		pHtemp = pHtemp->nextGeomcloseNode;//第一个封闭环处理完之后，进入第二个封闭环，如此循环最后整个排样dxf里面的封闭环都处理完；除了圆
 	}
 }
@@ -356,13 +453,17 @@ void GeomForCut::ChangClosedNodeOfNRDXF(NestResultDataNode*head)
 	double	m_allmindistant;//保存封闭环双向链表中最后一个已经被置位的节点到没有被置位节点之间的距离和没有被置位的封闭环节点到机床原点的距离之和的最小值
 	double	m_tempallmindistant;//保存封闭环双向链表中最后一个已经被置位的节点到没有被置位节点之间的距离和没有被置位的封闭环节点到机床原点的距离之和的值
 	int m_GeomCloseID = 0;
-	int m_TotalCloseID;//保存总共的封闭环算，但这样会出现一个问题，圆的封闭头结点并没有并入这个双向链表中，那么这里就会个数少，但将来是肯定要先把圆的也并进来，再到这一步的
+	int m_TotalCloseID=0;//保存总共的封闭环算，圆的封闭环数已经并进来了。
 	pHtemp = head->FirstGeomClose;//第一个封闭环头结点
 	pntemp = head->FirstGeomClose;
-	while (pntemp->nextGeomcloseNode)//找到最后一个封闭环节点
+	while (pntemp)//找到最后一个封闭环节点
+	{
+		m_TotalCloseID++;
 		pntemp = pntemp->nextGeomcloseNode;
-	m_TotalCloseID = pntemp->GEOMCLOSE_ID;
-	for (m_GeomCloseID = 1; m_GeomCloseID <m_TotalCloseID; m_GeomCloseID++)//将全部循环封闭环的个数遍
+	}
+	
+	//重点是m_TotalCloseID的数据要对
+	for (m_GeomCloseID = 1; m_GeomCloseID <=m_TotalCloseID; m_GeomCloseID++)//将全部循环封闭环的个数遍
 	{
 		
 		//找到第一个没有还没有被收编的头结点，以它到原点的距离为基准
@@ -512,6 +613,8 @@ void GeomForCut::ChangClosedNodeOfNRDXF(NestResultDataNode*head)
 		
 	}
 }
+
+
 //核心代码，请勿乱动！！
 //核心代码，请勿乱动！！
 //核心代码，请勿乱动！！
@@ -525,7 +628,7 @@ void GeomForCut::ChangeEleNodeOfGeomClosed_order(NestResultDataNode*head)
 	double m_mindistant, m_tempmindistant;//保存两点之间最短距离
 
 	pHtemp = head->FirstGeomClose;//第一个头结点
-	while (pHtemp)//所有封闭环头结点都处理完
+	while (pHtemp->nextGeomcloseNode)//所有封闭环头结点都处理完
 	{
 		if (!(pHtemp->prevGeomcloseNode))//如果这是第一个封闭环
 		{
@@ -553,7 +656,67 @@ void GeomForCut::ChangeEleNodeOfGeomClosed_order(NestResultDataNode*head)
 		{
 			if (!(ptemp->prevGeomeleNode))//如果ptemp是头结点那么目标结点就是头结点
 			{
-				paimnode = phtemp;//如果头结点的起止点是整个封闭环与和上一个封闭环起始点的最短距离的时候，头结点为目标结点
+				//对于圆来说整个封闭环只有一个结点，且为头结点，那么就需要根据前面封闭环的起止点和现在的圆心的直线和圆求交点。
+				if (3==ptemp->m_GeomStandData.m_typegeomele)//圆
+				{
+					double a,b,r,x0,y0,c;
+					double x1,y1,x2,y2;
+					double distance_1, distance_2;
+					a=ptemp->m_GeomStandData.m_circle.m_Circent_x;
+					b =ptemp->m_GeomStandData.m_circle.m_Circent_y;
+					r = ptemp->m_GeomStandData.m_circle.m_Circle_r;
+					x0 = m_prevGeomCloseEnd_x;
+					y0 = m_prevGeomCloseEnd_y;
+					if(x0==a)
+					{
+						x1=a;
+						y1=b-r;
+						x2=a;
+						y2=b+r;
+					}
+					else if(y0==b)
+					{
+						x1=a-r;
+						y1=b;
+						x2=a+r;
+						y2=b;
+					}
+					else
+					{
+						c=sqrt(pow(r,2)/(1+pow(((y0-b)/(x0-a)),2)));
+						x1=a+c;
+						y1=b+((y0-b)/(x0-a))*c;
+						x2=a-c;
+						y2=b-((y0-b)/(x0-a))*c;
+					}
+					distance_1 = fabs(sqrt(((x1 - m_prevGeomCloseEnd_x)*(x1 - m_prevGeomCloseEnd_x)) + ((y1 - m_prevGeomCloseEnd_y)*(y1 - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+					distance_2 = fabs(sqrt(((x2 - m_prevGeomCloseEnd_x)*(x2 - m_prevGeomCloseEnd_x)) + ((y2 - m_prevGeomCloseEnd_y)*(y2 - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+					m_tempmindistant = distance_1;
+					if (distance_2<distance_1)
+					{
+						x1 = x2;
+						y1 = y2;
+						m_tempmindistant = distance_2;
+					}
+					if (m_tempmindistant < m_mindistant)
+					{
+						ptemp->m_GeomStandData.GeoEle_start_x0 = x1;
+						ptemp->m_GeomStandData.GeoEle_start_y0 = y1;
+						ptemp->m_GeomStandData.GeoEle_start_x1 = x1;
+						ptemp->m_GeomStandData.GeoEle_start_y1 = y1;
+						ptemp->m_GeomStandData.m_circle.m_Circle_Start_Angle = m_geomele.ForCircleStartAngle(x1, y1, ptemp->m_GeomStandData.m_circle);
+					}
+					else
+					{
+						paimnode = ptemp;//说明现在这结点离上一个封闭环起止点的距离更近些
+
+					}
+				}
+				else
+				{
+					paimnode = phtemp;//如果头结点的起止点是整个封闭环与和上一个封闭环起始点的最短距离的时候，头结点为目标结点
+
+				}
 
 			}
 			else//如果不是头结点了那么就要进行数据比较了
@@ -572,26 +735,407 @@ void GeomForCut::ChangeEleNodeOfGeomClosed_order(NestResultDataNode*head)
 			ptemp = ptemp->nextGeomeleNode;
 		}
 		//至此，一个封闭环链表里面的数据中距离最短的那个结点已经找到，接下来要对封闭环内的结点进行数据调换了
-		if (paimnode == phtemp)//说明找了一圈发现还是最开始的结点距离最短
+		if (paimnode->prevGeomeleNode)//不是NULL，那么就是说不是从圆那边获得的数据
 		{
-			//其实这约等于说明都没干
-			pHtemp->FirstGeomele = phtemp;
-			pHtemp->m_geomclose_startpoint.colse_start_x0 = phtemp->m_GeomStandData.GeoEle_start_x0;//把头结点的起点赋给封闭环头结点里保存，作为下一个封闭环判断的依据
-			pHtemp->m_geomclose_startpoint.colse_start_y0 = phtemp->m_GeomStandData.GeoEle_start_y0;
-		}
-		else//说明并不是头结点为最理想的结点
-		{
-			ptemp = phtemp;
-			while (ptemp->nextGeomeleNode)//找到最后一个结点
-				ptemp = ptemp->nextGeomeleNode;
-			ptemp->nextGeomeleNode = phtemp;//原来ptemp作为尾结点，它的后向指针是指向NULL的
-			phtemp->prevGeomeleNode = ptemp;//原来phtemp作为头结点，它的前向指针是指向NULL的
-			paimnode->prevGeomeleNode->nextGeomeleNode = NULL;//原来paimnode的前向指针是指向它的，但是从此就作为尾结点了
-			paimnode->prevGeomeleNode = NULL;//从此作为头结点
-			pHtemp->FirstGeomele = paimnode;//作为上面的工作，它已经是这个封闭环里的新头结点了
-			pHtemp->m_geomclose_startpoint.colse_start_x0 = paimnode->m_GeomStandData.GeoEle_start_x0;//把新头结点的起点赋给封闭环头结点里保存，作为下一个封闭环判断的依据
-			pHtemp->m_geomclose_startpoint.colse_start_y0 = paimnode->m_GeomStandData.GeoEle_start_y0;
+			ChangeEleNodeForAloneClse(pHtemp, paimnode);
 		}
 		pHtemp = pHtemp->nextGeomcloseNode;//第一个封闭环处理完之后，进入第二个封闭环，如此循环最后整个排样dxf里面的封闭环都处理完；除了圆
+
 	}
+}
+///////////////////////////////////////////////////////////////////////////////////////////////
+//新算法，基于禁忌搜索的贪心算法
+//如果用这个算法就不要上面的算法了
+//void GeomForCut::BaseTS_GR_forChangeClosedNodeOfNRDXF(NestResultDataNode*head)
+//{
+//	Mindistant_EleNode*pmindistant_EleNode;
+//	GeomCloseHEAD*pHHtemp;//用作暂存头结点
+//
+//	GeomCloseHEAD*pHtemp, *pntemp;//用作遍历的头结点
+//	GeomCloseHEAD*phtemp = NULL;//保存最短距离的那个头节点
+//	GeomEleNode *node,*tempnode;
+//	int m_GeomCloseID, m_TotalCloseID;
+//	double m_mindistant_ptp, m_temp_mindistant_ptp;
+//	pHHtemp = head->FirstGeomClose;
+//	pmindistant_EleNode = FindMinDstGeomeleNode(head, pHHtemp);
+//	node = pmindistant_EleNode->pminnode;
+//	m_mindistant_ptp = pmindistant_EleNode->m_mindistant;
+//	pntemp = head->FirstGeomClose;
+//	while (pntemp->nextGeomcloseNode)//找到最后一个封闭环节点
+//		pntemp = pntemp->nextGeomcloseNode;
+//	m_TotalCloseID = pntemp->GEOMCLOSE_ID;
+//	for (m_GeomCloseID = 1; m_GeomCloseID < m_TotalCloseID; m_GeomCloseID++)//将全部循环封闭环的个数遍
+//	{
+//		pHtemp = head->FirstGeomClose;
+//		while (pHtemp)
+//		{
+//			//寻找两个封闭之间距离最近的那个过渡节点
+//			pmindistant_EleNode = FindMinDstGeomeleNode(head, pHtemp);
+//			tempnode = pmindistant_EleNode->pminnode;
+//			m_temp_mindistant_ptp = pmindistant_EleNode->m_mindistant;
+//
+//			if (m_temp_mindistant_ptp < m_mindistant_ptp)
+//			{
+//				node = tempnode;
+//				phtemp = pHtemp;
+//			}
+//			else
+//			{
+//				;
+//			}
+//			pHtemp = pHtemp->nextGeomcloseNode;
+//		}
+//		//以上以及
+//	}
+//}
+
+void GeomForCut::BaseTS_GR_forChangeClosedNodeOfNRDXF(NestResultDataNode*head)
+{
+	Mindistant_EleNode*pmindistant_EleNode, *pmindistant_EleNode1;
+	GeomEleNode *node, *tempnode;
+	GeomCloseHEAD*pHtemp;//保存封闭环双向链表的头结点
+	GeomCloseHEAD*phnowtemp;//保存封闭环双向链表结点
+	GeomCloseHEAD*phstarttemp = NULL;//保存封闭暂时应该是头结点
+	GeomCloseHEAD*pntemp = NULL;//保存最后一个封闭环节点
+	GeomCloseHEAD*ptemp = NULL;//保存封闭暂时应该是头结点
+	GeomCloseHEAD*ptemp1 = NULL;//保存封闭暂时应该是头结点
+
+	GeomCloseHEAD*pptemp = NULL;//保存封闭暂时应该是头结点
+	double m_origin_x = 0.0;//机床原点
+	double m_origin_y = 0.0;//机床原点
+	double m_prevGeomCloseEnd_x, m_prevGeomCloseEnd_y;//上一个封闭环的起止点
+	double m_tempGeomCloseEnd_x, m_tempGeomCloseEnd_y;//当前封闭环的起止点
+	double m_mindistant_ptp;//保存封闭环双向链表中最后一个已经被置位的节点到第一个没有被置位的节点之间的距离
+	double m_temp_mindistant_ptp;//暂时保存封闭环双向链表中最后一个已经被置位的节点到封闭环里没有被置位的节点之间的距离
+	int m_GeomCloseID = 0;
+	int m_TotalCloseID;//保存总共的封闭环算，但这样会出现一个问题，圆的封闭头结点并没有并入这个双向链表中，那么这里就会个数少，但将来是肯定要先把圆的也并进来，再到这一步的
+	pHtemp = head->FirstGeomClose;//第一个封闭环头结点
+	pntemp = head->FirstGeomClose;
+	while (pntemp->nextGeomcloseNode)//找到最后一个封闭环节点
+		pntemp = pntemp->nextGeomcloseNode;
+	m_TotalCloseID = pntemp->GEOMCLOSE_ID;
+	for (m_GeomCloseID = 1; m_GeomCloseID <m_TotalCloseID; m_GeomCloseID++)//将全部循环封闭环的个数遍
+	{
+
+		//找到第一个没有还没有被收编的头结点，以它到原点的距离为基准
+		ptemp = head->FirstGeomClose;
+		//注意要放置出现一个问题，就是当for循环还没有跳出的时候，里面已经全部是被置位的了，那么在下面while里面就是死循环
+		//while ((ptemp->m_AcceptGeomcloseHEAD)&&(ptemp!=NULL))//找到第一个没有被置位的封闭环节点,&&(ptemp!=NULL)是破解上面情况死循环的利器
+		while (ptemp->m_AcceptGeomcloseHEAD)
+		{
+			ptemp = ptemp->nextGeomcloseNode;//出现错误，它的下一个还是它本身
+			if (!ptemp)//当ptemp为NULL的时候，直接跳出整个循环
+			{
+				break;
+			}
+			else
+			{
+				;
+			}
+		}
+		//ptemp为第一个没有被收编的头结点
+		if (ptemp)//当ptemp不为NULL的时候，才有意义
+		{
+			pmindistant_EleNode = FindMinDstGeomeleNode(head, ptemp);
+			node = pmindistant_EleNode->pminnode;
+			m_mindistant_ptp = pmindistant_EleNode->m_mindistant;
+			phstarttemp = ptemp;
+			ptemp1 = ptemp;
+			while (ptemp1)
+			{
+				pmindistant_EleNode1 = FindMinDstGeomeleNode(head, ptemp1);
+				tempnode = pmindistant_EleNode1->pminnode;
+				m_temp_mindistant_ptp = pmindistant_EleNode1->m_mindistant;
+				if (m_temp_mindistant_ptp<m_mindistant_ptp)
+				{
+					node = tempnode;
+					m_mindistant_ptp = m_temp_mindistant_ptp;
+					phstarttemp = ptemp1;
+				}
+				ptemp1 = ptemp1->nextGeomcloseNode;
+			}
+		
+
+
+
+			//if (!(ptemp->prevGeomcloseNode))//如果ptemp是封闭环头结点且没有被置位，那么它前面节点的起始点为机床原点即是0.0，0.0
+			//{
+			//	m_prevGeomCloseEnd_x = 0.0;
+			//	m_prevGeomCloseEnd_y = 0.0;
+			//}
+			//else//说明ptemp 不是封闭环头结点，那么就该有前向节点
+			//{
+			//	m_prevGeomCloseEnd_x = ptemp->prevGeomcloseNode->m_geomclose_startpoint.colse_start_x0;
+			//	m_prevGeomCloseEnd_y = ptemp->prevGeomcloseNode->m_geomclose_startpoint.colse_start_y0;
+			//}
+			//m_tempGeomCloseEnd_x = ptemp->m_geomclose_startpoint.colse_start_x0;
+			//m_tempGeomCloseEnd_y = ptemp->m_geomclose_startpoint.colse_start_y0;
+			////第一个没被置位的封闭环的起始点到机床原点的距离
+			//m_mindistant_origin = fabs(sqrt(((m_tempGeomCloseEnd_x - m_origin_x)*(m_tempGeomCloseEnd_x - m_origin_x)) + ((m_tempGeomCloseEnd_y - m_origin_y)*(m_tempGeomCloseEnd_y - m_origin_y))));//这里求的是两点之间的最短距离
+			//m_mindistant_ptp = fabs(sqrt(((m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)*(m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)) + ((m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y)*(m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+			//m_allmindistant = m_mindistant_origin*WEIGHT_ORIGIN + m_mindistant_ptp*WEIGHT_PTP;//求最短距离
+			//phstarttemp = ptemp;
+			////先要找到这个最后一个没有被置位的封闭环节点
+			//phnowtemp = head->FirstGeomClose;
+			//while (phnowtemp)//全部遍历一遍，需求和前一封闭环靠的最近的那个封闭环
+			//{
+			//	if (!(phnowtemp->prevGeomcloseNode))//说明是头结点
+			//	{
+			//		if (!(phnowtemp->m_AcceptGeomcloseHEAD))//说明这个封闭环还没有被规划好，这段代码的目的是得到一个暂时的最小值
+			//		{
+			//			m_prevGeomCloseEnd_x = 0.0;
+			//			m_prevGeomCloseEnd_y = 0.0;
+			//			m_tempGeomCloseEnd_x = phnowtemp->m_geomclose_startpoint.colse_start_x0;
+			//			m_tempGeomCloseEnd_y = phnowtemp->m_geomclose_startpoint.colse_start_y0;
+			//			//到原点的距离
+			//			m_tempmindistant_origin = fabs(sqrt(((m_tempGeomCloseEnd_x - m_origin_x)*(m_tempGeomCloseEnd_x - m_origin_x)) + ((m_tempGeomCloseEnd_y - m_origin_y)*(m_tempGeomCloseEnd_y - m_origin_y))));//这里求的是两点之间的最短距离
+			//			//两个封闭环之间的距离
+			//			m_tempmindistant_ptp = fabs(sqrt(((m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)*(m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)) + ((m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y)*(m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+			//			//求最短距离
+			//			m_tempallmindistant = m_tempmindistant_origin*WEIGHT_ORIGIN + m_tempmindistant_ptp*WEIGHT_PTP;
+			//			if (m_tempallmindistant < m_allmindistant)//如果这个比所在的最小还要小，那么当前应该是它最小
+			//			{
+			//				m_allmindistant = m_tempallmindistant;
+			//				phstarttemp = phnowtemp;
+			//			}
+			//		}
+			//	}
+			//	else//说明不是头结点了
+			//	{
+			//		if (!(phnowtemp->m_AcceptGeomcloseHEAD))//说明这个封闭环还没有被规划好
+			//		{
+			//			//找到第一个没有还没有被收编的头结点，以它到原点的距离为基准
+			//			pptemp = head->FirstGeomClose;
+			//			while (pptemp->m_AcceptGeomcloseHEAD)//找到第一个没有被置位的封闭环节点
+			//				pptemp = pptemp->nextGeomcloseNode;
+			//			if (!(pptemp->prevGeomcloseNode))//如果ptemp是封闭环头结点且没有被置位，那么它前面节点的起始点为机床原点即是0.0，0.0
+			//			{
+			//				m_prevGeomCloseEnd_x = 0.0;
+			//				m_prevGeomCloseEnd_y = 0.0;
+			//			}
+			//			else//说明ptemp 不是封闭环头结点，那么就该有前向节点
+			//			{
+			//				m_prevGeomCloseEnd_x = pptemp->prevGeomcloseNode->m_geomclose_startpoint.colse_start_x0;
+			//				m_prevGeomCloseEnd_y = pptemp->prevGeomcloseNode->m_geomclose_startpoint.colse_start_y0;
+			//			}
+			//			m_tempGeomCloseEnd_x = phnowtemp->m_geomclose_startpoint.colse_start_x0;
+			//			m_tempGeomCloseEnd_y = phnowtemp->m_geomclose_startpoint.colse_start_y0;
+			//			//到原点的距离
+			//			m_tempmindistant_origin = fabs(sqrt(((m_tempGeomCloseEnd_x - m_origin_x)*(m_tempGeomCloseEnd_x - m_origin_x)) + ((m_tempGeomCloseEnd_y - m_origin_y)*(m_tempGeomCloseEnd_y - m_origin_y))));//这里求的是两点之间的最短距离
+			//			//两个封闭环之间的距离
+			//			m_tempmindistant_ptp = fabs(sqrt(((m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)*(m_tempGeomCloseEnd_x - m_prevGeomCloseEnd_x)) + ((m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y)*(m_tempGeomCloseEnd_y - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+			//			//求最短距离
+			//			m_tempallmindistant = m_tempmindistant_origin*WEIGHT_ORIGIN + m_tempmindistant_ptp*WEIGHT_PTP;
+			//			if (m_tempallmindistant < m_allmindistant)//如果这个比所在的最小还要小，那么当前应该是它最小
+			//			{
+			//				m_allmindistant = m_tempallmindistant;
+			//				phstarttemp = phnowtemp;
+			//			}
+			//		}
+				//}
+
+				//phnowtemp = phnowtemp->nextGeomcloseNode;
+			
+			//以上是循环一遍之后找到的目前来说最小的一个封闭环头结点
+			if (!(phstarttemp->prevGeomcloseNode))//如果是头结点，找了一遍发现还是头结点为最靠近的封闭环节节点
+			{
+				head->FirstGeomClose = phstarttemp;//还是它为头结点
+				//为新算法独有
+				ChangeEleNodeForAloneClse(phstarttemp, node);
+				phstarttemp->m_AcceptGeomcloseHEAD = true;//从此该节点就被固定了
+			}
+			else//说明不是头结点了，那么这个节点要挂的目前最后一个m_AcceptGeomcloseHEAD没有被设置为true的封闭环节点后面
+			{
+				//先要找到这个最后一个没有被置位的封闭环节点
+				phnowtemp = head->FirstGeomClose;
+				while (phnowtemp->nextGeomcloseNode->m_AcceptGeomcloseHEAD)//当phnowtemp的下一个封闭环头结点不再是true的时候，那么phnowtemp就应该是最后一个m_AcceptGeomcloseHEAD是true的，也就是已经被安排了顺序的
+					phnowtemp = phnowtemp->nextGeomcloseNode;
+				//经过上面的寻找，现在phnowtemp是最后一个是true的节点，而phstarttemp就是要挂到phnowtemp后面
+				//本来是每次调整双向链表的节点位置时候，都要考虑该节点是不是头尾还是一般节点的，但这里可以不用考虑头结点了
+				if (!(phstarttemp->nextGeomcloseNode))//如果是尾节点
+				{
+					//还有判断phstarttemp的前一个是不是倒数第二个，如果是则直接挂上去，不要变，否则死循环
+					if (phnowtemp->nextGeomcloseNode == phstarttemp)//说明最后一个已经置位的封闭环头结点的后一个节点本身就是phstarttemp
+					{
+						phstarttemp->m_AcceptGeomcloseHEAD = true;//没有位置给它了，直接置位
+						//为新算法独有
+						ChangeEleNodeForAloneClse(phstarttemp, node);
+
+					}
+					else
+					{
+						phnowtemp->nextGeomcloseNode->prevGeomcloseNode = phstarttemp;
+						phstarttemp->prevGeomcloseNode->nextGeomcloseNode = NULL;
+						phstarttemp->nextGeomcloseNode = phnowtemp->nextGeomcloseNode;
+						phnowtemp->nextGeomcloseNode = phstarttemp;
+						phstarttemp->prevGeomcloseNode = phnowtemp;
+						phstarttemp->m_AcceptGeomcloseHEAD = true;
+						//为新算法独有
+						ChangeEleNodeForAloneClse(phstarttemp, node);
+					}
+				}
+				else//一般节点
+				{
+					phstarttemp->prevGeomcloseNode->nextGeomcloseNode = phstarttemp->nextGeomcloseNode;//它原来前面的后面本来是它的，但它走了，自然就变成了它后面的那个
+					phstarttemp->nextGeomcloseNode->prevGeomcloseNode = phstarttemp->prevGeomcloseNode;//它原来后面的前面本来是它的，但它走了，自然就变成了它前面的那个
+					phnowtemp->nextGeomcloseNode->prevGeomcloseNode = phstarttemp;
+					phstarttemp->nextGeomcloseNode = phnowtemp->nextGeomcloseNode;
+					phnowtemp->nextGeomcloseNode = phstarttemp;
+					phstarttemp->prevGeomcloseNode = phnowtemp;
+					phstarttemp->m_AcceptGeomcloseHEAD = true;
+					//为新算法独有
+					ChangeEleNodeForAloneClse(phstarttemp, node);
+				}
+			}
+		}
+		else//当ptemp为NULL的时候，啥也不干，就耗完for就好了
+		{
+			;
+		}
+
+	}
+}
+void GeomForCut::BaseTS_GR_forChangeClosedNodeOfNRDXF1(NestResultDataNode*head)
+{
+	
+	GeomCloseHEAD*pHtemp, *phtemp, *pminhtemp,*phnowtemp;
+	GeomEleNode*node, *temp,*minnode;
+	double m_prev_x, m_prev_y,m_temp_x,m_temp_y;
+	double m_temp_mindistant_inclose, m_mindistant_inclose;
+	double m_mindistant,m_temp_mindistant;
+	int m_GeomCloseID, m_TotalCloseID;
+	
+	phtemp = head->FirstGeomClose;
+	while (phtemp->nextGeomcloseNode)//找到最后一个封闭环节点
+		phtemp = phtemp->nextGeomcloseNode;
+	m_TotalCloseID = phtemp->GEOMCLOSE_ID;
+	for (m_GeomCloseID = 1; m_GeomCloseID <m_TotalCloseID; m_GeomCloseID++)//将全部循环封闭环的个数遍
+	{
+		pHtemp = head->FirstGeomClose;
+		while (pHtemp->m_AcceptGeomcloseHEAD)//找到第一个没被置位的封闭环头结点
+		{
+			pHtemp = pHtemp->nextGeomcloseNode;
+			if (!pHtemp)//当ptemp为NULL的时候，直接跳出整个循环
+			{
+				break;
+			}
+			else
+			{
+				;
+			}
+		}
+		if (pHtemp)
+		{
+			//以上处理后的pHtemp为整个链中的第一个没被置位的封闭环头结点
+			if (!(pHtemp->prevGeomcloseNode))//说明还是头结点
+			{
+				m_prev_x = 0.0;
+				m_prev_y = 0.0;
+			}
+			else
+			{
+				m_prev_x = pHtemp->prevGeomcloseNode->m_geomclose_startpoint.colse_start_x0;
+				m_prev_y = pHtemp->prevGeomcloseNode->m_geomclose_startpoint.colse_start_y0;
+			}
+			node = pHtemp->FirstGeomele;
+			m_temp_x = node->m_GeomStandData.GeoEle_start_x0;
+			m_temp_y = node->m_GeomStandData.GeoEle_start_y0;
+			m_mindistant_inclose = fabs(sqrt(((m_temp_x - m_prev_x)*(m_temp_x - m_prev_x)) + ((m_temp_y - m_prev_y)*(m_temp_y - m_prev_y))));//这里求的是两点之间的最短距离
+			//此时的pHtemp为整个链中的第一个没被置位的封闭环头结点
+			m_mindistant = m_mindistant_inclose;//整个封闭环头结点链表中的未置位的头结点到最后一个最被置位的封闭环头结点的起始点的最短距离
+			pminhtemp = pHtemp;
+			minnode = node;
+			while (pHtemp)//开始两层搜索了
+			{
+				temp = pHtemp->FirstGeomele;
+				while (temp)//同一个封闭环里面的所有图元节点遍历
+				{
+					m_temp_x = temp->m_GeomStandData.GeoEle_start_x0;
+					m_temp_y = temp->m_GeomStandData.GeoEle_start_y0;
+					m_temp_mindistant_inclose = fabs(sqrt(((m_temp_x - m_prev_x)*(m_temp_x - m_prev_x)) + ((m_temp_y - m_prev_y)*(m_temp_y - m_prev_y))));//这里求的是两点之间的最短距离
+					if (m_temp_mindistant_inclose<m_mindistant_inclose)
+					{
+						m_mindistant_inclose = m_temp_mindistant_inclose;
+						node = temp;
+					}
+					temp = temp->nextGeomeleNode;
+				}
+				//上个while是寻找当前未置位封闭环头结点里到最后一个已经置位的封闭环头结点的最短距离
+				m_temp_mindistant = m_mindistant_inclose;
+				if (m_temp_mindistant < m_mindistant)//说明这次的封闭环的距离要比之前的小
+				{
+					m_mindistant = m_temp_mindistant;
+					pminhtemp = pHtemp;
+					minnode = node;
+				}
+				pHtemp = pHtemp->nextGeomcloseNode;
+			}
+			//经过以上，那么已经找到在当前已经被置位的封闭环头结点下，离它最近的那个未置位的封闭环到达是哪个，和那个未置位的封闭环里的那个头结点
+			//以上是循环一遍之后找到的目前来说最小的一个封闭环头结点
+			if (!(pminhtemp->prevGeomcloseNode))//如果是头结点，找了一遍发现还是头结点为最靠近的封闭环节节点
+			{
+				head->FirstGeomClose = pminhtemp;//还是它为头结点
+				//为新算法独有
+				ChangeEleNodeForAloneClse(pminhtemp, minnode);
+				pminhtemp->m_AcceptGeomcloseHEAD = true;//从此该节点就被固定了
+			}
+			else//说明不是头结点了，那么这个节点要挂的目前最后一个m_AcceptGeomcloseHEAD没有被设置为true的封闭环节点后面
+			{
+				//先要找到这个最后一个没有被置位的封闭环节点
+				phnowtemp = head->FirstGeomClose;
+				while (phnowtemp->nextGeomcloseNode->m_AcceptGeomcloseHEAD)//当phnowtemp的下一个封闭环头结点不再是true的时候，那么phnowtemp就应该是最后一个m_AcceptGeomcloseHEAD是true的，也就是已经被安排了顺序的
+					phnowtemp = phnowtemp->nextGeomcloseNode;
+				//经过上面的寻找，现在phnowtemp是最后一个是true的节点，而phstarttemp就是要挂到phnowtemp后面
+				//本来是每次调整双向链表的节点位置时候，都要考虑该节点是不是头尾还是一般节点的，但这里可以不用考虑头结点了
+				if (!(pminhtemp->nextGeomcloseNode))//如果是尾节点
+				{
+					//还有判断phstarttemp的前一个是不是倒数第二个，如果是则直接挂上去，不要变，否则死循环
+					if (phnowtemp->nextGeomcloseNode == pminhtemp)//说明最后一个已经置位的封闭环头结点的后一个节点本身就是phstarttemp
+					{
+						pminhtemp->m_AcceptGeomcloseHEAD = true;//没有位置给它了，直接置位
+						//为新算法独有
+						ChangeEleNodeForAloneClse(pminhtemp, minnode);
+
+					}
+					else
+					{
+						phnowtemp->nextGeomcloseNode->prevGeomcloseNode = pminhtemp;
+						pminhtemp->prevGeomcloseNode->nextGeomcloseNode = NULL;
+						pminhtemp->nextGeomcloseNode = phnowtemp->nextGeomcloseNode;
+						phnowtemp->nextGeomcloseNode = pminhtemp;
+						pminhtemp->prevGeomcloseNode = phnowtemp;
+						pminhtemp->m_AcceptGeomcloseHEAD = true;
+						//为新算法独有
+						ChangeEleNodeForAloneClse(pminhtemp, minnode);
+					}
+				}
+				else//一般节点
+				{
+					pminhtemp->prevGeomcloseNode->nextGeomcloseNode = pminhtemp->nextGeomcloseNode;//它原来前面的后面本来是它的，但它走了，自然就变成了它后面的那个
+					pminhtemp->nextGeomcloseNode->prevGeomcloseNode = pminhtemp->prevGeomcloseNode;//它原来后面的前面本来是它的，但它走了，自然就变成了它前面的那个
+					phnowtemp->nextGeomcloseNode->prevGeomcloseNode = pminhtemp;
+					pminhtemp->nextGeomcloseNode = phnowtemp->nextGeomcloseNode;
+					phnowtemp->nextGeomcloseNode = pminhtemp;
+					pminhtemp->prevGeomcloseNode = phnowtemp;
+					pminhtemp->m_AcceptGeomcloseHEAD = true;
+					//为新算法独有
+					ChangeEleNodeForAloneClse(pminhtemp, minnode);
+				}
+			}
+		}
+		else
+		{
+			;
+		}
+	}
+		
+
+}
+//创造一个用来存放离最后一个已经被置位的封闭环最近的内图元结点和最短距离
+Mindistant_EleNode*GeomForCut::CreatMindistant_EleNode(GeomEleNode* pmindst, double m_mindstant)
+{
+	Mindistant_EleNode*newNode = (Mindistant_EleNode*)malloc(sizeof(Mindistant_EleNode));
+	newNode->m_mindistant = m_mindstant;
+	newNode->pminnode = pmindst;
+	return newNode;
 }

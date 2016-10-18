@@ -11,7 +11,7 @@ GeomClose::GeomClose()
 GeomClose::~GeomClose()
 {
 }
-//初始化一块内存来存放整个图元标志的数据格式GeomStandData
+//初始化一块内存来存放整个图元标准的数据格式GeomStandData
 //最底层的一个链表
 GeomEleNode* GeomClose::CreatGeomEleNode(GeomStandData m_geomstandData)
 {
@@ -250,8 +250,8 @@ GeomStandData GeomClose::DataSwap(GeomStandData m_geomstandData)
 	m_tempData.GeoEle_start_x1 = m_geomstandData.GeoEle_start_x0;
 	m_tempData.GeoEle_start_y0 = m_geomstandData.GeoEle_start_y1;
 	m_tempData.GeoEle_start_y1 = m_geomstandData.GeoEle_start_y0;
-	m_tempData.m_arc.m_ArcAngle_start = m_geomstandData.m_arc.m_ArcAngle_end;//对于ARC而言，数据转换了，那么起始角和终止角要调转，否则切割的过程会跳到另一头开始切。
-	m_tempData.m_arc.m_ArcAngle_start = m_geomstandData.m_arc.m_ArcAngle_end;//相当于二次赋值
+	//m_tempData.m_arc.m_ArcAngle_start = m_geomstandData.m_arc.m_ArcAngle_end;//对于ARC而言，数据转换了，那么起始角和终止角要调转，否则切割的过程会跳到另一头开始切。
+	//m_tempData.m_arc.m_ArcAngle_end = m_geomstandData.m_arc.m_ArcAngle_start;//相当于二次赋值
 	m_tempData.m_line.x0 = m_geomstandData.m_line.x1;
 	m_tempData.m_line.x1 = m_geomstandData.m_line.x0;
 	m_tempData.m_line.y0 = m_geomstandData.m_line.y1;

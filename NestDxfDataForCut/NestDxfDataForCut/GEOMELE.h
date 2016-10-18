@@ -14,9 +14,11 @@ typedef struct
 	double Arccent_x, Arccent_y;//保留ARC的圆心
 	double m_Arc_r;//ARC的半径
 	double m_ArcAngle_start, m_ArcAngle_end;//ARC的起止角度
+	
 }GARC;
 typedef struct
 {
+	double m_Circle_Start_Angle;//转换到切割的时候，切割圆时候的起始角。
 	double m_Circent_x, m_Circent_y;//CIRCLE的圆心
 	double m_Circle_r;//CIRCLE的半径
 }GCIRCLE;
@@ -54,6 +56,7 @@ public://这个类要实现的功能
     GeomStandData ReadLineData(GLINE m_line);//输入dxf里面LINE的四个参数，输出
 	GeomStandData ReadArcData(GARC m_arc);//读取ARC的参数，共有五个参数，但是要转为图元的统一起点和终点，用来将来寻找封闭环用
 	GeomStandData ReadCircleData(GCIRCLE m_circle);//对于圆而言，那么他就是独立的封闭环，给它附一个特别的值如99999，下个类判断到这个值的时候，直接让他是一个封闭环就好
-	
+	//对于圆来说，要根据其输入的打孔点坐标，求得切割时候需要的起始角参数
+	double ForCircleStartAngle(double inter_x, double inter_y,GCIRCLE m_circle);
 };
 

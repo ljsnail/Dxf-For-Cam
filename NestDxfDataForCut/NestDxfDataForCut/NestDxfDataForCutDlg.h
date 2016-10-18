@@ -78,7 +78,6 @@ public:
 	GeomEleNode*m_pDiffGeomclsDataNode;//不同封闭环的数据结点
 	GeomEleNode*m_pTempGeomDataNode;
 	bool m_IfDataDisposed;//数据是否已经处理完毕
-	int m_MaxNumOfGeomClose;
 	
 	afx_msg void OnSimulation();
 	//opengl
@@ -96,4 +95,7 @@ public:
 	GLINE ReadDataForOGL(GeomEleNode*node);
 	afx_msg void OnMouseHWheel(UINT nFlags, short zDelta, CPoint pt);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg void OnSavearc();
+	afx_msg void Savtran();
+	afx_msg void Savecircle();
 };

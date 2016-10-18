@@ -67,7 +67,6 @@ CNestDxfDataForCutDlg::CNestDxfDataForCutDlg(CWnd* pParent /*=NULL*/)
 	m_pBatchHead = NULL;//未指向任何地方
 	m_pNestrsltdtND = NULL;
 	m_pGeomclsHead=NULL;
-	m_MaxNumOfGeomClose = 0;
 	m_IfDataDisposed = false;
 	//Onstart();//放这里等效于点击了start的button
 	//opengl
@@ -94,6 +93,9 @@ BEGIN_MESSAGE_MAP(CNestDxfDataForCutDlg, CDialogEx)
 	ON_WM_TIMER()
 	ON_WM_MOUSEHWHEEL()
 	ON_WM_MOUSEMOVE()
+	ON_BN_CLICKED(IDC_SAVEarc, &CNestDxfDataForCutDlg::OnSavearc)
+	ON_BN_CLICKED(IDC_SAVTran, &CNestDxfDataForCutDlg::Savtran)
+	ON_BN_CLICKED(IDC_SAVECircle, &CNestDxfDataForCutDlg::Savecircle)
 END_MESSAGE_MAP()
 
 
@@ -239,6 +241,11 @@ void CNestDxfDataForCutDlg::OnOpenFile()//打开一次就是一张图纸
 	NestResult_ID++;
 	m_pNestrsltdtND = m_GeomForCut.CreatNestResultNode(NestResult_ID);//在初始化时候记录这是打开的第几张图纸
 	m_pBatchHead = m_GeomForCut.AddNestRsltDtNode(m_pBatchHead, m_pNestrsltdtND);//把新生成的结点挂在生产批次指向的图纸双向链表中
+	//生成一个只存放圆的排样结果图结点
+	m_pNestNode_forCircle = m_GeomForCut.CreatNestResultNode(NestResult_ID);//输入上一张图纸的ID，因为这里只是先划一块区域来挂圆，ID不需要改变
+	//把只存放圆的排样结果图结点挂到生产批次结点上
+	m_pBatchHead = m_GeomForCut.AddNestRsltDtNode(m_pBatchHead, m_pNestNode_forCircle);//新的图纸双向链表结点挂在同一生产批次F头结点上
+
 	//创建记录图元结点的F头结点
 	GEOMCLOSE_ID++;
 	m_pGeomclsHead = m_GeomClose.CreatGeomCloseHEAD(GEOMCLOSE_ID);
@@ -327,11 +334,13 @@ void CNestDxfDataForCutDlg::switchkeyword(CString path)
 				//创立记录基本图元的双向链表,把获得的数据保存起来
 				//圆的特殊性是因为它本身就是一个封闭环,先让它挂到另一张排样结果图中，读取完数据之后再挂回来
 				GEOMCLOSE_ID++;//自己就可以增加一个封闭环
-				//生成一个排样结果图结点
-				m_pNestNode_forCircle = m_GeomForCut.CreatNestResultNode(NestResult_ID);//输入上一张图纸的ID，因为这里只是先划一块区域来挂圆，ID不需要改变
-				//把图结点挂到生产批次结点上
-				m_pBatchHead = m_GeomForCut.AddNestRsltDtNode(m_pBatchHead, m_pNestNode_forCircle);//新的图纸双向链表结点挂在同一生产批次F头结点上
-				//生成一个封闭环结点
+				//////////////////////////////////////////////////////////////////////////////////
+				////生成一个排样结果图结点
+				//m_pNestNode_forCircle = m_GeomForCut.CreatNestResultNode(NestResult_ID);//输入上一张图纸的ID，因为这里只是先划一块区域来挂圆，ID不需要改变
+				////把图结点挂到生产批次结点上
+				//m_pBatchHead = m_GeomForCut.AddNestRsltDtNode(m_pBatchHead, m_pNestNode_forCircle);//新的图纸双向链表结点挂在同一生产批次F头结点上
+				////生成一个封闭环结点
+				////////////////////////////////////////////////////////////////////////////////////
 				m_pGeomclsHead_forCircle = m_GeomClose.CreatGeomCloseHEAD(GEOMCLOSE_ID);
 				//把封闭环结点挂到排样结果图结点上
 				m_pNestNode_forCircle = m_GeomForCut.AddGeomCloseHeadNode(m_pNestNode_forCircle, m_pGeomclsHead_forCircle);//输入指向封闭环结点的排样dxf结果图结点，和封闭环结点，把封闭环结点挂到排样dxf结果图上，这里已经包含了三层结构
@@ -380,6 +389,7 @@ GLINE CNestDxfDataForCutDlg::AcceptDxfLineData(int symbol, CString m_readgeomele
 }
 GARC CNestDxfDataForCutDlg::AcceptDxfArcData(int symbol, CString m_readgeomele, CStdioFile &m_dxfofnestresult)
 {
+	
 	switch (symbol)
 	{
 	case 10://圆心x
@@ -434,6 +444,11 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	//以上已经把排样结果DXF里面的数据全部读取了，接下来要对数据进行：封闭环分开挂到不同的封闭环头结点上
 	int m_GeomCloseID;//处理了的封闭环的个数
 	GeomEleNode*temp;
+	GeomCloseHEAD*Htemp, *m_FindTheEndClosed, *m_CircleFirstClosed=NULL;
+	int m_MaxNumOfGeomClose, m_MAXNumOfGeomClose;
+
+	
+	
 	temp = head->FirstGeomClose->FirstGeomele;//最原始链表的第一个数据结点
 	while (temp->nextGeomeleNode)//找到最原始链表的最后一个数据结点
 		temp = temp->nextGeomeleNode;
@@ -460,35 +475,112 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	//以上应该是已经保证了封闭环挂在不同的封闭环F头结点指向的双向链表上，并且每一个封闭环结点内的数据结点都是完整的
 	//以下还有封闭环之间的排序问题，封闭环之间的过渡线问题，圆往回挂的问题。
 	//封闭环内的数据结点处理问题
+	//要把圆加入到排样图里面
+	if ((m_pNestrsltdtND->nextNestResultDataNode->FirstGeomClose))//如果有圆的排样图
+	{
+		m_CircleFirstClosed = m_pNestrsltdtND->nextNestResultDataNode->FirstGeomClose;//全部是圆的那个封闭环双向链表的第一个封闭环头结点
+		m_FindTheEndClosed = m_pNestrsltdtND->FirstGeomClose;
+
+		while (m_FindTheEndClosed->nextGeomcloseNode)//找到最后一个直线圆弧组成的封闭环
+		{
+			m_FindTheEndClosed = m_FindTheEndClosed->nextGeomcloseNode;
+		}
+		m_FindTheEndClosed->nextGeomcloseNode = m_CircleFirstClosed;
+		m_CircleFirstClosed->prevGeomcloseNode = m_FindTheEndClosed;
+		while (m_CircleFirstClosed->nextGeomcloseNode)//找到圆封闭环的最后一个封闭环
+		{
+			m_CircleFirstClosed = m_CircleFirstClosed->nextGeomcloseNode;
+
+		}
+		m_MAXNumOfGeomClose = m_MaxNumOfGeomClose + m_CircleFirstClosed->GEOMCLOSE_ID;
+		m_FindTheEndClosed->GEOMCLOSE_ID = m_MAXNumOfGeomClose;//这样就可以把所有的封闭环数传到最后一个圆封闭环数据里
+		//对包含有圆的再处理一遍
+		for (m_GeomCloseID = 1; m_GeomCloseID <= m_MAXNumOfGeomClose; m_GeomCloseID++)//保证全部结点已经被处理一遍，且给以跳出的条件
+		{
+			m_pDiffGeomclsDataNode = m_GeomForCut.FindDiffGeomCloseNode(m_pNestrsltdtND);
+			m_GeomForCut.InsertGeomCloseHEAD(m_pNestrsltdtND, m_pDiffGeomclsDataNode);
+		}
+		free(m_pNestrsltdtND->nextNestResultDataNode);
+	}
+	
+	//以上以及将所有的封闭环处理好了。
 	m_GeomForCut.ChangeEleNodeOfGeomClosed_origin(m_pNestrsltdtND);//可惜这代码没有起到任何效果，原因之一可能是封闭环本身就没有分清楚，其二是处理的算法有问题。
 	m_GeomForCut.ChangClosedNodeOfNRDXF(m_pNestrsltdtND);
 	m_GeomForCut.ChangeEleNodeOfGeomClosed_order(m_pNestrsltdtND);
+	//另一种处理方式
+	//m_GeomForCut.BaseTS_GR_forChangeClosedNodeOfNRDXF1(head);
+	//m_GeomForCut.ChangeEleNodeOfGeomClosed_order(m_pNestrsltdtND);
+
 	m_IfDataDisposed = true;
 	return m_IfDataDisposed;
 }
 void CNestDxfDataForCutDlg::OnSavefile()
 {
+	m_IfDataDisposed = true;
 	// TODO:  在此添加控件通知处理程序代码
-
+	GeomCloseHEAD*Htemp;
+	GeomEleNode*tempnode;
+	int typegeomele ;
+	double x0, x1, y0, y1, Arccent_x, Arccent_y, r,temp;
 	if (m_IfDataDisposed)//数据处理完了，保存才有意义
 	{
-		GeomCloseHEAD*Htemp;
-		GeomEleNode*tempnode;
-		ofstream outfile("I:\\MATLAB\\最低点11.txt"); 
+			ofstream outfile("I:\\MATLAB\\最低点3.txt"); 
 		Htemp = m_pNestrsltdtND->FirstGeomClose;//第一个封闭环F结点
 		while (Htemp)//全部遍历
 		{
 			tempnode = Htemp->FirstGeomele;//封闭环里的第一个数据结点
 			while (tempnode)//全部遍历完
 			{
-				double x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
-				double x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
-				double y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
-				double y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
+				x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
+				x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
+				y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
+				y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
 				//outfile << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
+				//outfile << typegeomele << endl;
 				outfile << x0 << "    " << y0 << endl;
 				outfile << x1 << "    " << y1 << endl;
-				//////////////opengl///////////////////////////
+
+				//switch (tempnode->m_GeomStandData.m_typegeomele)
+				//{
+				//case 1:
+				//	 typegeomele = 1;
+				//	 x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
+				//	 x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
+				//	 y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
+				//	 y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
+				//	//outfile << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
+				//	outfile << typegeomele << endl;
+				//	outfile << x0 << "    " << y0 << endl;
+				//	outfile << x1 << "    " << y1 << endl;
+				//	break;
+				//case 2:
+				//	 //现在会产生X0>X1的现象导致不能画出图形
+				//	 x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
+				//	 x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
+				//	 if (x0>x1)
+				//	 {
+				//		 temp = x0;
+				//		 x0 = x1;
+				//		 x1 = temp;
+				//		 typegeomele = 4;//代表反向画圆弧
+				//	 }
+					/* else
+					 {
+						 typegeomele = 2;
+					 }
+					 Arccent_x = tempnode->m_GeomStandData.m_arc.Arccent_x;
+					 Arccent_y = tempnode->m_GeomStandData.m_arc.Arccent_y;
+					 r = tempnode->m_GeomStandData.m_arc.m_Arc_r;
+					outfile << typegeomele << endl;
+					outfile << x0 << "    " << x1 << endl;
+					outfile << r << "    " << Arccent_x << "    " << Arccent_y << endl;
+					break;
+				case 3:
+					break;
+				default:
+					break;
+				}*/
+					//////////////opengl///////////////////////////
 			
 
 				tempnode = tempnode->nextGeomeleNode;
@@ -686,4 +778,291 @@ void CNestDxfDataForCutDlg::OnTimer(UINT nIDEvent) //实时绘制场景
 		//	SetDlgItemText(IDC_EDIT_Coordinate, m_strCoordinate);
 		//}
 		CDialogEx::OnMouseMove(nFlags, point);
+	}
+
+
+	void CNestDxfDataForCutDlg::OnSavearc()
+	{
+		// TODO:  在此添加控件通知处理程序代码
+		GeomCloseHEAD*Htemp;
+		GeomEleNode*tempnode;
+		int typegeomele;
+		double x0, x1, y0, y1, Arccent_x, Arccent_y, r, temp, Angle_start, Angle_end;
+		if (m_IfDataDisposed)//数据处理完了，保存才有意义
+		{
+			ofstream outfile("I:\\MATLAB\\最低点21.txt");
+			Htemp = m_pNestrsltdtND->FirstGeomClose;//第一个封闭环F结点
+			while (Htemp)//全部遍历
+			{
+				tempnode = Htemp->FirstGeomele;//封闭环里的第一个数据结点
+				while (tempnode)//全部遍历完
+				{
+					
+					switch (tempnode->m_GeomStandData.m_typegeomele)
+					{
+					case 1:
+
+						 typegeomele = 1;//实切直线
+						 x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
+						 x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
+						 y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
+						 y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
+						 //outfile << typegeomele << "    " << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
+						//outfile << typegeomele << endl;
+						outfile << x0 << "    " << y0 << endl;
+						outfile << x1 << "    " << y1 << endl;
+						break;
+					case 2:
+						 //现在会产生X0>X1的现象导致不能画出图形
+					x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
+					x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
+					Angle_start = tempnode->m_GeomStandData.m_arc.m_ArcAngle_start;
+					Angle_end = tempnode->m_GeomStandData.m_arc.m_ArcAngle_end;
+					if (x0>x1)
+					{
+						/*temp = Angle_start;
+						Angle_start = Angle_end;
+						Angle_end = temp;*/
+						typegeomele = 4;//代表反向画圆弧
+					}
+					else
+					{
+						typegeomele = 2;
+					}
+					Arccent_x = tempnode->m_GeomStandData.m_arc.Arccent_x;
+					Arccent_y = tempnode->m_GeomStandData.m_arc.Arccent_y;
+					r = tempnode->m_GeomStandData.m_arc.m_Arc_r;
+					outfile << typegeomele << endl;
+					outfile << Angle_start << "    " << Angle_end << "    " << r << "    " << Arccent_x << "    " << Arccent_y << endl;
+					break;
+					case 3:
+					break;
+					default:
+					break;
+					}
+					//////////////opengl///////////////////////////
+
+
+					tempnode = tempnode->nextGeomeleNode;
+				}
+				Htemp = Htemp->nextGeomcloseNode;
+			}
+
+		}
+		else
+		{
+			AfxMessageBox((_T("请等待数据处理完毕！"), MB_YESNO) == IDYES);
+		}
+
+	}
+
+
+	void CNestDxfDataForCutDlg::Savtran()
+	{
+		// TODO:  在此添加控件通知处理程序代码
+		GeomCloseHEAD*Htemp;
+		GeomEleNode*tempnode;
+		int typegeomele;
+		double x0, x1, y0, y1, Arccent_x, Arccent_y, r, temp, Angle_start, Angle_end, Angle_cut_start;
+		double x0_tran=0,y0_tran=0, x1_tran, y1_tran;
+		double Angle_add;//增量角度
+		if (m_IfDataDisposed)//数据处理完了，保存才有意义
+		{
+			ofstream outfile("I:\\MATLAB\\过渡线1.txt");
+			Htemp = m_pNestrsltdtND->FirstGeomClose;//第一个封闭环F结点
+			while (Htemp)//全部遍历
+			{
+				tempnode = Htemp->FirstGeomele;//封闭环里的第一个数据结点
+				x1_tran = tempnode->m_GeomStandData.GeoEle_start_x0;
+				y1_tran = tempnode->m_GeomStandData.GeoEle_start_y0;
+				typegeomele = 4;//空跑直线
+				outfile << typegeomele << "    " << x0_tran << "    " << y0_tran << "    " << x1_tran << "    " << y1_tran << endl;
+
+				while (tempnode)//全部遍历完
+				{
+						switch (tempnode->m_GeomStandData.m_typegeomele)
+					{
+					case 1://直线
+						
+						typegeomele = 1;//实切直线
+						x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
+						x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
+						y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
+						y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
+						outfile << typegeomele << "    " << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
+						break;
+					case 2://圆弧，要按照太极控制卡的API输出相应的数据
+						typegeomele = 2;//实切圆弧
+						Angle_start = tempnode->m_GeomStandData.m_arc.m_ArcAngle_start;
+						Angle_end = tempnode->m_GeomStandData.m_arc.m_ArcAngle_end;
+						r = tempnode->m_GeomStandData.m_arc.m_Arc_r;
+						Arccent_x = tempnode->m_GeomStandData.m_arc.Arccent_x;
+						Arccent_y = tempnode->m_GeomStandData.m_arc.Arccent_y;
+						if (tempnode->m_GeomStandData.m_IsTranData)//如果将圆弧的起止角度
+						{
+							Angle_cut_start = Angle_end;
+							if (Angle_start < Angle_end)//起始角小于终止角
+							{
+								Angle_add = Angle_end - Angle_start;
+								Angle_add = -Angle_add;//调换了位置则是负的增量角度
+							}
+							else//起始角大于终止角
+							{
+								Angle_add = 360 - Angle_start + Angle_end;
+								Angle_add = -Angle_add;//调换了位置则是负的增量角度
+							}
+						}
+						else//如果没有调换圆弧的起止角度
+						{
+							Angle_cut_start = Angle_start;
+							if (Angle_start < Angle_end)//起始角小于终止角
+							{
+								Angle_add = Angle_end - Angle_start;								
+							}
+							else//起始角大于终止角
+							{
+								Angle_add = 360 - Angle_start + Angle_end;					
+							}
+						}		
+						outfile << typegeomele << "    " << Angle_cut_start << "    " << Angle_add << "    " << r << "    " << Arccent_x << "    " << Arccent_y << endl;
+						break;
+					case 3:
+						typegeomele = 2;//实切圆弧
+						Angle_start = tempnode->m_GeomStandData.m_circle.m_Circle_Start_Angle;
+						Angle_add = 360;
+						r = tempnode->m_GeomStandData.m_circle.m_Circle_r;
+						Arccent_x = tempnode->m_GeomStandData.m_circle.m_Circent_x;
+						Arccent_y = tempnode->m_GeomStandData.m_circle.m_Circent_y;
+						outfile << typegeomele << "    " << Angle_start << "    " << Angle_add << "    " << r << "    " << Arccent_x << "    " << Arccent_y << endl;
+
+						break;
+					default:
+						break;
+					}
+					if (NULL == tempnode->nextGeomeleNode)//如果是最后一个,那么要把他的值保留下来
+					{
+						x0_tran = tempnode->m_GeomStandData.GeoEle_start_x1;
+						y0_tran = tempnode->m_GeomStandData.GeoEle_start_y1;
+					}
+
+
+					tempnode = tempnode->nextGeomeleNode;
+				
+				}
+				Htemp = Htemp->nextGeomcloseNode;
+			}
+
+		}
+		else
+		{
+			AfxMessageBox((_T("请等待数据处理完毕！"), MB_YESNO) == IDYES);
+		}
+
+	}
+
+
+	void CNestDxfDataForCutDlg::Savecircle()
+	{
+		// TODO:  在此添加控件通知处理程序代码
+		GeomCloseHEAD*Htemp,*m_FindTheEndClosed,*m_CircleFirstClosed;
+		GeomEleNode*tempnode;
+		int typegeomele;
+		double x0, x1, y0, y1, Arccent_x, Arccent_y, r, temp, Angle_start, Angle_end, Angle_cut_start;
+		double x0_tran = 0, y0_tran = 0, x1_tran, y1_tran;
+		double Angle_add;//增量角度
+		if (m_IfDataDisposed)//数据处理完了，保存才有意义
+		{
+			ofstream outfile("I:\\MATLAB\\过渡线.txt");
+			if ((m_pNestrsltdtND->nextNestResultDataNode))//如果没有圆的排样图
+			{
+				m_CircleFirstClosed = m_pNestrsltdtND->nextNestResultDataNode->FirstGeomClose;//全部是圆的那个封闭环双向链表的第一个封闭环头结点
+				m_FindTheEndClosed = m_pNestrsltdtND->FirstGeomClose;
+
+				while (m_FindTheEndClosed->nextGeomcloseNode)//找到最后一个
+				{
+					m_FindTheEndClosed = m_FindTheEndClosed->nextGeomcloseNode;
+				}
+				m_FindTheEndClosed->nextGeomcloseNode = m_CircleFirstClosed;
+				m_CircleFirstClosed->prevGeomcloseNode = m_FindTheEndClosed;
+			}
+				Htemp = m_pNestrsltdtND->FirstGeomClose;//第一个封闭环F结点
+				while (Htemp)//全部遍历
+				{
+					tempnode = Htemp->FirstGeomele;//封闭环里的第一个数据结点
+					x1_tran = tempnode->m_GeomStandData.GeoEle_start_x0;
+					y1_tran = tempnode->m_GeomStandData.GeoEle_start_y0;
+					typegeomele = 4;//空跑直线
+					outfile << typegeomele << "    " << x0_tran << "    " << y0_tran << "    " << x1_tran << "    " << y1_tran << endl;
+
+					while (tempnode)//全部遍历完
+					{
+						switch (tempnode->m_GeomStandData.m_typegeomele)
+						{
+						case 1://直线
+
+							typegeomele = 1;//实切直线
+							x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
+							x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
+							y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
+							y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
+							outfile << typegeomele << "    " << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
+							break;
+						case 2://圆弧，要按照太极控制卡的API输出相应的数据
+							typegeomele = 2;//实切圆弧
+							Angle_start = tempnode->m_GeomStandData.m_arc.m_ArcAngle_start;
+							Angle_end = tempnode->m_GeomStandData.m_arc.m_ArcAngle_end;
+							r = tempnode->m_GeomStandData.m_arc.m_Arc_r;
+							Arccent_x = tempnode->m_GeomStandData.m_arc.Arccent_x;
+							Arccent_y = tempnode->m_GeomStandData.m_arc.Arccent_y;
+							if (tempnode->m_GeomStandData.m_IsTranData)//如果将圆弧的起止角度
+							{
+								Angle_cut_start = Angle_end;
+								if (Angle_start < Angle_end)//起始角小于终止角
+								{
+									Angle_add = Angle_end - Angle_start;
+									Angle_add = -Angle_add;//调换了位置则是负的增量角度
+								}
+								else//起始角大于终止角
+								{
+									Angle_add = 360 - Angle_start + Angle_end;
+									Angle_add = -Angle_add;//调换了位置则是负的增量角度
+								}
+							}
+							else//如果没有调换圆弧的起止角度
+							{
+								Angle_cut_start = Angle_start;
+								if (Angle_start < Angle_end)//起始角小于终止角
+								{
+									Angle_add = Angle_end - Angle_start;
+								}
+								else//起始角大于终止角
+								{
+									Angle_add = 360 - Angle_start + Angle_end;
+								}
+							}
+							outfile << typegeomele << "    " << Angle_cut_start << "    " << Angle_add << "    " << r << "    " << Arccent_x << "    " << Arccent_y << endl;
+							break;
+						case 3:
+							break;
+						default:
+							break;
+						}
+						if (NULL == tempnode->nextGeomeleNode)//如果是最后一个,那么要把他的值保留下来
+						{
+							x0_tran = tempnode->m_GeomStandData.GeoEle_start_x1;
+							y0_tran = tempnode->m_GeomStandData.GeoEle_start_y1;
+						}
+
+
+						tempnode = tempnode->nextGeomeleNode;
+
+					}
+					Htemp = Htemp->nextGeomcloseNode;
+				}
+			
+			}
+		else
+		{
+			AfxMessageBox((_T("请等待数据处理完毕！"), MB_YESNO) == IDYES);
+		}
 	}
