@@ -63,7 +63,7 @@ NestResultDataNode*GeomForCut::AddGeomCloseHeadNode(NestResultDataNode*head, Geo
 //把一个批次有多少张排样结果图插入到生产批次指向的双向链表中
 BatchHEAD*GeomForCut::AddNestRsltDtNode(BatchHEAD*head, NestResultDataNode*node)
 {
-	NestResultDataNode*temp;
+	NestResultDataNode*temp=NULL;
 	//分是否为空表
 	//如果是空表
 	if (!(head->FirstNestRsltNode))

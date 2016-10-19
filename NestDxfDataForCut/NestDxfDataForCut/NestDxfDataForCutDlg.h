@@ -11,7 +11,13 @@
 #include <gl\glu.h>
 #include "GLAUX.H"
 #include "afxwin.h"
-
+////额外添加的
+//#define W2A(lpw) (\
+//	((_lpw = lpw) == NULL) ? NULL : (\
+//	(_convert = (lstrlenW(_lpw) + 1), \
+//	(_convert>INT_MAX / 2) ? NULL : \
+//	ATLW2AHELPER((LPSTR)alloca(_convert*sizeof(WCHAR)), _lpw, _convert*sizeof(WCHAR), _acp))))
+////
 // CNestDxfDataForCutDlg 对话框
 class CNestDxfDataForCutDlg : public CDialogEx
 {
@@ -98,4 +104,6 @@ public:
 	afx_msg void OnSavearc();
 	afx_msg void Savtran();
 	afx_msg void Savecircle();
+	//对保存数据的文档命名
+	CString m_name;
 };
