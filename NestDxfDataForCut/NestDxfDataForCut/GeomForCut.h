@@ -76,6 +76,8 @@ public:
 	//输入排样结果DXF的头结点，然后用每一步都在寻找最优的方式来一次性解决封闭环顺序和封闭环过渡点问题
 	void BaseTS_GR_forChangeClosedNodeOfNRDXF(NestResultDataNode*head);
 	void BaseTS_GR_forChangeClosedNodeOfNRDXF1(NestResultDataNode*head);
+	//一种面向全局最优的禁忌_贪婪算法,输入封闭环头结点，此时一个批次的所有图元都已经在这里面了。
+	void BaseTS_GR_ForCutPathPlan(NestResultDataNode*head);
 
 	//寻找两个封闭之间距离最近的那个过渡节点
 	Mindistant_EleNode *FindMinDstGeomeleNode(NestResultDataNode*head, GeomCloseHEAD*pGMCLSHead);//输入没有置位的第一个封闭环头结点，输出与上一个已经置位的封闭环头结点之间的最短距离的过渡节点

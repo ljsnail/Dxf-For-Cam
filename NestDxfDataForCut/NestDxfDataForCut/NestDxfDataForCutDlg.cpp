@@ -504,12 +504,11 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	}
 	
 	//以上以及将所有的封闭环处理好了。
-	m_GeomForCut.ChangeEleNodeOfGeomClosed_origin(m_pNestrsltdtND);//可惜这代码没有起到任何效果，原因之一可能是封闭环本身就没有分清楚，其二是处理的算法有问题。
-	m_GeomForCut.ChangClosedNodeOfNRDXF(m_pNestrsltdtND);
-	m_GeomForCut.ChangeEleNodeOfGeomClosed_order(m_pNestrsltdtND);
-	//另一种处理方式
-	//m_GeomForCut.BaseTS_GR_forChangeClosedNodeOfNRDXF1(head);
+	//m_GeomForCut.ChangeEleNodeOfGeomClosed_origin(m_pNestrsltdtND);//可惜这代码没有起到任何效果，原因之一可能是封闭环本身就没有分清楚，其二是处理的算法有问题。
+	//m_GeomForCut.ChangClosedNodeOfNRDXF(m_pNestrsltdtND);
 	//m_GeomForCut.ChangeEleNodeOfGeomClosed_order(m_pNestrsltdtND);
+	//////另一种处理方式
+	m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);
 
 	m_IfDataDisposed = true;
 	return m_IfDataDisposed;
@@ -832,7 +831,7 @@ void CNestDxfDataForCutDlg::OnTimer(UINT nIDEvent) //实时绘制场景
 		double Angle_add;//增量角度
 		if (m_IfDataDisposed)//数据处理完了，保存才有意义
 		{
-			ofstream outfile("I:\\MATLAB\\过渡线1.txt");
+			ofstream outfile("I:\\MATLAB\\过渡线01.txt");
 			Htemp = m_pNestrsltdtND->FirstGeomClose;//第一个封闭环F结点
 			while (Htemp)//全部遍历
 			{
@@ -913,8 +912,18 @@ void CNestDxfDataForCutDlg::OnTimer(UINT nIDEvent) //实时绘制场景
 					tempnode = tempnode->nextGeomeleNode;
 				
 				}
+				if (NULL == Htemp->nextGeomcloseNode)//如果是最后一个,那么要把他的值保留下来
+				{
+					x0 = x0_tran;
+					y0 = y0_tran;
+				}
 				Htemp = Htemp->nextGeomcloseNode;
 			}
+			x1 = 0.0;
+			y1 = 0.0;
+			typegeomele = 4;//空跑直线
+			outfile << typegeomele << "    " << x0 << "    " << y0<< "    " << x1<< "    " << y1<< endl;
+
 
 		}
 		else
@@ -1036,9 +1045,23 @@ void CNestDxfDataForCutDlg::OnTimer(UINT nIDEvent) //实时绘制场景
 
 								tempnode = tempnode->nextGeomeleNode;
 
+								/*}
+								Htemp = Htemp->nextGeomcloseNode;
+								}*/
+								if (NULL == Htemp->nextGeomcloseNode)//如果是最后一个,那么要把他的值保留下来
+								{
+									x0 = x0_tran;
+									y0 = y0_tran;
+								}
 							}
-							Htemp = Htemp->nextGeomcloseNode;
-						}
+						Htemp = Htemp->nextGeomcloseNode;
+					}
+					x1 = 0.0;
+					y1 = 0.0;
+					typegeomele = 4;//空跑直线
+					outfile << typegeomele << "    " << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
+
+
 						m_ifOneDxfResultCuted = true;//一张图纸已经处理完毕
 						typegeomele = 99;//如果控制机床这里该是暂停切割和机床回到工具坐标原点，和传送带运输机床。
 						outfile << typegeomele << endl;
