@@ -33,6 +33,8 @@ GeomCloseHEAD*GeomClose::CreatGeomCloseHEAD(int GEOMCLOSE_ID)
 	newNode->GEOMCLOSE_ID = GEOMCLOSE_ID;
 	newNode->m_NumGeomele = 0;
 	newNode->FirstGeomele = NULL;
+	newNode->FirstInsideGCloseNode = NULL;
+	newNode->prevOutsideGCloseNode = NULL;
 	newNode->prevGeomcloseNode = NULL;
 	newNode->nextGeomcloseNode = NULL;
 	newNode->m_AcceptGeomcloseHEAD = false;//起初时候并没有收录

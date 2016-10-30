@@ -11,13 +11,14 @@
 #include <gl\glu.h>
 #include "GLAUX.H"
 #include "afxwin.h"
-////额外添加的
-//#define W2A(lpw) (\
-//	((_lpw = lpw) == NULL) ? NULL : (\
-//	(_convert = (lstrlenW(_lpw) + 1), \
-//	(_convert>INT_MAX / 2) ? NULL : \
-//	ATLW2AHELPER((LPSTR)alloca(_convert*sizeof(WCHAR)), _lpw, _convert*sizeof(WCHAR), _acp))))
-////
+//输出相关
+#include <fstream>
+
+#include <iostream>
+
+#include <conio.h>
+#include<iosfwd>
+
 // CNestDxfDataForCutDlg 对话框
 class CNestDxfDataForCutDlg : public CDialogEx
 {
@@ -106,4 +107,19 @@ public:
 	afx_msg void Savecircle();
 	//对保存数据的文档命名
 	CString m_name;
+	afx_msg void SaveNestCloseHead();
+public:
+	//输入一个封闭环头结点，判断其是否包含有子封闭环
+	bool IfIncludeKidClose(GeomCloseHEAD*pTemp);
+	//读取子封闭头结点内的数据
+	void ReadKidCloseHeadData(GeomCloseHEAD*pTemp);
+	//读取单一封闭环头结点内的数据
+	void ReadCloseHeadData(GeomCloseHEAD*pTemp);
+	//一些数据
+	double x0, x1, y0, y1, Arccent_x, Arccent_y, r, temp, Angle_start, Angle_end, Angle_cut_start;
+	double x0_tran, y0_tran, x1_tran, y1_tran;
+	double Angle_add;//增量角度
+	//ofstream outfile;
+
+
 };

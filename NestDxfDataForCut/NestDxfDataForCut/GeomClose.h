@@ -40,6 +40,8 @@ typedef struct GeomCloseHEAD
 	unsigned int m_NumGeomele;//该链表存有多少个基本图元
 	unsigned int GEOMCLOSE_ID;//作为每一个封闭环的标识，在切割时候与类里面的标识对应，作为调用标志
 	struct GeomEleNode*FirstGeomele;//指向双向链表GeomEleNode的头结点
+	struct GeomCloseHEAD*FirstInsideGCloseNode;//指向封闭环内部嵌套的第一个小封闭环头结点
+	struct GeomCloseHEAD*prevOutsideGCloseNode;//由第一个子封闭环指向前一个父封闭环的头结点
 	struct GeomCloseHEAD*prevGeomcloseNode;//指向前一个封闭环GeomCloseHEAD结点
 	struct GeomCloseHEAD*nextGeomcloseNode;//指向后一个封闭环GeomCloseHEAD结点
 	bool m_IfGeomCloseIntact;//判断一个封闭环内的数据是否完整，标志是头结点的起点与尾结点的终点相同

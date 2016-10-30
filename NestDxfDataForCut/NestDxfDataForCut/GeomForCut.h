@@ -30,6 +30,33 @@ typedef struct
 	GeomEleNode *pminnode;
 	double m_mindistant;
 }Mindistant_EleNode;
+//保存两条直线交点的数据结构,两条直线要么没有交点，要么只有一个交点
+typedef struct
+{
+	double x;
+	double y;
+}Point;
+//保存决定一条直线的两个点的数据结构
+typedef struct
+{
+	Point p1, p2;
+	double a, b, c;
+}Line_Cross;
+typedef struct
+{
+	bool m_IfCloseNest;
+	GeomCloseHEAD*KidCloseHead;
+	GeomCloseHEAD*NextCloseHead;
+}Geom2CloseHeadNest;
+//封闭环包络矩形
+typedef struct
+{
+	double x_min;//包络矩形的x方向的最小值
+	double x_max;//包络矩形的x方向的最大值
+	double y_min;//包络矩形的y方向的最小值
+	double y_max;//包络矩形的y方向的最大值
+}Envelope_Rect;
+
 class GeomForCut
 {
 public:
@@ -73,9 +100,6 @@ public:
 	void ChangeEleNodeOfGeomClosed_order(NestResultDataNode*head);//输入排样结果图头结点，按照已经排好的封闭环
 	//开辟新的算法，将以上三个函数合在一个函数里面
 	//基于禁忌搜索的贪婪算法
-	//输入排样结果DXF的头结点，然后用每一步都在寻找最优的方式来一次性解决封闭环顺序和封闭环过渡点问题
-	void BaseTS_GR_forChangeClosedNodeOfNRDXF(NestResultDataNode*head);
-	void BaseTS_GR_forChangeClosedNodeOfNRDXF1(NestResultDataNode*head);
 	//一种面向全局最优的禁忌_贪婪算法,输入封闭环头结点，此时一个批次的所有图元都已经在这里面了。
 	void BaseTS_GR_ForCutPathPlan(NestResultDataNode*head);
 
@@ -87,8 +111,11 @@ public:
 	GeomCloseHEAD*FindNotAcceptClosedNode(NestResultDataNode*head);
 	//创造一个用来存放离最后一个已经被置位的封闭环最近的内图元结点和最短距离
 	Mindistant_EleNode*CreatMindistant_EleNode(GeomEleNode* pmindst,double m_mindstant);
+	//第一个封闭环是不要进行数据读取和切割的,将第二个封闭环作为第一个封闭环。
+	NestResultDataNode*ChangeSencondCH2FH(NestResultDataNode*head);
 
 public:
+
 	int i,j,a;
 ////////////////////////////////////for taiji controller////////////////
 public:
@@ -119,8 +146,31 @@ public:
 	bool OpenWaterJet();//开高压水柱
 	bool OpenSandValve();//开沙阀
 	bool OpenWaterPump();//开水泵
-
-
+	public:
+	//添加工艺
+	//寻找嵌套的封闭环，这一个内容的加入，使得整个路径规划得从来。
+	//创建一块用来存放直线数据点的内存
+	//输入整个排样结果图头结点，找到其中嵌套的封闭环，然后把内环挂到封闭环的子环下
+	void Find_AdjustNestCloseHead(NestResultDataNode*head);
+	//判断第二个封闭环在不在第一个封闭环里面
+	Geom2CloseHeadNest EstimateCloseHeadNest(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp);
+	//求单个封闭环包络矩形的xy最值
+	Envelope_Rect GetLimtofGeomClosed(GeomCloseHEAD*pHtemp);
+	//包络封闭环的数据
+	Envelope_Rect m_GemoClosedLimt;
+	//用包络的方式判断后面的封闭环和前面的封闭环是否有嵌套关系
+	Geom2CloseHeadNest JudgeCloseHeadNest(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp);
+	//保留四位小数
+	double Retain4Decimals(double a);
+	Point m_PointCross;
+	Geom2CloseHeadNest m_G2CloseHeadNest;
+	Line_Cross m_line1Point, m_line2Point;
+	//输入直线的两个坐标，求直线基本方程的参数
+	void GetLinePara(Line_Cross *line);
+	//求两个直线的交点
+	Point  GetCrossPoint(Line_Cross *m_line1Point, Line_Cross *m_line2Point);
+	//把现在已经知道的子封闭环挂到另一个封闭环上
+	void SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp);
 
 };
 
