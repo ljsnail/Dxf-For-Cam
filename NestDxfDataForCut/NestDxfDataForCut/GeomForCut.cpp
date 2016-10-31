@@ -1287,7 +1287,8 @@ Geom2CloseHeadNest  GeomForCut::EstimateCloseHeadNest(GeomCloseHEAD*pTempCHead, 
 void  GeomForCut::SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp)
 {
 	
-	GeomCloseHEAD*pKidHtemp;
+	GeomCloseHEAD*pKidHtemp=NULL;
+	GeomCloseHEAD*pKidLastClose = NULL;//子封闭环所在的封闭环双向链表中的最后一个封闭环链表
 	bool m_IfCloseNest = false;//判断第二个封闭环是不是第一个封闭环的子封闭环
 	//先要判断pHtemp有没有子封闭环，如果有的话又得区分pHNtemp和原来的子封闭环有没有内嵌的关系
 	if (!(pHtemp->FirstInsideGCloseNode))//如果原来并没有子封闭环
@@ -1317,8 +1318,11 @@ void  GeomForCut::SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp)
 		{
 			//这是按照每一个都是大环的假设进行规划
 			//输入这两个封闭环头结点判断是否有嵌套关系
-			//判断这两个封闭环有没有嵌套
-			m_G2CloseHeadNest = EstimateCloseHeadNest(pKidHtemp, pHNtemp);
+			//////////判断这两个封闭环有没有嵌套
+			////////m_G2CloseHeadNest = EstimateCloseHeadNest(pKidHtemp, pHNtemp);
+			//用包络的方式来判断两个封闭环有没有嵌套
+			m_G2CloseHeadNest = JudgeCloseHeadNest(pKidHtemp, pHNtemp);
+
 			//如果有嵌套，那么就要把第二个封闭环挂到第一个封闭上
 			if (m_G2CloseHeadNest.m_IfCloseNest)
 			{
@@ -1326,9 +1330,8 @@ void  GeomForCut::SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp)
 				pHNtemp = m_G2CloseHeadNest.KidCloseHead;
 				SetInSideClose(pKidHtemp, pHNtemp);
 			}
-			else//如果没有嵌套，那么就直接把pHNtemp挂到pKidHtemp后面就好了
+			else//如果没有嵌套，
 			{
-				pKidHtemp->nextGeomcloseNode = pHNtemp;//pKidHtemp作为新进入另一个领域的封闭环，他已经把原来的关系交接完了之后丢掉了，变成了没有身份的了，此时前后节点都是NULL
 				//这里要把pHNtemp原来的关系进行交接
 				//这里要注意pHNtemp是最后一个封闭环的情况，但不可能是第一个封闭环
 				if (pHNtemp->nextGeomcloseNode)//如果pHNtemp不是最后的封闭环
@@ -1340,11 +1343,58 @@ void  GeomForCut::SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp)
 				{
 					pHNtemp->prevGeomcloseNode->nextGeomcloseNode = NULL;
 				}
-				//调整完了之后，pHNtemp就该把这个子封闭环里面的关系建立起来
-				pHNtemp->prevGeomcloseNode = pKidHtemp;
-				pHNtemp->nextGeomcloseNode = NULL;
+				//并列封闭环的关系
+				//那么就要分pKidHtemp所在的子封闭环双向链表封闭环了，如果没有其他直接把pHNtemp挂到pKidHtemp后面就好了
+				if (!(pKidHtemp->nextGeomcloseNode))//如果后面没有其他封闭环了
+				{
+					pKidHtemp->nextGeomcloseNode = pHNtemp;//pKidHtemp作为新进入另一个领域的封闭环，他已经把原来的关系交接完了之后丢掉了，变成了没有身份的了，此时前后节点都是NULL
+					//调整完了之后，pHNtemp就该把这个子封闭环里面的关系建立起来
+					pHNtemp->prevGeomcloseNode = pKidHtemp;
+					pHNtemp->nextGeomcloseNode = NULL;
+				}
+				else//pKidHtemp所在的子封闭环双向链表封闭环后面有其他封闭环
+				{
+					//既然后面还有其他封闭环，那么有可能是跟它后面的封闭环嵌套，而不是跟头结点封闭环
+					//判断pHNtemp与pKidHtemp后面的封闭环是否构成嵌套关系，如果构成那么要挂到后面，
+					//不要全部遍历一遍，当只有最后一个封闭环的时候就可以跳出去了，因为要嵌套起码要两个封闭环
+					pKidHtemp = pKidHtemp->nextGeomcloseNode;
+					while (pKidHtemp)//把子封闭环里面余下的并列的封闭环遍历一遍
+					{
+						//用包络的方式来判断两个封闭环有没有嵌套
+						m_G2CloseHeadNest = JudgeCloseHeadNest(pKidHtemp, pHNtemp);
+
+						//如果有嵌套，那么就要把第二个封闭环挂到第一个封闭上
+						if (m_G2CloseHeadNest.m_IfCloseNest)
+						{
+							//把第二个封闭环环挂到第一个封闭上
+							pHNtemp = m_G2CloseHeadNest.KidCloseHead;
+							SetInSideClose(pKidHtemp, pHNtemp);
+							m_IfCloseNest = true;//说明已经嵌套进去了
+							break;
+						}
+						//否则找到最后一个，然后把pHNtemp挂到其后面
+						if (!(pKidHtemp->nextGeomcloseNode))//如果pKidHtemp是最后一个
+						{
+							pKidLastClose = pKidHtemp;//这是最后一个封闭环，会到这来，说明，最后一个封闭环和pHNtemp也没有嵌套的关系
+							m_IfCloseNest = false;
+						}
+						pKidHtemp = pKidHtemp->nextGeomcloseNode;
+					}			
+					if (!(m_IfCloseNest))
+					{
+						pKidLastClose->nextGeomcloseNode = pHNtemp;
+						//调整完了之后，pHNtemp就该把这个子封闭环里面的关系建立起来
+						pHNtemp->prevGeomcloseNode = pKidLastClose;
+						pHNtemp->nextGeomcloseNode = NULL;
+					}
+					
+				}
+				
 			}
-			pKidHtemp = pKidHtemp->nextGeomcloseNode;
+			//这个while循环不需要再从下面这个代码去循环，因为这是一个自递归的函数，当去到上面的else时候，整个while其实应该是要停止了
+			//pKidHtemp = pKidHtemp->nextGeomcloseNode;
+			//如果用上面的代码，将会使得pKidHtemp会跟自己循环一次
+			break;
 		}
 	}
 }
@@ -1446,6 +1496,7 @@ Envelope_Rect  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 //核心算法
 //用包络的方法来判断两个封闭环是否嵌套
 Geom2CloseHeadNest  GeomForCut::JudgeCloseHeadNest(GeomCloseHEAD*pTempCHead, GeomCloseHEAD*pTempNextCHead)
+
 {
 	Envelope_Rect m_GeomClosed1, m_GeomClosed2;
 	double x1_min, x1_max, y1_min, y1_max;//寻找封闭环1的包络矩形的范围

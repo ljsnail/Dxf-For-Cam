@@ -510,7 +510,7 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	//m_GeomForCut.ChangeEleNodeOfGeomClosed_order(m_pNestrsltdtND);
 	//////另一种处理方式
 	m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);
-	//m_GeomForCut.Find_AdjustNestCloseHead(head);
+	m_GeomForCut.Find_AdjustNestCloseHead(head);
 	m_IfDataDisposed = true;
 	return m_IfDataDisposed;
 }
@@ -882,6 +882,7 @@ void CNestDxfDataForCutDlg::OnTimer(UINT nIDEvent) //实时绘制场景
 						{
 							Angle_cut_start = Angle_start;
 							if (Angle_start < Angle_end)//起始角小于终止角
+				
 							{
 								Angle_add = Angle_end - Angle_start;								
 							}
