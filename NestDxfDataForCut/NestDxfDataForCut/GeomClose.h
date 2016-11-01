@@ -46,6 +46,7 @@ typedef struct GeomCloseHEAD
 	struct GeomCloseHEAD*nextGeomcloseNode;//指向后一个封闭环GeomCloseHEAD结点
 	bool m_IfGeomCloseIntact;//判断一个封闭环内的数据是否完整，标志是头结点的起点与尾结点的终点相同
 	bool m_AcceptGeomcloseHEAD;//如果以后要全局最优路径规划的时候，最为每一个封闭环时候已经被规划的标识
+	bool m_ReadKidGeomCloseHead;//判断是否读取了子封闭环的数据。默认为false;
 }GeomCloseHEAD;
 class GeomClose
 {

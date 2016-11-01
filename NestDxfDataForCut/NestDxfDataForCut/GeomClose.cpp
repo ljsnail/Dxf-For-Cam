@@ -39,6 +39,7 @@ GeomCloseHEAD*GeomClose::CreatGeomCloseHEAD(int GEOMCLOSE_ID)
 	newNode->nextGeomcloseNode = NULL;
 	newNode->m_AcceptGeomcloseHEAD = false;//起初时候并没有收录
 	newNode->m_IfGeomCloseIntact = false;//默认为不完整。
+	newNode->m_ReadKidGeomCloseHead = false;//默认为没有读取
 	return newNode;
 }
 GeomCloseHEAD*GeomClose::InsertGeomEleNode(GeomCloseHEAD*head, GeomEleNode *node, GeomStandData m_geomstandData)

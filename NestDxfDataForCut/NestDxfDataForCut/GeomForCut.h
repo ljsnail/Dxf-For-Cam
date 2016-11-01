@@ -171,6 +171,7 @@ public:
 	Point  GetCrossPoint(Line_Cross *m_line1Point, Line_Cross *m_line2Point);
 	//把现在已经知道的子封闭环挂到另一个封闭环上
 	void SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp);
+	
 
 };
 
