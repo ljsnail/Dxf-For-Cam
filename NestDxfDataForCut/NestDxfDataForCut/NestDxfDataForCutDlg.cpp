@@ -65,8 +65,7 @@ CNestDxfDataForCutDlg::CNestDxfDataForCutDlg(CWnd* pParent /*=NULL*/)
 	m_pNestrsltdtND = NULL;
 	m_pGeomclsHead=NULL;
 	m_IfDataDisposed = false;
-	x0_tran = 0.0;
-	y0_tran = 0.0;
+	m_NewDxf = true;//新图纸
 
 	//Onstart();//放这里等效于点击了start的button
 	//opengl
@@ -239,6 +238,7 @@ void CNestDxfDataForCutDlg::OnOpenFile()//打开一次就是一张图纸
 {
 	// TODO:  在此添加控件通知处理程序代码
 	//打开图纸导入图纸结点
+    m_NewDxf= true;//新图纸
 	NestResult_ID++;
 	m_pNestrsltdtND = m_GeomForCut.CreatNestResultNode(NestResult_ID);//在初始化时候记录这是打开的第几张图纸
 	m_pBatchHead = m_GeomForCut.AddNestRsltDtNode(m_pBatchHead, m_pNestrsltdtND);//把新生成的结点挂在生产批次指向的图纸双向链表中
@@ -509,8 +509,16 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	//m_GeomForCut.ChangClosedNodeOfNRDXF(m_pNestrsltdtND);
 	//m_GeomForCut.ChangeEleNodeOfGeomClosed_order(m_pNestrsltdtND);
 	//////另一种处理方式
+	//先贪婪算法将所有的封闭环按给定初始顺序
 	m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);
-	m_GeomForCut.Find_AdjustNestCloseHead(head);
+	//划分出不同的封闭环层次
+	//m_GeomForCut.Find_AdjustNestCloseHead(head);
+	////用蚁群算法对第一层封闭环进行路径规划与优化
+	//m_GeomForCut.Base_ACO_ForFirstCHead(head);
+	////根据蚁群算法调整后的第一层封闭环，调整每个封闭环群里面的子封闭环顺序，并调整相应的父封闭环打孔点
+	//m_GeomForCut.BaseTS_GR_ForKidCHead(head);
+	//
+
 	m_IfDataDisposed = true;
 	return m_IfDataDisposed;
 }
@@ -624,40 +632,6 @@ BOOL CNestDxfDataForCutDlg::CreateViewGLContext(HDC hDC)
 		return FALSE;
 	return TRUE;
 }
-//void CNestDxfDataForCutDlg::RenderScene()
-//{
-//	/////////////////////////////////////////////////
-//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//	glLoadIdentity();
-//	glTranslatef(0.0f, 0.0f, -6.0f); // Move Left 1.5 Units And Into The Screen 6.0
-//	glRotated(m_yRotate, 0.0, 1.0, 0.0);
-//	glBegin(GL_TRIANGLES); // Drawing Using Triangles
-//	glVertex3f(0.0f, 1.0f, 0.0f); // Top
-//	glVertex3f(-1.0f, -1.0f, 0.0f); // Bottom Left
-//	glVertex3f(1.0f, -1.0f, 0.0f); // Bottom Right
-//	////////////////////////////////////////////
-//	//glVertex2f(-4.00, 0.00);
-//	//   glVertex2f(-3.00, 2.00);
-//	//   glVertex2f(-2.00, 0.00);
-//	//   glVertex2f(-1.00, 2.00);
-//	//   glVertex2f(0.0, 0.00);
-//	//   glVertex2f(1.00, 2.00);
-//	//   glVertex2f(2.00, 0.00);
-//	//   glVertex2f(3.00, 2.00);
-//	//   glVertex2f(4.00, 0.00);
-//	/////////////////////////
-//	////glColor3f (0.0, 0.0, 0.0);
-//	/* glBegin(GL_POLYGON);
-//	glVertex2i(2,2);
-//	glVertex2i(3,1);
-//	glVertex2i(10,5);
-//	glVertex2i(12,10);
-//	glVertex2i(5,12);
-//	glVertex2i(5,6);*/
-//
-//	glEnd(); // Finished Drawing The Triangle
-//	SwapBuffers(hrenderDC);
-//}
 
 void CNestDxfDataForCutDlg::OnTimer(UINT nIDEvent) //实时绘制场景
 {
@@ -699,6 +673,7 @@ void CNestDxfDataForCutDlg::OnTimer(UINT nIDEvent) //实时绘制场景
 	m_line.x1 = node->m_GeomStandData.GeoEle_start_x1;
 	m_line.y1 = node->m_GeomStandData.GeoEle_start_y1;
 	return m_line;
+	
 }
 
 
@@ -925,6 +900,7 @@ void CNestDxfDataForCutDlg::OnTimer(UINT nIDEvent) //实时绘制场景
 			}
 			x1 = 0.0;
 			y1 = 0.0;
+
 			typegeomele = 4;//空跑直线
 			outfile << typegeomele << "    " << x0 << "    " << y0<< "    " << x1<< "    " << y1<< endl;
 
@@ -1089,7 +1065,7 @@ void CNestDxfDataForCutDlg::OnTimer(UINT nIDEvent) //实时绘制场景
 void CNestDxfDataForCutDlg::SaveNestCloseHead()
 {
 		// TODO:  在此添加控件通知处理程序代码
-		GeomCloseHEAD*Htemp,*Hkidtemp;
+		GeomCloseHEAD*Hkidtemp;
 		GeomEleNode*tempnode;
 		bool m_ifHvkidClose;
 		
@@ -1097,22 +1073,22 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 		if (m_IfDataDisposed)//数据处理完了，保存才有意义
 			{
 
-				Htemp = m_pNestrsltdtND->FirstGeomClose;//第一个封闭环F结点
-				while (Htemp)//全部遍历
+			pTheFirstLevelCloseHead = m_pNestrsltdtND->FirstGeomClose;//第一个封闭环F结点
+			while (pTheFirstLevelCloseHead)//全部遍历
 				{
 					//要判断是否有子封闭环， 
-					m_ifHvkidClose = IfIncludeKidClose(Htemp);
+				m_ifHvkidClose = IfIncludeKidClose(pTheFirstLevelCloseHead);
 					if (m_ifHvkidClose)
 					{
 						//既然有子封闭环，那么就在子封闭环里把整一个封闭嵌套的所有数据读完
 						//包括了父封闭环的数据
-						ReadKidCloseHeadData(Htemp);
+						ReadKidCloseHeadData(pTheFirstLevelCloseHead);
 					}
 					else//如果没有子封闭环的话
 					{
-						ReadCloseHeadData(Htemp);
+						ReadCloseHeadData(pTheFirstLevelCloseHead);
 					}
-					Htemp = Htemp->nextGeomcloseNode;
+					pTheFirstLevelCloseHead = pTheFirstLevelCloseHead->nextGeomcloseNode;
 				}
 			}
 		else
@@ -1133,36 +1109,15 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 	//这个代码是把这个大封闭环的数据从里到外全部读取出来
 	void CNestDxfDataForCutDlg::ReadKidCloseHeadData(GeomCloseHEAD*pTemp)
 	{
-		GeomCloseHEAD*Htemp, *Hkidtemp,*HFattemp;
+		GeomCloseHEAD*Htemp, *Hkidtemp, *HFattemp, *pfadtemph;
+		GeomCloseHEAD*NextCHtemp;//下一个封闭环头结点
 		bool m_ifHvkidClose;
-		
+		bool m_ifotherHvkidClose;
+
 
 		//既然pTemp是有子封闭环的，那么就得先读子封闭环的数据
 		Hkidtemp = pTemp->FirstInsideGCloseNode;
-		////有子封闭环但还要考虑是否在子封闭环所在的双向链表中，其他节点上的子封闭环还有子封闭环
-		//while (Hkidtemp)//把子封闭环全部遍历一遍
-		//{
-		//	while (Hkidtemp->FirstInsideGCloseNode)//找到最深一层；
-		//			Hkidtemp = Hkidtemp->FirstInsideGCloseNode;
-		//	
-		//	if (Hkidtemp->nextGeomcloseNode)//如果子封闭环有其他兄弟节点
-		//	{
-		//		Htemp = Hkidtemp->nextGeomcloseNode;
-		//		while (Htemp)//把兄弟节点遍历一遍
-		//		{
-		//			while (Htemp->FirstInsideGCloseNode)//如果兄弟节点有子节点
-		//			{
-		//				ReadKidCloseHeadData(Htemp);
-		//				break;
-		//			}
-		//			ReadCloseHeadData(Htemp);
-		//			Htemp = Htemp->nextGeomcloseNode;
-		//		}
-		//		
-		//	}
-		//	ReadCloseHeadData(Hkidtemp);
-		//	Hkidtemp = Hkidtemp->FirstInsideGCloseNode;
-		//}
+
 
 		//这个while是要找到最深的一层子封闭环
 		while (Hkidtemp->FirstInsideGCloseNode)//找到最深一层；
@@ -1170,66 +1125,67 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 		Htemp = Hkidtemp;
 		while (Htemp)//把这一层给遍历一遍
 		{
-			if(Htemp->FirstInsideGCloseNode)//如果兄弟节点有子节点,那么在这个代码就会把子封闭环和父封闭环一起读完
+			if (Htemp->FirstInsideGCloseNode)//如果兄弟节点有子节点,那么在这个代码就会把子封闭环和父封闭环一起读完
 			{
+
 				ReadKidCloseHeadData(Htemp);
 			}
 			else
 			{
 				ReadCloseHeadData(Htemp);
 			}
+
 			Htemp = Htemp->nextGeomcloseNode;
 		}
+
+
 		//上一个循环是已经把最深一层子封闭处理完，那么现在要进行上一层子封闭环
 		HFattemp = Hkidtemp->prevOutsideGCloseNode;
+		int a = 0;
 		while (HFattemp != pTemp)//当还不是最先的父节点的时候
 		{
-			while (HFattemp)//把这一层父节点给遍历一遍
-			{
-				//如果有兄弟封闭环节点
-				if (HFattemp->nextGeomcloseNode)
-				{
-					HFattemp = HFattemp->nextGeomcloseNode;
-					while (HFattemp->FirstInsideGCloseNode)//如果兄弟节点有子节点
-					{
-						ReadKidCloseHeadData(HFattemp);
-						break;
-					}
-					
-				}
-				else//如果只有一个封闭环节点
-				{
-					ReadCloseHeadData(HFattemp);
-					break;
-				}
+			ReadCloseHeadData(HFattemp);
 
+			NextCHtemp = HFattemp->nextGeomcloseNode;//第一个兄弟封闭环结点
+			while (NextCHtemp)//全部遍历
+			{
+				//要判断是否有子封闭环， 
+				m_ifotherHvkidClose = IfIncludeKidClose(NextCHtemp);
+				if (m_ifotherHvkidClose)
+				{
+					//既然有子封闭环，那么就在子封闭环里把整一个封闭嵌套的所有数据读完
+					//包括了父封闭环的数据
+					ReadKidCloseHeadData(NextCHtemp);
+				}
+				else//如果没有子封闭环的话
+				{
+					ReadCloseHeadData(NextCHtemp);
+				}
+				NextCHtemp = NextCHtemp->nextGeomcloseNode;
 			}
 			HFattemp = HFattemp->prevOutsideGCloseNode;
 		}
 		//以上已经把除了第一层的父节点之外的所以子节点的数据都处理完了，余下要处理的是第一层的父节点
 		ReadCloseHeadData(pTemp);
 	}
-	
+
 //读单一封闭环的数据
 	void CNestDxfDataForCutDlg::ReadCloseHeadData(GeomCloseHEAD*Htemp)
 	{
 		GeomEleNode*tempnode;
 		int typegeomele;
-		//单一封闭环里面可能也有子封闭环
-		//if ((Htemp->FirstInsideGCloseNode) &&( !Htemp->FirstInsideGCloseNode->m_ReadKidGeomCloseHead))
-		//{
-		//	Htemp->FirstInsideGCloseNode->m_ReadKidGeomCloseHead = true;//防止有子封闭环的封闭环在此死循环，第二次就不能进入了
-		//	ReadKidCloseHeadData(Htemp);
-		//}
-		//else
-		//{
-			ofstream outfile("I:\\MATLAB\\DXF\\过渡线005.txt", ios_base::out | ios_base::app);//打开并追加
+			ofstream outfile("I:\\MATLAB\\DXF\\过渡线38.txt", ios_base::out | ios_base::app);//打开并追加
 			tempnode = Htemp->FirstGeomele;//封闭环里的第一个数据结点
 			x1_tran = tempnode->m_GeomStandData.GeoEle_start_x0;
 			y1_tran = tempnode->m_GeomStandData.GeoEle_start_y0;
 			typegeomele = 4;//空跑直线
+			if (m_NewDxf == true)//表明这是新图片
+			{
+				x0_tran = 0.0;
+				y0_tran = 0.0;
+			}
 			outfile << typegeomele << "    " << x0_tran << "    " << y0_tran << "    " << x1_tran << "    " << y1_tran << endl;
-
+			m_NewDxf = false;//新图纸;//进入一次之后便不再是新图片
 			while (tempnode)//全部遍历完
 			{
 				switch (tempnode->m_GeomStandData.m_typegeomele)
@@ -1301,22 +1257,16 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 				tempnode = tempnode->nextGeomeleNode;
 
 			}
-
-			if (NULL == Htemp->nextGeomcloseNode)
+			//pTheFirstLevelCloseHead是全局变量，下面代码是表示:
+			//如果第一层的封闭环遍历完了，那么就该让水刀回到机床原点。
+			if (NULL == pTheFirstLevelCloseHead->nextGeomcloseNode)
 			{
 				x1 = 0.0;
 				y1 = 0.0;
 				typegeomele = 4;//空跑直线
 				outfile << typegeomele << "    " << x0_tran << "    " << y0_tran << "    " << x1 << "    " << y1 << endl;
-
 			}
-		//}
-		
-		//上面已经把一个封闭环里面的数据遍历完了，那么要给下一个封闭保留过渡线
-			/*x0 = x0_tran;
-			y0 = y0_tran;*/
-
-
+			
 	}
 
 

@@ -171,7 +171,16 @@ public:
 	Point  GetCrossPoint(Line_Cross *m_line1Point, Line_Cross *m_line2Point);
 	//把现在已经知道的子封闭环挂到另一个封闭环上
 	void SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp);
-	
+	//输入子封闭环的最后节点，改变父封闭环的图元头结点（打孔点）
+	void ChangeOutsideGeomEleNode(GeomCloseHEAD*pKidCloseHead, GeomCloseHEAD*pFadClosedHead);
+	//输入第一层父封闭环的图元头结点，改变下一个第一层父封闭环的子封闭环的顺序,并把最后一个子封闭环输出
+	GeomCloseHEAD*ChangeINsideGeomEleNode(GeomCloseHEAD*pFadClosedHead, GeomCloseHEAD*pNKidCloseHead);
 
+	//用蚁群算法把整个第一层的封闭环顺序处理一遍
+	void Base_ACO_ForFirstCHead(NestResultDataNode*head);
+	//根据蚁群算法得出的第一层封闭环的顺序，
+	//调整不同第一层封闭环里子封闭环的顺序，
+	//并调整与子封闭环对应的父封闭环的打孔点
+	void BaseTS_GR_ForKidCHead(NestResultDataNode*head);
 };
 

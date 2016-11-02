@@ -119,7 +119,8 @@ public:
 	double x0, x1, y0, y1, Arccent_x, Arccent_y, r, temp, Angle_start, Angle_end, Angle_cut_start;
 	double x0_tran, y0_tran, x1_tran, y1_tran;
 	double Angle_add;//增量角度
-	//ofstream outfile;
+	GeomCloseHEAD*pTheFirstLevelCloseHead;
+	bool m_NewDxf;//当第一次进入读取数据时候x0_tran，y0_tran应该为0.0，和每打开一张图片时候，都应该为0.0;
 
 
 };
