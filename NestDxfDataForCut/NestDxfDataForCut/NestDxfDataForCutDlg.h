@@ -102,7 +102,7 @@ public:
 	GLINE ReadDataForOGL(GeomEleNode*node);
 	afx_msg void OnMouseHWheel(UINT nFlags, short zDelta, CPoint pt);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
-	afx_msg void OnSavearc();
+	afx_msg void OnSaveTSP();
 	afx_msg void Savtran();
 	afx_msg void Savecircle();
 	//对保存数据的文档命名
@@ -121,6 +121,6 @@ public:
 	double Angle_add;//增量角度
 	GeomCloseHEAD*pTheFirstLevelCloseHead;
 	bool m_NewDxf;//当第一次进入读取数据时候x0_tran，y0_tran应该为0.0，和每打开一张图片时候，都应该为0.0;
-
+	int k;
 
 };

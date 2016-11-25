@@ -22,6 +22,7 @@ GeomEleNode* GeomClose::CreatGeomEleNode(GeomStandData m_geomstandData)
 	newNode->m_AccptGeomEleNode = false;
 	newNode->m_NumGeomEleID=m_geomstandData.m_GeomEleID;//这是这张排样图的第几个基本图元
 	newNode->m_NumGeomCloseID = 0;
+	m_NumGeomEle++;
 	return newNode;
 
 }

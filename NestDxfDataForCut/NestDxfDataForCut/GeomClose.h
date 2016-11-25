@@ -25,7 +25,7 @@ typedef struct GeomEleNode//所有的数据进来时候存放的结点
 	struct GeomEleNode* prevGeomeleNode;//指向前一个GeomeleNode结点
 	struct GeomEleNode* nextGeomeleNode;//指向后一个GeomeleNode结点
 	unsigned int m_NumGeomEleID;//记录第几个图元
-	unsigned int m_NumGeomCloseID;//记录第几个封闭环的。
+	unsigned int m_NumGeomCloseID;//记录是第几个封闭环的图元。
 	bool m_AccptGeomEleNode;//判断该结点是否已经被收录的,初始化为false
 }GeomEleNode;
 //********************************************************************//
@@ -84,5 +84,6 @@ public:
 	GeomStandData DataSwap(GeomStandData m_geomstandData);//将起点和终点的数据调换
 public:
 	int m_NumGeomClose;//统计封闭环个数
+	int m_NumGeomEle;//统计基本图元的个数
 };
 

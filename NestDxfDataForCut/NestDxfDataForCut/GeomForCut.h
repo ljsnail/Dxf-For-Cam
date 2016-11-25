@@ -182,5 +182,11 @@ public:
 	//调整不同第一层封闭环里子封闭环的顺序，
 	//并调整与子封闭环对应的父封闭环的打孔点
 	void BaseTS_GR_ForKidCHead(NestResultDataNode*head);
+	//判断该封闭环是否有子封闭环，如果有，获取最后的封闭环
+	GeomCloseHEAD*GetTheLastKidCH(GeomCloseHEAD*pCHead);
+	//输入一层的封闭环头结点，然后对双向链表里封闭环进行贪婪算法排序，并输出最后的封闭环节点
+	GeomCloseHEAD*ChangeGeomCHead(GeomCloseHEAD*pNKidCloseHead);
+	//寻找下一个第一层封闭环
+	GeomCloseHEAD*Find_Next_TheFirstLevel(GeomCloseHEAD*pFirstClosedHead);
 };
 
