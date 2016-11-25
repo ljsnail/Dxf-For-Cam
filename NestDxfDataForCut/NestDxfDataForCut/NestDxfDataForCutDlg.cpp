@@ -504,6 +504,7 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 		m_pNestrsltdtND->nextNestResultDataNode->FirstGeomClose = NULL;//既然圆已经从这个链表头里面退出来了，那么就该让其下面变为表。
 	}
 	head = m_GeomForCut.ChangeSencondCH2FH(head);
+	//head = m_GeomForCut.ChangeSencondCH2FH(head);
 	//以上以及将所有的封闭环处理好了。
 	//m_GeomForCut.ChangeEleNodeOfGeomClosed_origin(m_pNestrsltdtND);//可惜这代码没有起到任何效果，原因之一可能是封闭环本身就没有分清楚，其二是处理的算法有问题。
 	//m_GeomForCut.ChangClosedNodeOfNRDXF(m_pNestrsltdtND);
@@ -516,6 +517,7 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	////////用蚁群算法对第一层封闭环进行路径规划与优化
 	//////m_GeomForCut.Base_ACO_ForFirstCHead(head);
 	m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);
+
 
 	////////根据蚁群算法调整后的第一层封闭环，调整每个封闭环群里面的子封闭环顺序，并调整相应的父封闭环打孔点
 	m_GeomForCut.BaseTS_GR_ForKidCHead(head);

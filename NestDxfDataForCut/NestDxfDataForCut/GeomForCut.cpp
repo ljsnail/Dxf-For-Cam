@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "GeomForCut.h"
 #define EPSILON 0.018
-#define WEIGHT_ORIGIN 0.5//封闭环到机床原点距离的权重
-#define WEIGHT_PTP 0.5//封闭环到另一个封闭环之间距离的权重
+#define WEIGHT_ORIGIN 0.1//封闭环到机床原点距离的权重
+#define WEIGHT_PTP 0.9//封闭环到另一个封闭环之间距离的权重
 GeomForCut::GeomForCut()
 {
 	//BatchHEAD m_batchHead = { 0, NULL };//结构体初始化
@@ -461,11 +461,11 @@ void GeomForCut::ChangClosedNodeOfNRDXF(NestResultDataNode*head)
 		m_TotalCloseID++;
 		pntemp = pntemp->nextGeomcloseNode;
 	}
-	while (pHtemp->nextGeomcloseNode)
+	/*while (pHtemp->nextGeomcloseNode)
 	{
 		pHtemp = pHtemp->nextGeomcloseNode;
 	}
-	//重点是m_TotalCloseID的数据要对
+	*///重点是m_TotalCloseID的数据要对
 	for (m_GeomCloseID = 1; m_GeomCloseID <=m_TotalCloseID; m_GeomCloseID++)//将全部循环封闭环的个数遍
 	{
 		
@@ -818,7 +818,7 @@ void GeomForCut::BaseTS_GR_ForCutPathPlan(NestResultDataNode*head)
 	//pntemp = pSencond2FirstCloseHead->nextGeomcloseNode;//第一个封闭环是800*800的瓷砖，不应该切
 	//head->FirstGeomClose = pntemp;
 	//将第二个封闭环代替第一个封闭环
-	/*head = ChangeSencondCH2FH(head);*/
+	//head = ChangeSencondCH2FH(head);
 	pLastAcceptCHead = head->FirstGeomClose;
 	pntemp = head->FirstGeomClose;
 	m_TotalCloseID = 0;
@@ -2040,8 +2040,7 @@ GeomCloseHEAD*GeomForCut::ChangeGeomCHead(GeomCloseHEAD*pNKidCloseHead)
 				m_tempmindistant_ptp = fabs(sqrt(((temp_x - pre_x)*(temp_x - pre_x)) + ((temp_y - pre_y)*(temp_y - pre_y))));//这里求的是两点之间的最短距离
 				//求最短距离,暂时的最短距离
 				newNode->m_mindistant = m_tempmindistant_origin*WEIGHT_ORIGIN + m_tempmindistant_ptp*WEIGHT_PTP;
-				newNode->m_mindistant = 1 / newNode->m_mindistant;
-				//newNode->pminhead = pTempCHead;
+				newNode->pminhead = pTempCHead;
 				newNode->pminnode = pTempCHead->FirstGeomele;
 				pMinDistantCloseHead = pTempCHead;
 				//把剩下的没有被置位的所有遍历一遍
@@ -2141,6 +2140,7 @@ GeomCloseHEAD*GeomForCut::ChangeGeomCHead(GeomCloseHEAD*pNKidCloseHead)
 				//下面要做到是基于封闭环头结点和图元节点进行双向链表数据调整
 				//先是把图元节点调整为封闭环的头结点
 				GeomEleNode*phtemp, *ptemp;
+				b++;
 				phtemp = newNode->pminhead->FirstGeomele;
 				if (newNode->pminnode == phtemp)//说明找了一圈发现还是最开始的结点距离最短
 				{
