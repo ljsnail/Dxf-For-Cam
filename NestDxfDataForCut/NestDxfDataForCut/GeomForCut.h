@@ -48,15 +48,26 @@ typedef struct
 	GeomCloseHEAD*KidCloseHead;
 	GeomCloseHEAD*NextCloseHead;
 }Geom2CloseHeadNest;
-//封闭环包络矩形
+//切割引刀线的数据结构
 typedef struct
 {
-	double x_min;//包络矩形的x方向的最小值
-	double x_max;//包络矩形的x方向的最大值
-	double y_min;//包络矩形的y方向的最小值
-	double y_max;//包络矩形的y方向的最大值
-}Envelope_Rect;
-
+	double x0;//引刀线起点
+	double y0;//引刀线起点
+	double x1;//引刀线终点，以原来切割控制点的起点为终点
+	double y1;//引刀线终点，以原来切割控制点的起点为终点
+	///*double 
+		;//引刀线与直线x0轴的斜率；以便将来切割引刀线与封闭环有交点时候，调整引刀线时候一步到位
+	GeomCloseHEAD*prevGeomcloseNode;//指向前一个封闭环GeomCloseHEAD结点，因为是引刀线，所以这里前面只能指向NULL
+	GeomCloseHEAD*nextGeomcloseNode;//指向后一个封闭环GeomCloseHEAD结点,因为这里是引刀线，所以这里只能指向封闭环的第一个头结点
+	bool if_CutGuideLine;//作为切割引刀线的判断，默认为ture
+}CutGuideLine;
+////创建一个数据结构，保存去掉板材框后的排样图纸头文件和板材框封闭环头文件
+////在进行切割路径规划和引刀线添加前的预处理
+//typedef struct
+//{
+//	GeomCloseHEAD*SheetMate;
+//	NestResultDataNode*head;
+//}Pretreat;
 class GeomForCut
 {
 public:
@@ -98,6 +109,9 @@ public:
 	void ChangClosedNodeOfNRDXF(NestResultDataNode*head);
 	//经过上面之后，排样结果内的封闭环已经调整好顺序，那么为了使空行程更短，这次应该根据到上一个封闭环最短距离来设置每个封闭环内部的头结点
 	void ChangeEleNodeOfGeomClosed_order(NestResultDataNode*head);//输入排样结果图头结点，按照已经排好的封闭环
+	//为了避开小的部件切割后跳起使得撞刀水刀头，要把面积过小的瓷砖的切割点为远离原点一段，刚好与上面相反。
+	void ChangeEleNode_Avoid_Impact(NestResultDataNode*head);
+
 	//开辟新的算法，将以上三个函数合在一个函数里面
 	//基于禁忌搜索的贪婪算法
 	//一种面向全局最优的禁忌_贪婪算法,输入封闭环头结点，此时一个批次的所有图元都已经在这里面了。
@@ -155,7 +169,7 @@ public:
 	//判断第二个封闭环在不在第一个封闭环里面
 	Geom2CloseHeadNest EstimateCloseHeadNest(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp);
 	//求单个封闭环包络矩形的xy最值
-	Envelope_Rect GetLimtofGeomClosed(GeomCloseHEAD*pHtemp);
+	void GetLimtofGeomClosed(GeomCloseHEAD*pHtemp);
 	//包络封闭环的数据
 	Envelope_Rect m_GemoClosedLimt;
 	//用包络的方式判断后面的封闭环和前面的封闭环是否有嵌套关系
@@ -173,6 +187,7 @@ public:
 	void SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp);
 	//输入子封闭环的最后节点，改变父封闭环的图元头结点（打孔点）
 	void ChangeOutsideGeomEleNode(GeomCloseHEAD*pKidCloseHead, GeomCloseHEAD*pFadClosedHead);
+	
 	//输入第一层父封闭环的图元头结点，改变下一个第一层父封闭环的子封闭环的顺序,并把最后一个子封闭环输出
 	GeomCloseHEAD*ChangeINsideGeomEleNode(GeomCloseHEAD*pFadClosedHead, GeomCloseHEAD*pNKidCloseHead);
 
@@ -188,5 +203,20 @@ public:
 	GeomCloseHEAD*ChangeGeomCHead(GeomCloseHEAD*pNKidCloseHead);
 	//寻找下一个第一层封闭环
 	GeomCloseHEAD*Find_Next_TheFirstLevel(GeomCloseHEAD*pFirstClosedHead);
+	//////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////
+	//以下是求解切割引刀线的相关代码（切割瓷砖和玻璃用，而切割钢铁之类的则不用）
+	GeomCloseHEAD*m_ceramic_Head;//保存瓷砖部件的头文件
+	//输入头文件，添加切割引刀线，这是在已经确定了切割控制点之后，也就是在完成了贪婪算法，多重嵌套识别算法，调节切割控制点之后
+	void Add_CutGuideLine(NestResultDataNode*head);
+	CutGuideLine*CreatCutGuideLine(GeomCloseHEAD*Phead); //生成切割引刀线，切割封闭环的头结点
+	CutGuideLine*CreatCutGuideLine_Circle(GeomEleNode*Pnode,bool m_bilayer); //求圆的切割引刀线
+	CutGuideLine*CreatCutGuideLine_Polygon(GeomEleNode*Pnode, bool m_bilayer); //求多边形（非圆）的切割引刀线
+	double CalculateSlope(GeomEleNode*pGnode);//输入一个基本图元数据结构，求解其首图元和尾图元直线的斜率
+	//以上求切割引刀线的方式过于复杂了
+	//提出一种基于封闭环之间的逻辑层次感念的材料去留切割引刀线问题
+	//即是根据封闭环识别之后的逻辑关系，和切割顺序，进行切割引刀线的添加
+	CutGuideLine*CreatCutGuideLINE(GeomCloseHEAD*Phead);//输入每一个封闭环，然后对其进行切割 引刀线的添加。
+	bool IfIncludeKidClose(GeomCloseHEAD*Phead);//输入一个封闭环，判断是否有子封闭环
+	void Add_KidCloseCutLine(GeomCloseHEAD*Phead);//输入一个含有子封闭环的封闭环，给它添加切割引刀线
 };
-

@@ -41,6 +41,8 @@ GeomCloseHEAD*GeomClose::CreatGeomCloseHEAD(int GEOMCLOSE_ID)
 	newNode->m_AcceptGeomcloseHEAD = false;//起初时候并没有收录
 	newNode->m_IfGeomCloseIntact = false;//默认为不完整。
 	newNode->m_KidAcceptGeomCloseHead = false;//默认为没有读取
+	newNode->m_Singlelayer = true; //默认是单层，最外边的框框不能算一层，从里面排列的第一层开始算起为单层
+	newNode->m_GemoClosedLimt = { 0.0, 0.0, 0.0, 0.0 };//初始化的值
 	return newNode;
 }
 GeomCloseHEAD*GeomClose::InsertGeomEleNode(GeomCloseHEAD*head, GeomEleNode *node, GeomStandData m_geomstandData)

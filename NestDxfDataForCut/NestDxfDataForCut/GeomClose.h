@@ -28,6 +28,14 @@ typedef struct GeomEleNode//所有的数据进来时候存放的结点
 	unsigned int m_NumGeomCloseID;//记录是第几个封闭环的图元。
 	bool m_AccptGeomEleNode;//判断该结点是否已经被收录的,初始化为false
 }GeomEleNode;
+//封闭环包络矩形
+typedef struct
+{
+	double x_min;//包络矩形的x方向的最小值
+	double x_max;//包络矩形的x方向的最大值
+	double y_min;//包络矩形的y方向的最小值
+	double y_max;//包络矩形的y方向的最大值
+}Envelope_Rect;
 //********************************************************************//
 //将每个封闭环的双向链表的头结点保存起来。刚开始的时候保存整个DXF的图元的结点所形成的无序双向链表的头结点
 //这些头结点之间在更上一层还会形成以同一个排样dxf图形所有封闭环组成的双向链表，
@@ -35,6 +43,7 @@ typedef struct GeomEleNode//所有的数据进来时候存放的结点
 //********************************************************************//
 typedef struct GeomCloseHEAD
 {
+	Envelope_Rect m_GemoClosedLimt;//存储封闭环外包络矩形的控制点
 	TranLine m_tranline;//存储过渡直线
 	GEOMCCLOSTAPOINT m_geomclose_startpoint;//存储所指向双向链表的起止重合点
 	unsigned int m_NumGeomele;//该链表存有多少个基本图元
@@ -47,6 +56,7 @@ typedef struct GeomCloseHEAD
 	bool m_IfGeomCloseIntact;//判断一个封闭环内的数据是否完整，标志是头结点的起点与尾结点的终点相同
 	bool m_AcceptGeomcloseHEAD;//如果以后要全局最优路径规划的时候，最为每一个封闭环时候已经被规划的标识
 	bool m_KidAcceptGeomCloseHead;//判断子封闭环是否已经再次被确定位置
+	bool m_Singlelayer;//判断封闭环是单还是双，用来处理引刀线。默认是单层
 }GeomCloseHEAD;
 class GeomClose
 {

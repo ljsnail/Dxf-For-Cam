@@ -10,6 +10,7 @@ GeomForCut::GeomForCut()
 	j = 0;
 	a = 0;
 	m_nestrsltNode = { NULL, NULL, NULL, false };//用来作为每次存储值的全局变量，但每次之后都会被重写
+	m_ceramic_Head = NULL;
 }
 
 
@@ -778,6 +779,137 @@ void GeomForCut::ChangeEleNodeOfGeomClosed_order(NestResultDataNode*head)
 
 	}
 }
+//核心代码，请勿乱动！！
+//核心代码，请勿乱动！！
+//核心代码，请勿乱动！！
+//按照已经确定的顺序封闭环顺序去处理每一个封闭环里面切割控制点，使得避免撞刀
+void GeomForCut::ChangeEleNode_Avoid_Impact(NestResultDataNode*head)
+{
+	int a = 0;
+	GeomCloseHEAD*pHtemp;
+	GeomEleNode*phtemp, *paimnode = NULL, *ptemp;//重要的三个结点参数
+	double m_prevGeomCloseEnd_x, m_prevGeomCloseEnd_y;//上一个封闭环的起止点
+	double temp_end_x, temp_end_y;//当前封闭环数据结点的起点
+	double m_mindistant, m_tempmindistant;//保存两点之间最短距离
+
+	pHtemp = head->FirstGeomClose;//第一个头结点
+	while (pHtemp->nextGeomcloseNode)//所有封闭环头结点都处理完
+	{
+		if (!(pHtemp->prevGeomcloseNode))//如果这是第一个封闭环
+		{
+			//说明Htemp没有前一个封闭环，把机床原点赋给它
+			m_prevGeomCloseEnd_x = 0.0;//以机床原点为最开始的起点，以（0,0）为机床原点
+			m_prevGeomCloseEnd_y = 0.0;
+		}
+		else//说明不是头结点，那么就有前封闭环结点了，那么把前一个封闭环头结点保存的起止点数据传给它
+		{
+			m_prevGeomCloseEnd_x = pHtemp->prevGeomcloseNode->m_geomclose_startpoint.colse_start_x0;
+			m_prevGeomCloseEnd_y = pHtemp->prevGeomcloseNode->m_geomclose_startpoint.colse_start_y0;
+
+		}
+
+		//对于单个封闭环处理
+		//寻找所有数据结点的起点中与上一个封闭环链表中的起止点最靠近的那个结点
+		phtemp = pHtemp->FirstGeomele;//保存头结点
+		ptemp = pHtemp->FirstGeomele;//用来遍历的结点
+		//求下一个结点起点和上一个封闭环起止点的最短距离
+		//以头结点起点和上一个封闭环起止点的最短距离为首先参考
+		temp_end_x = phtemp->m_GeomStandData.GeoEle_start_x0;//保存起点数据
+		temp_end_y = phtemp->m_GeomStandData.GeoEle_start_y0;
+		m_mindistant = fabs(sqrt(((temp_end_x - m_prevGeomCloseEnd_x)*(temp_end_x - m_prevGeomCloseEnd_x)) + ((temp_end_y - m_prevGeomCloseEnd_y)*(temp_end_y - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+		while (ptemp)//把封闭环内所有的数据结点遍历一般,找出最理想的数据结点
+		{
+			if (!(ptemp->prevGeomeleNode))//如果ptemp是头结点那么目标结点就是头结点
+			{
+				//对于圆来说整个封闭环只有一个结点，且为头结点，那么就需要根据前面封闭环的起止点和现在的圆心的直线和圆求交点。
+				if (3 == ptemp->m_GeomStandData.m_typegeomele)//圆
+				{
+					double a, b, r, x0, y0, c;
+					double x1, y1, x2, y2;
+					double distance_1, distance_2;
+					a = ptemp->m_GeomStandData.m_circle.m_Circent_x;
+					b = ptemp->m_GeomStandData.m_circle.m_Circent_y;
+					r = ptemp->m_GeomStandData.m_circle.m_Circle_r;
+					x0 = m_prevGeomCloseEnd_x;
+					y0 = m_prevGeomCloseEnd_y;
+					if (x0 == a)
+					{
+						x1 = a;
+						y1 = b - r;
+						x2 = a;
+						y2 = b + r;
+					}
+					else if (y0 == b)
+					{
+						x1 = a - r;
+						y1 = b;
+						x2 = a + r;
+						y2 = b;
+					}
+					else
+					{
+						c = sqrt(pow(r, 2) / (1 + pow(((y0 - b) / (x0 - a)), 2)));
+						x1 = a + c;
+						y1 = b + ((y0 - b) / (x0 - a))*c;
+						x2 = a - c;
+						y2 = b - ((y0 - b) / (x0 - a))*c;
+					}
+					distance_1 = fabs(sqrt(((x1 - m_prevGeomCloseEnd_x)*(x1 - m_prevGeomCloseEnd_x)) + ((y1 - m_prevGeomCloseEnd_y)*(y1 - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+					distance_2 = fabs(sqrt(((x2 - m_prevGeomCloseEnd_x)*(x2 - m_prevGeomCloseEnd_x)) + ((y2 - m_prevGeomCloseEnd_y)*(y2 - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+					m_tempmindistant = distance_1;
+					if (distance_2<distance_1)
+					{
+						x1 = x2;
+						y1 = y2;
+						m_tempmindistant = distance_1;
+					}
+					if (m_mindistant<m_tempmindistant)
+					{
+						ptemp->m_GeomStandData.GeoEle_start_x0 = x1;
+						ptemp->m_GeomStandData.GeoEle_start_y0 = y1;
+						ptemp->m_GeomStandData.GeoEle_start_x1 = x1;
+						ptemp->m_GeomStandData.GeoEle_start_y1 = y1;
+						ptemp->m_GeomStandData.m_circle.m_Circle_Start_Angle = m_geomele.ForCircleStartAngle(x1, y1, ptemp->m_GeomStandData.m_circle);
+					}
+					else
+					{
+						paimnode = ptemp;//说明现在这结点离上一个封闭环起止点的距离更近些
+
+					}
+				}
+				else
+				{
+					paimnode = phtemp;//如果头结点的起止点是整个封闭环与和上一个封闭环起始点的最短距离的时候，头结点为目标结点
+
+				}
+
+			}
+			else//如果不是头结点了那么就要进行数据比较了
+			{
+				//求下一个结点起点和上一个封闭环起止点的最短距离
+				temp_end_x = ptemp->m_GeomStandData.GeoEle_start_x0;//保存起点数据
+				temp_end_y = ptemp->m_GeomStandData.GeoEle_start_y0;
+				m_tempmindistant = fabs(sqrt(((temp_end_x - m_prevGeomCloseEnd_x)*(temp_end_x - m_prevGeomCloseEnd_x)) + ((temp_end_y - m_prevGeomCloseEnd_y)*(temp_end_y - m_prevGeomCloseEnd_y))));//这里求的是两点之间的最短距离
+				if (m_mindistant<m_tempmindistant)
+				{
+					m_mindistant = m_tempmindistant;//把最小值也要更新
+					paimnode = ptemp;//说明现在这结点离上一个封闭环起止点的距离更近些
+
+				}
+			}
+			ptemp = ptemp->nextGeomeleNode;
+		}
+		//至此，一个封闭环链表里面的数据中距离最短的那个结点已经找到，接下来要对封闭环内的结点进行数据调换了
+		a++;
+		//if (paimnode->prevGeomeleNode)//不是NULL，那么就是说不是从圆那边获得的数据
+		if (pHtemp->FirstGeomele->m_GeomStandData.m_typegeomele != 3)//不是圆
+		{
+			ChangeEleNodeForAloneClse(pHtemp, paimnode);
+		}
+		pHtemp = pHtemp->nextGeomcloseNode;//第一个封闭环处理完之后，进入第二个封闭环，如此循环最后整个排样dxf里面的封闭环都处理完；除了圆
+
+	}
+}
 
 //创造一个用来存放离最后一个已经被置位的封闭环最近的内图元结点和最短距离
 Mindistant_EleNode*GeomForCut::CreatMindistant_EleNode(GeomEleNode* pmindst, double m_mindstant)
@@ -794,6 +926,7 @@ Mindistant_EleNode*GeomForCut::CreatMindistant_EleNode(GeomEleNode* pmindst, dou
 
 void GeomForCut::BaseTS_GR_ForCutPathPlan(NestResultDataNode*head)
 {
+
 	Mindistant_EleNode*newNode = (Mindistant_EleNode*)malloc(sizeof(Mindistant_EleNode));
 	newNode->m_mindistant = 99999.0;
 	newNode->pminhead = NULL;
@@ -1078,9 +1211,11 @@ NestResultDataNode* GeomForCut::ChangeSencondCH2FH(NestResultDataNode*head)
 {
 	GeomCloseHEAD*pFirstCloseHead;
 	pFirstCloseHead = head->FirstGeomClose;
+	m_ceramic_Head = pFirstCloseHead;//保存瓷砖的部件
 	pFirstCloseHead = pFirstCloseHead->nextGeomcloseNode;
 	pFirstCloseHead->prevGeomcloseNode = NULL;
 	head->FirstGeomClose = pFirstCloseHead;
+
 	return head;
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1440,10 +1575,10 @@ GeomCloseHEAD* GeomForCut::ChangeINsideGeomEleNode(GeomCloseHEAD*pFadClosedHead,
 //将整张图的封闭环是否嵌套全部找出来，并按照是否嵌套的关系挂到不同的封闭环头结点上
 void GeomForCut::Find_AdjustNestCloseHead(NestResultDataNode*head)
 {
-	int a = 0;
+	int a = 0;//找bug使用
 	GeomCloseHEAD*pTempCHead, *pTempNextCHead;//用作遍历全部封闭环
 	GeomCloseHEAD*pNextCHead;//作为pTempNextCHead被查出是pTempCHead的子封闭环后，要离开大封闭环的交接环
-	m_G2CloseHeadNest.m_IfCloseNest= false;//判断第二个封闭环是不是第一个封闭环的子封闭环
+	m_G2CloseHeadNest.m_IfCloseNest= true;//判断第二个封闭环是不是第一个封闭环的子封闭环
 	//算法开始
 	pTempCHead = head->FirstGeomClose;
 	//不要全部遍历一遍，当只有最后一个封闭环的时候就可以跳出去了，因为要嵌套起码要两个封闭环
@@ -1451,6 +1586,7 @@ void GeomForCut::Find_AdjustNestCloseHead(NestResultDataNode*head)
 	//那么它就成了最后一个，那么经过下面的pTempCHead = pTempCHead->nextGeomcloseNode;
 	//此时pTempCHead已经是NULL，所以pTempCHead->nextGeomcloseNode是会报错的
 	//所以要改为while (pTempCHead)
+	pTempCHead->m_Singlelayer = true;//这个是800*800的板材，是第一层也就是单层
 	while (pTempCHead)//倒数第二个可以进入循环，最后一个就要跳出循环了
 	{
 		pNextCHead = head->FirstGeomClose;
@@ -1460,7 +1596,7 @@ void GeomForCut::Find_AdjustNestCloseHead(NestResultDataNode*head)
 			//给pNextCHead找一个替身pTempNextCHead,
 			pTempNextCHead = pNextCHead;
 			////////////用射线的方式判断这两个封闭环有没有嵌套
-			//////////m_G2CloseHeadNest = EstimateCloseHeadNest(pTempCHead, pTempNextCHead);
+			////////m_G2CloseHeadNest = EstimateCloseHeadNest(pTempCHead, pTempNextCHead);
 			//用包络的方式来判断两个封闭环有没有嵌套
 			m_G2CloseHeadNest = JudgeCloseHeadNest(pTempCHead, pTempNextCHead);
 			//如果有嵌套，那么就要把第二个封闭环挂到第一个封闭上
@@ -1481,7 +1617,7 @@ void GeomForCut::Find_AdjustNestCloseHead(NestResultDataNode*head)
 		a++;
 		pTempCHead = pTempCHead->nextGeomcloseNode;
 	}
-}
+}//以上代码实现了，单双层判断和外包络矩形的控制点记录
 //核心代码！
 //核心代码！
 //核心代码！
@@ -1739,7 +1875,7 @@ void  GeomForCut::SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp)
 }
 //求封闭环的包络矩形xy的极限值
 
-Envelope_Rect  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
+void  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 {
 	GeomEleNode*ptempGelenode;
 	double temp_x_min, temp_x_max, temp_y_min, temp_y_max;
@@ -1823,11 +1959,10 @@ Envelope_Rect  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 	x_max = Retain4Decimals(x_max);
 	y_min = Retain4Decimals(y_min);
 	y_max = Retain4Decimals(y_max);
-	m_GemoClosedLimt.x_min = x_min;
-	m_GemoClosedLimt.x_max = x_max;
-	m_GemoClosedLimt.y_min = y_min;
-	m_GemoClosedLimt.y_max = y_max;
-	return m_GemoClosedLimt;
+	pTempCHead->m_GemoClosedLimt.x_min = x_min;
+	pTempCHead->m_GemoClosedLimt.x_max = x_max;
+	pTempCHead->m_GemoClosedLimt.y_min = y_min;
+	pTempCHead->m_GemoClosedLimt.y_max = y_max;
 }
 
 //核心算法
@@ -1857,8 +1992,10 @@ Geom2CloseHeadNest  GeomForCut::JudgeCloseHeadNest(GeomCloseHEAD*pTempCHead, Geo
 
 	}
 	//求两个封闭环的包络矩形的范围
-	m_GeomClosed1 = GetLimtofGeomClosed(pTempCHead);
-	m_GeomClosed2 = GetLimtofGeomClosed(pTempNextCHead);
+	GetLimtofGeomClosed(pTempCHead);
+	GetLimtofGeomClosed(pTempNextCHead);
+	m_GeomClosed1 =pTempCHead->m_GemoClosedLimt;
+	m_GeomClosed2 =pTempNextCHead->m_GemoClosedLimt;
 	//对数值保留四位小数
 	x1_min = m_GeomClosed1.x_min;
 	x1_max = m_GeomClosed1.x_max;
@@ -1877,6 +2014,15 @@ Geom2CloseHeadNest  GeomForCut::JudgeCloseHeadNest(GeomCloseHEAD*pTempCHead, Geo
 		//如果有交点的情况下，那么应该把这个封闭环2挂到封闭环1中，作为它的子封闭环
 		m_G2CloseHeadNest.m_IfCloseNest = true;
 		m_G2CloseHeadNest.KidCloseHead = pTempNextCHead;
+		//根据父封闭环是单双层来判断子封闭环的单双层
+		if (pTempCHead->m_Singlelayer)//能进来说明是单层，因为默认是单层
+		{
+			pTempNextCHead->m_Singlelayer = false;//因为它已经是人家的子封闭环，而他爹是单层，他就得是双层
+		}
+		else//pTempCHead->m_Singlelayer如果父封闭环是双层，那么子封闭环就得是单层，也就是不用变
+		{
+			pTempNextCHead->m_Singlelayer = true;//父是双层的时候，这里应该是单层了
+		}
 		m_G2CloseHeadNest.NextCloseHead = pTempNextCHead->nextGeomcloseNode;
 		
 	}
@@ -1935,7 +2081,6 @@ void GeomForCut::BaseTS_GR_ForKidCHead(NestResultDataNode*head)
 
 	pFirstClosedHead = head->FirstGeomClose;
 	//把第一层封闭环循环完就可以了
-	
 	while (pFirstClosedHead)
 	{
 		
@@ -2499,4 +2644,237 @@ GeomCloseHEAD*GeomForCut::Find_Next_TheFirstLevel(GeomCloseHEAD*pFirstClosedHead
 
 	return pTheLastKidCHead;
 	
+}
+////////////////////////////////////添加切割引刀线//////////////////////////////////////////
+////添加切割引刀线
+//void GeomForCut::Add_CutGuideLine(NestResultDataNode*head)
+//{
+//
+//}
+//求解首图元和尾图元的直线的斜率，用此斜率来确定切割引刀线的斜率
+double GeomForCut::CalculateSlope(GeomEleNode*pGnode)
+{
+	double slope;//斜率
+	double x0, x1, y0, y1;//基本图元的四个控制点
+	x0 = pGnode->m_GeomStandData.GeoEle_start_x0;
+	y0 = pGnode->m_GeomStandData.GeoEle_start_y0;
+	x1 = pGnode->m_GeomStandData.GeoEle_start_x1;
+	y1 = pGnode->m_GeomStandData.GeoEle_start_y1;
+	//判断是否为垂直直线
+	if (x0 == x1)
+	{
+		slope = -987654;//给予一个固定的值，作为垂直直线的标识
+	}
+	//判断是否为水平直线
+	else if (y1 == y0)
+	{
+		slope = 0.0;
+	}
+	//一般直线
+	else
+	{
+		slope = (y1 - y0) / (x1 - x0);
+	}
+	return slope;
+}
+//生成切割引刀线
+//要区分直线，圆，圆弧的不同
+CutGuideLine* GeomForCut::CreatCutGuideLine(GeomCloseHEAD*Phead) //生成切割引刀线，输入切割控制点的起点，输入第一条基本图元的斜率，最后一条直线的斜率，输入是判断是内环还是外环。
+{
+	CutGuideLine*newNode = (CutGuideLine*)malloc(sizeof(CutGuideLine));
+	//判断该封闭环是不是圆，如果是圆那么求切割引刀线的方式与其他的不一样
+	GeomEleNode*First_node;//封闭环第一个基本图元
+	bool m_bilayer;//判断是否双层
+	m_bilayer = Phead->m_Singlelayer;
+	First_node = Phead->FirstGeomele;
+	if (First_node->m_GeomStandData.m_typegeomele == 3)//说明是圆
+	{
+		newNode = CreatCutGuideLine_Circle(First_node,m_bilayer);
+	}
+	else//说明是其他多边形的时候
+	{
+		newNode = CreatCutGuideLine_Polygon(First_node, m_bilayer);
+	}
+	return newNode;
+}
+//求圆的切割引刀线
+CutGuideLine*GeomForCut::CreatCutGuideLine_Circle(GeomEleNode*Phead, bool m_bilayer)
+{
+	CutGuideLine*newNode = (CutGuideLine*)malloc(sizeof(CutGuideLine));
+
+	return newNode;
+}
+//求多边形（非圆）的切割引刀线
+CutGuideLine*GeomForCut::CreatCutGuideLine_Polygon(GeomEleNode*Phead, bool m_bilayer)
+{
+	//既然是多边形，那么肯定有不止一个基本图元
+	CutGuideLine*newNode = (CutGuideLine*)malloc(sizeof(CutGuideLine));
+	GeomEleNode*End_node;
+	double x0, y0, x1, y1;
+	double slope_1;//封闭环第一个基本图元的斜率
+	double slope_2;//封闭环最后一个基本图元的斜率
+	double a, b, r;//圆心，半径
+	End_node = Phead->nextGeomeleNode;
+	while (End_node->nextGeomeleNode)//找到最后一个基本图元
+		End_node = End_node->nextGeomeleNode;	
+	x1 = Phead->m_GeomStandData.GeoEle_start_x0;//以封闭环的第一个基本图元作为切割引刀线的末尾
+	y1 = Phead->m_GeomStandData.GeoEle_start_y0;//以封闭环的第一个基本图元作为切割引刀线的末尾
+	//要区分首尾节点中，是否有圆弧这种特殊的图元存在，
+	//如果首图元是圆弧，那么切割引刀线最好是相切的方式（单层的时候，往外切）
+	//（双层的时候，往里切），那么就是求弦的斜率
+	if (Phead->m_GeomStandData.m_typegeomele==2||End_node->m_GeomStandData.m_typegeomele==2)//只要有一个是，都要分开处理
+	{
+		if (Phead->m_GeomStandData.m_typegeomele == 2)//首图元是圆弧
+		{
+			if (m_bilayer)//是双层，那么就该是往内切，求首，尾节点的斜率，与普通多边形一样求法，所以只求斜率，和后面一起处理
+			{
+				slope_1 = CalculateSlope(Phead);
+				slope_2 = CalculateSlope(End_node);
+			}
+			else//单层，切割引刀线往外切，这个时候，应该是求圆弧的相切线
+			{
+				//求圆弧的切线
+			
+
+			}
+		}
+	}
+	//newNode->x0 = x0;
+	//newNode->y0 = y0;
+	//newNode->x1 = x1;
+	//newNode->y1 = y1;
+	//newNode->if_CutGuideLine = true;//作为后续的是否切割引刀线判断的标准
+	//newNode->nextGeomcloseNode = Phead;//切割引刀线后面就是封闭环的第一个图元节点
+	//newNode->prevGeomcloseNode = NULL;//前面没有指向了，这里其实不要也应该可以的
+	return newNode;
+}
+////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
+//新的添加切割引刀线的方法//
+//添加切割引刀线，上述代码已经把封闭环按照逻辑顺序挂靠完了。
+void GeomForCut::Add_CutGuideLine(NestResultDataNode*head)
+{
+	//这里就要把所有的封闭环按照逻辑顺序读一遍，这是坑爹啊
+	GeomCloseHEAD*ptemp;//封闭环首结点。
+	bool m_HaveKidClosed;//判断是否有子封闭环，有子封闭环则需要由最里面的子封闭环开始挂靠
+
+	ptemp = head->FirstGeomClose;
+	while (ptemp)//将封闭环全部遍历，这里是对第一层封闭环进行遍历
+	{
+		//判断是否有子封闭环
+		m_HaveKidClosed = IfIncludeKidClose(ptemp);
+		if (m_HaveKidClosed)//如果有，那么调用专门为有子封闭环的切割引刀线添加函数
+		{
+			Add_KidCloseCutLine(ptemp);
+		}
+		else
+		{
+			CreatCutGuideLINE(ptemp);//添加引刀线
+		}
+		//如果没有子封闭环，那么就可以按照每个封闭环的外包络矩形来进行引刀线添加
+		
+		ptemp = ptemp->nextGeomcloseNode;
+	}
+
+}
+//判断封闭环是否有子封闭环
+bool GeomForCut::IfIncludeKidClose(GeomCloseHEAD*Phead)
+{
+	if (Phead->FirstInsideGCloseNode)//有子封闭环
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+//核心代码，处理含有子封闭环的封闭环数据
+//含有子封闭环，那么就可能存在一串的封闭环，
+//因为子封闭环可能有兄弟封闭环，兄弟封闭环可能有子封闭环。
+//在这个函数里，要把子封闭环的数据处理完，然后还要把封闭环本身的数据处理完
+//自递归方程
+void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//输入一个含有子封闭环的封闭环，给它添加切割引刀线
+{
+	GeomCloseHEAD*pktemp;//子封闭环结点。
+	GeomCloseHEAD*pkNtemp;//子兄弟封闭环结点。
+	GeomCloseHEAD*pFtemp;//上一层父封闭环结点。
+	GeomCloseHEAD*pFNtemp;//上一层父兄弟封闭环结点。
+	bool m_HaveKidClosed;//判断是否有子封闭环，有子封闭环则需要由最里面的子封闭环开始挂靠
+	pktemp = Phead->FirstInsideGCloseNode;//子封闭环
+	m_HaveKidClosed = IfIncludeKidClose(pktemp);
+	if (m_HaveKidClosed)//如果有,则会一直判断，进入，直到最后一次没有子封闭环的封闭环
+	{
+		Add_KidCloseCutLine(pktemp);
+	}
+	else//没有子封闭环，那么就可以将该子封闭环添加切割引刀线。
+	{
+		CreatCutGuideLINE(pktemp);
+	}
+	//以上只是把含有子封闭环的第一层链表的封闭环的最底层封闭环处理完了
+	//余下要处理最底层的兄弟封闭环
+	//和上一级父封闭环
+	//剩余封闭环处理开始
+	//如果有兄弟封闭环,那么就要把该层的兄弟环处理完
+	if (pktemp->nextGeomcloseNode)
+	{
+		pkNtemp = pktemp->nextGeomcloseNode;
+		//遍历该层的兄弟封闭环
+		while (pkNtemp)
+		{
+			//如果兄弟封闭环有子封闭环的情况下
+			if (pkNtemp->FirstInsideGCloseNode)
+			{
+				Add_KidCloseCutLine(pkNtemp);
+			}
+			else//如果没有的情况下,直接处理
+			{
+				CreatCutGuideLINE(pkNtemp);
+			}
+			pkNtemp = pkNtemp->nextGeomcloseNode;
+		}
+	}
+	//如果没有兄弟封闭环，或者兄弟封闭环已经处理完了
+	//一定会有父封闭环的
+	pFtemp = pktemp->prevOutsideGCloseNode;
+	//重要代码
+	while (pFtemp != Phead)//如果上一层父封闭环还不是第一层父封闭环的时候，那么就要继续往上处理
+	{
+		CreatCutGuideLINE(pFtemp);
+		//判断是否有兄弟封闭环
+		if (pFtemp->nextGeomcloseNode)
+		{
+			pFNtemp = pFtemp->nextGeomcloseNode;
+			//把这一层兄弟封闭环处理完
+			while (pFNtemp)
+			{
+				//兄弟封闭环是否有子封闭环
+				if (pFNtemp->FirstInsideGCloseNode)
+				{
+					Add_KidCloseCutLine(pFNtemp);
+				}
+				else
+				{
+					CreatCutGuideLINE(pFNtemp);
+				}
+				pFNtemp = pFNtemp->nextGeomcloseNode;
+			}
+
+		}
+
+		pFtemp = pFtemp->prevOutsideGCloseNode;
+
+	}
+	//以上已经把由第一层的那个封闭环带领的子封闭环除第一层子封闭环之外的封闭环全部处理完
+		CreatCutGuideLINE(Phead);
+}
+//最核心的代码，这个代码将是要对每一个封闭环进行求切割引刀线
+//要求判断该切割引导线不会与其他线有交点，也就是不会存在把切割引刀线开到要保留的材料中
+//还要把切割引刀线加入到子封闭环中，并作为头结点
+//如果不合适的话，还要对封闭环的切割控制点进行重新选择
+CutGuideLine*GeomForCut::CreatCutGuideLINE(GeomCloseHEAD*Phead)//输入每一个封闭环，然后对其进行切割 引刀线的添加。
+{
+	CutGuideLine*A;
+	return A;
 }
