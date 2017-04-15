@@ -1,5 +1,6 @@
 #pragma once
 #include"GeomClose.h"
+#include"CutLeadLine.h"
 //这个类主要是实现把之前的封闭环之间串起来切割使用。
 //实现，将封闭环之间排序，对圆这种特殊图形要另外处理，对于圆弧要转换成原来的数据形式
 //包含封闭图元之间的过渡直线
@@ -30,12 +31,12 @@ typedef struct
 	GeomEleNode *pminnode;
 	double m_mindistant;
 }Mindistant_EleNode;
-//保存两条直线交点的数据结构,两条直线要么没有交点，要么只有一个交点
-typedef struct
-{
-	double x;
-	double y;
-}Point;
+////保存两条直线交点的数据结构,两条直线要么没有交点，要么只有一个交点
+//typedef struct
+//{
+//	double x;
+//	double y;
+//}Point;
 //保存决定一条直线的两个点的数据结构
 typedef struct
 {
@@ -48,17 +49,20 @@ typedef struct
 	GeomCloseHEAD*KidCloseHead;
 	GeomCloseHEAD*NextCloseHead;
 }Geom2CloseHeadNest;
-//切割引刀线的数据结构
+////以下为切割引导性相关的数据结构
+////切割引刀线的数据结构
+//struct Line_point
+//{
+//	double x0, x1;//切割引刀线的起始点
+//	double y0, y1;//切割引刀线的终止点，也就是原来封闭环的首结点的一个点
+//};
+//切割引刀线图元数据结构
+//切割引刀线为直线
 typedef struct
 {
-	double x0;//引刀线起点
-	double y0;//引刀线起点
-	double x1;//引刀线终点，以原来切割控制点的起点为终点
-	double y1;//引刀线终点，以原来切割控制点的起点为终点
-	///*double 
-		;//引刀线与直线x0轴的斜率；以便将来切割引刀线与封闭环有交点时候，调整引刀线时候一步到位
-	GeomCloseHEAD*prevGeomcloseNode;//指向前一个封闭环GeomCloseHEAD结点，因为是引刀线，所以这里前面只能指向NULL
-	GeomCloseHEAD*nextGeomcloseNode;//指向后一个封闭环GeomCloseHEAD结点,因为这里是引刀线，所以这里只能指向封闭环的第一个头结点
+	Line_para m_cutline;
+	GeomEleNode*prevGelenode;//指向前一个图元节点，但这里的切割引刀线，所以这里只能是
+	GeomEleNode*nextGelenode;//指向后一个封闭环GeomCloseHEAD结点,因为这里是引刀线，所以这里只能指向封闭环的第一个头结点
 	bool if_CutGuideLine;//作为切割引刀线的判断，默认为ture
 }CutGuideLine;
 ////创建一个数据结构，保存去掉板材框后的排样图纸头文件和板材框封闭环头文件
@@ -216,7 +220,16 @@ public:
 	//以上求切割引刀线的方式过于复杂了
 	//提出一种基于封闭环之间的逻辑层次感念的材料去留切割引刀线问题
 	//即是根据封闭环识别之后的逻辑关系，和切割顺序，进行切割引刀线的添加
-	CutGuideLine*CreatCutGuideLINE(GeomCloseHEAD*Phead);//输入每一个封闭环，然后对其进行切割 引刀线的添加。
+	void CreatCutGuideLINE(GeomCloseHEAD*Phead);//输入每一个封闭环，然后对其进行切割 引刀线的添加。
 	bool IfIncludeKidClose(GeomCloseHEAD*Phead);//输入一个封闭环，判断是否有子封闭环
 	void Add_KidCloseCutLine(GeomCloseHEAD*Phead);//输入一个含有子封闭环的封闭环，给它添加切割引刀线
+	//用上CutLeadLine这个类
+	CutLeadLine m_CutLeadLine;
+	//////////////////////////////////////////////////////////////////////////////
+	///////////////////////////切割引刀线干涉判断，与调整/////////////////////////
+	///////////////////////////核心代码，核心代码，核心代码,下一篇的工作////////
+	//输入切割图头结点，把封闭环的切割引导线都清理一遍。
+	//NestResultDataNode*CheckCutGuideLINE()
+
 };
+

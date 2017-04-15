@@ -3,6 +3,7 @@
 #define EPSILON 0.018
 #define WEIGHT_ORIGIN 0.1//·â±Õ»·µ½»ú´²Ô­µã¾àÀëµÄÈ¨ÖØ
 #define WEIGHT_PTP 0.9//·â±Õ»·µ½ÁíÒ»¸ö·â±Õ»·Ö®¼ä¾àÀëµÄÈ¨ÖØ
+#define pi 3.1416;
 GeomForCut::GeomForCut()
 {
 	//BatchHEAD m_batchHead = { 0, NULL };//½á¹¹Ìå³õÊ¼»¯
@@ -16,6 +17,7 @@ GeomForCut::GeomForCut()
 
 GeomForCut::~GeomForCut()
 {
+
 }
 //ÊµÀý»¯BatchHEAD²¢¸³³õÖµ¡£
 BatchHEAD* GeomForCut::CreatBatchHEAD(int BatchHEAD_ID)//ÊµÀý»¯µÄÊ±ºò¾Í¸Ã×¢Ã÷ÕâÊÇµÚ¼¸Åú´Î£¬Ó¦¸ÃÒªÓÐÈ«¾Ö±äÁ¿
@@ -1878,8 +1880,8 @@ void  GeomForCut::SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp)
 void  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 {
 	GeomEleNode*ptempGelenode;
-	double temp_x_min, temp_x_max, temp_y_min, temp_y_max;
-	double x_min, x_max, y_min, y_max;//Ñ°ÕÒ·â±Õ»·1µÄ°üÂç¾ØÐÎµÄ·¶Î§
+	double temp_x_min=0.0, temp_x_max=0.0, temp_y_min=0.0, temp_y_max=0.0;
+	double x_min=0.0, x_max=0.0, y_min=0.0, y_max=0.0;//Ñ°ÕÒ·â±Õ»·1µÄ°üÂç¾ØÐÎµÄ·¶Î§
 	//´ÓµÚÒ»¸ö·â±Õ»·µÄµÚÒ»¸öÍ¼Ôª½Úµã¿ªÊ¼
 	//ÒªµÚÒ»¸ö·â±Õ»·¶ÔÈý½ÇÐÎ£¬ºÍÔ²½øÐÐÇø·Ö
 	ptempGelenode = pTempCHead->FirstGeomele;
@@ -2651,6 +2653,8 @@ GeomCloseHEAD*GeomForCut::Find_Next_TheFirstLevel(GeomCloseHEAD*pFirstClosedHead
 //{
 //
 //}
+
+//***************************************Ã»ÓÐÓÃµ½**************************************************//
 //Çó½âÊ×Í¼ÔªºÍÎ²Í¼ÔªµÄÖ±ÏßµÄÐ±ÂÊ£¬ÓÃ´ËÐ±ÂÊÀ´È·¶¨ÇÐ¸îÒýµ¶ÏßµÄÐ±ÂÊ
 double GeomForCut::CalculateSlope(GeomEleNode*pGnode)
 {
@@ -2684,16 +2688,16 @@ CutGuideLine* GeomForCut::CreatCutGuideLine(GeomCloseHEAD*Phead) //Éú³ÉÇÐ¸îÒýµ¶Ï
 	CutGuideLine*newNode = (CutGuideLine*)malloc(sizeof(CutGuideLine));
 	//ÅÐ¶Ï¸Ã·â±Õ»·ÊÇ²»ÊÇÔ²£¬Èç¹ûÊÇÔ²ÄÇÃ´ÇóÇÐ¸îÒýµ¶ÏßµÄ·½Ê½ÓëÆäËûµÄ²»Ò»Ñù
 	GeomEleNode*First_node;//·â±Õ»·µÚÒ»¸ö»ù±¾Í¼Ôª
-	bool m_bilayer;//ÅÐ¶ÏÊÇ·ñË«²ã
-	m_bilayer = Phead->m_Singlelayer;
+	bool m_Singlelayer;//ÅÐ¶ÏÊÇ·ñË«²ã
+	m_Singlelayer = Phead->m_Singlelayer;
 	First_node = Phead->FirstGeomele;
 	if (First_node->m_GeomStandData.m_typegeomele == 3)//ËµÃ÷ÊÇÔ²
 	{
-		newNode = CreatCutGuideLine_Circle(First_node,m_bilayer);
+		newNode = CreatCutGuideLine_Circle(First_node, m_Singlelayer);
 	}
 	else//ËµÃ÷ÊÇÆäËû¶à±ßÐÎµÄÊ±ºò
 	{
-		newNode = CreatCutGuideLine_Polygon(First_node, m_bilayer);
+		newNode = CreatCutGuideLine_Polygon(First_node, m_Singlelayer);
 	}
 	return newNode;
 }
@@ -2748,6 +2752,7 @@ CutGuideLine*GeomForCut::CreatCutGuideLine_Polygon(GeomEleNode*Phead, bool m_bil
 	//newNode->prevGeomcloseNode = NULL;//Ç°ÃæÃ»ÓÐÖ¸ÏòÁË£¬ÕâÀïÆäÊµ²»ÒªÒ²Ó¦¸Ã¿ÉÒÔµÄ
 	return newNode;
 }
+//****************************************************************************************//
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -2873,8 +2878,48 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓÐ×Ó·â±Õ»·µ
 //ÒªÇóÅÐ¶Ï¸ÃÇÐ¸îÒýµ¼Ïß²»»áÓëÆäËûÏßÓÐ½»µã£¬Ò²¾ÍÊÇ²»»á´æÔÚ°ÑÇÐ¸îÒýµ¶Ïß¿ªµ½Òª±£ÁôµÄ²ÄÁÏÖÐ
 //»¹Òª°ÑÇÐ¸îÒýµ¶Ïß¼ÓÈëµ½×Ó·â±Õ»·ÖÐ£¬²¢×÷ÎªÍ·½áµã
 //Èç¹û²»ºÏÊÊµÄ»°£¬»¹Òª¶Ô·â±Õ»·µÄÇÐ¸î¿ØÖÆµã½øÐÐÖØÐÂÑ¡Ôñ
-CutGuideLine*GeomForCut::CreatCutGuideLINE(GeomCloseHEAD*Phead)//ÊäÈëÃ¿Ò»¸ö·â±Õ»·£¬È»ºó¶ÔÆä½øÐÐÇÐ¸î Òýµ¶ÏßµÄÌí¼Ó¡£
+ void GeomForCut::CreatCutGuideLINE(GeomCloseHEAD*Phead)//ÊäÈëÃ¿Ò»¸ö·â±Õ»·£¬È»ºó¶ÔÆä½øÐÐÇÐ¸î Òýµ¶ÏßµÄÌí¼Ó¡£
 {
-	CutGuideLine*A;
-	return A;
+	 GeomEleNode*newNode = (GeomEleNode*)malloc(sizeof(GeomEleNode));
+	GeomCloseHEAD*ptemp;//±¸ÓÃ·â±Õ»·½Úµã
+	GeomEleNode*Fnode,*Enode;
+	Line_para m_startline, m_endline;//·â±Õ»·Ê×Í¼Ôª½ÚµãºÍÎ²Í¼Ôª½ÚµãµÄ»ù±¾Êý¾Ý
+	Line_para m_cutline;//ÇÐ¸îÒýµ¶ÏßµÄºËÐÄ²ÎÊý
+	double x0_min, y0_min, x0_max, y0_max;
+	double x1_min, y1_min, x1_max, y1_max;
+	bool m_Singlelayer;
+	m_Singlelayer = Phead->m_Singlelayer;
+	//Ö»²âÊÔÖ±ÏßÀàÐÍµÄÍ¼Ôª,²¢²»¿¼ÂÇÊÇ·ñÓÐ½»Éæ£¬²»¿¼ÂÇÔ²
+	Fnode = Phead->FirstGeomele;
+	Enode = Fnode->nextGeomeleNode;
+	while (Enode->nextGeomeleNode)//ÕÒµ½×îºóÒ»¸ö½Úµã
+		Enode = Enode->nextGeomeleNode;
+	//ÒÔÏÂÓÃµÄÊÇ½ÇÆ½·ÖÏß·¨
+	//Ê×Í¼Ôª½Úµã
+	m_startline.x0 = Fnode->m_GeomStandData.GeoEle_start_x0;
+	m_startline.y0 = Fnode->m_GeomStandData.GeoEle_start_y0;
+	m_startline.x1 = Fnode->m_GeomStandData.GeoEle_start_x1;
+	m_startline.y1 = Fnode->m_GeomStandData.GeoEle_start_y1;
+	//Î²Í¼Ôª½Úµã£¬Òª×¢ÒâÊ×Î²¶Ôµ÷
+	m_endline.x0 = Enode->m_GeomStandData.GeoEle_start_x1;
+	m_endline.y0 = Enode->m_GeomStandData.GeoEle_start_y1;
+	m_endline.x1 = Enode->m_GeomStandData.GeoEle_start_x0;
+	m_endline.y1 = Enode->m_GeomStandData.GeoEle_start_y0;
+	//µ÷ÓÃÇÐ¸îÒýµ¶Ïßº¯Êý
+	m_cutline = m_CutLeadLine.Get_CutLeadLine(m_startline, m_endline, m_Singlelayer);
+	//½«ÇÐ¸îÒýµ¶ÏßÒ²Ò»²¢±£´æÎªÍ¬Ò»µÄÍ¼Ôª¸ñÊ½
+	newNode->m_GeomStandData.GeoEle_start_x0 = m_cutline.x0;
+	newNode->m_GeomStandData.GeoEle_start_y0 = m_cutline.y0;
+	newNode->m_GeomStandData.GeoEle_start_x1 = m_cutline.x1;
+	newNode->m_GeomStandData.GeoEle_start_y1 = m_cutline.y1;
+	newNode->m_GeomStandData.k = m_cutline.k;
+	newNode->m_GeomStandData.m_typegeomele = 6;//ÇÐ¸îÒýµ¶ÏßµÄ±ê×¼
+	//ÖØµã£¡£¡£¡
+	//´Ó´Ë·â±Õ»·µÄÍ·½áµã²»ÔÙÊÇµÚÒ»¸ö·â±Õ»·Í¼Ôª£¬¶øÊÇÇÐ¸îÒýµ¶Ïß
+	//µÚ¶þ¸ö²ÅÊÇÔ­À´¹²ÓÐµÄÍ¼Ôª¡£
+	Phead->FirstGeomele = newNode;//ÇÐ¸îÒýµ¶ÏßÎªÊ×Í¼Ôª
+	newNode->nextGeomeleNode = Fnode;//Ö¸ÏòÔ­À´µÄÊ×Í¼Ôª
+	newNode->prevGeomeleNode = NULL;//×ÔÈ»Ëü¾Í³ÉÁËµÚÒ»¸öÁË
+	Fnode->prevGeomeleNode = newNode;//Ô­À´Ç°ÃæÖ¸ÏòµÄÊÇNULL
+	//Èç´Ë·â±Õ»·¾Í¼ÓÉÏÁËÇÐ¸îÒýµ¶Ïß
 }

@@ -24,11 +24,16 @@ typedef struct
 }GCIRCLE;
 typedef struct
 {
-	double GeoEle_start_x0, GeoEle_start_y0, GeoEle_start_x1, GeoEle_start_y1;//作为每一个图元的标准直线段，用作后续寻求同一个封闭图元而用的标准
+	//作为每一个图元的标准直线段，用作后续寻求同一个封闭图元而用的标准
+	//切割引刀线的数据也保存在这里
+	double GeoEle_start_x0, GeoEle_start_y0, GeoEle_start_x1, GeoEle_start_y1;
 	GLINE m_line;//包含三种类型
 	GARC m_arc;
 	GCIRCLE m_circle;
-	unsigned int m_typegeomele;//1为LINE,2为ARC,3为CIRCLE,默认是1
+	//对于切割引刀线还有一个斜率要保存
+	double k;//默认是9876.5；
+	//////////////
+	unsigned int m_typegeomele;//1为LINE,2为ARC,3为CIRCLE,6为切割引刀线，默认是1
 	int m_GeomEleID;//对每一个图元编号，将来为寻找封闭图元遍历用的，默认为0,那么有一个就是1
 	int m_GeomCloseID;//对每一个封闭环所属的图元进行编号，给将来封闭环之间判断使用，默认为0,那么有一个就是1
 	bool m_IsGeomeleAccept;//判断该图元是不是已经被收录，默认为fales

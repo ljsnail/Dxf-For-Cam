@@ -508,19 +508,20 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	//m_GeomForCut.ChangeEleNodeOfGeomClosed_origin(m_pNestrsltdtND);//可惜这代码没有起到任何效果，原因之一可能是封闭环本身就没有分清楚，其二是处理的算法有问题。
 	//m_GeomForCut.ChangClosedNodeOfNRDXF(m_pNestrsltdtND);
 	//m_GeomForCut.ChangeEleNodeOfGeomClosed_order(m_pNestrsltdtND);
-	////m_GeomForCut.ChangeEleNode_Avoid_Impact(m_pNestrsltdtND);
+	//m_GeomForCut.ChangeEleNode_Avoid_Impact(m_pNestrsltdtND);
 	////////////////另一种处理方式//////////////////////////////////
 	////先贪婪算法将所有的封闭环按给定初始顺序
 	m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);
-	////划分出不同的封闭环层次
+	//划分出不同的封闭环层次
 	m_GeomForCut.Find_AdjustNestCloseHead(head);
-	//////用蚁群算法对第一层封闭环进行路径规划与优化
-	////m_GeomForCut.Base_ACO_ForFirstCHead(head);
-	//m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);
-   //////根据蚁群算法调整后的第一层封闭环，调整每个封闭环群里面的子封闭环顺序，并调整相应的父封闭环打孔点
-	//m_GeomForCut.BaseTS_GR_ForKidCHead(head);
-	//
+	////用蚁群算法对第一层封闭环进行路径规划与优化
+	//m_GeomForCut.Base_ACO_ForFirstCHead(head);
+	m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);
+   ////根据蚁群算法调整后的第一层封闭环，调整每个封闭环群里面的子封闭环顺序，并调整相应的父封闭环打孔点
+	m_GeomForCut.BaseTS_GR_ForKidCHead(head);
+	
 	//添加切割引刀线
+	//m_GeomForCut.Add_CutGuideLine(head);
 
 	m_IfDataDisposed = true;
 	return m_IfDataDisposed;
@@ -746,7 +747,7 @@ void CNestDxfDataForCutDlg::OnTimer(UINT nIDEvent) //实时绘制场景
 				typegeomele = 4;//空跑直线
 				//outfile << typegeomele << "    " << x0_tran << "    " << y0_tran << "    " << x1_tran << "    " << y1_tran << endl;
 				//TSP
-				outfile << "{" << x0_tran << "," << y0_tran << "},"<< endl;
+				outfile << "{" << x0_tran << "," << y0_tran << "}," << endl;
 
 				while (tempnode)//全部遍历完
 				{
@@ -1118,7 +1119,7 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 		GeomEleNode*tempnode;
 		bool m_ifHvkidClose;
 		
-		//ofstream outfile("I:\\MATLAB\\DXF\\过渡线01.txt");
+		ofstream outfile("I:\\MATLAB\\DXF\\过渡线01.txt");
 		if (m_IfDataDisposed)//数据处理完了，保存才有意义
 			{
 			//m_pNestrsltdtND = m_GeomForCut.ChangeSencondCH2FH(m_pNestrsltdtND);
@@ -1303,6 +1304,14 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 					Arccent_y = tempnode->m_GeomStandData.m_circle.m_Circent_y;
 					outfile << typegeomele << "    " << Angle_start << "    " << Angle_add << "    " << r << "    " << Arccent_x << "    " << Arccent_y << endl;
 
+					break;
+				case 6:
+					typegeomele = 6;//切割引刀线
+					x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
+					x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
+					y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
+					y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
+					outfile << typegeomele << "    " << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
 					break;
 				default:
 					break;

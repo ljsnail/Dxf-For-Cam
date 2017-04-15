@@ -32,6 +32,7 @@ GeomStandData GEOMELE::ReadLineData(GLINE line)//ReadLineDataÊÇGeomStandData ÀàĞ
 	m_geomstandData.m_GeomCloseID = 1;//LINE ARC ½øÀ´µÄÊ±ºò¶¼¹ÒÎªµÚÒ»¸ö·â±Õ»·
 	m_geomstandData.m_IsGeomeleAccept = false;
 	m_geomstandData.m_IsTranData = false;
+	m_geomstandData.k = 9876.5;//Îª½«À´ÇĞ¸îÒıµ¶ÏßÁôµÄĞ±ÂÊ
 	return m_geomstandData;
 }
 //ÊäÈëARCµÄÎå¸ö²ÎÊı£¬×ª»»Êä³öGEOMELEµÄÆğÊ¼ÖÕÖ¹²ÎÊı
