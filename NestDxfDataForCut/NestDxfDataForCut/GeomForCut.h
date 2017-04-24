@@ -187,8 +187,9 @@ public:
 	void GetLinePara(Line_Cross *line);
 	//求两个直线的交点
 	Point  GetCrossPoint(Line_Cross *m_line1Point, Line_Cross *m_line2Point);
-	//把现在已经知道的子封闭环挂到另一个封闭环上
-	void SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp);
+	//把现在已经知道的子封闭环挂到另一个封闭环上,
+	//第三个参数则是因为当封闭环头结点已经作为子封闭环挂在了其他封闭环时候，则应该把切割图头结点也要将其换另外一个封闭环上挂
+	void SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp,NestResultDataNode*head);
 	//输入子封闭环的最后节点，改变父封闭环的图元头结点（打孔点）
 	void ChangeOutsideGeomEleNode(GeomCloseHEAD*pKidCloseHead, GeomCloseHEAD*pFadClosedHead);
 	

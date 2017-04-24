@@ -505,21 +505,24 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	}
 	head = m_GeomForCut.ChangeSencondCH2FH(head);//这里先要把第一层板材的去掉，但同时应该是要把第一层板材的数据保存出来的。
 	//以上以及将所有的封闭环处理好了。
+	//TSP两步法的代码，以下三行
 	//m_GeomForCut.ChangeEleNodeOfGeomClosed_origin(m_pNestrsltdtND);//可惜这代码没有起到任何效果，原因之一可能是封闭环本身就没有分清楚，其二是处理的算法有问题。
 	//m_GeomForCut.ChangClosedNodeOfNRDXF(m_pNestrsltdtND);
 	//m_GeomForCut.ChangeEleNodeOfGeomClosed_order(m_pNestrsltdtND);
+
 	//m_GeomForCut.ChangeEleNode_Avoid_Impact(m_pNestrsltdtND);
 	////////////////另一种处理方式//////////////////////////////////
 	////先贪婪算法将所有的封闭环按给定初始顺序
-	m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);
+	//m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);//对于没有嵌套的平面切割图形，dtsp法就用这个。
+
 	//划分出不同的封闭环层次
-	m_GeomForCut.Find_AdjustNestCloseHead(head);
-	////用蚁群算法对第一层封闭环进行路径规划与优化
-	//m_GeomForCut.Base_ACO_ForFirstCHead(head);
-	m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);
-   ////根据蚁群算法调整后的第一层封闭环，调整每个封闭环群里面的子封闭环顺序，并调整相应的父封闭环打孔点
-	m_GeomForCut.BaseTS_GR_ForKidCHead(head);
-	
+	m_GeomForCut.Find_AdjustNestCloseHead(head);//嵌套封闭环的嵌套识别工作，就这行代码
+	//////用蚁群算法对第一层封闭环进行路径规划与优化
+	////m_GeomForCut.Base_ACO_ForFirstCHead(head);//未成功，但这是另外一篇EI的工作
+	//m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);
+ //  ////根据贪婪算法调整后的第一层封闭环，调整每个封闭环群里面的子封闭环顺序，并调整相应的父封闭环打孔点
+	////m_GeomForCut.BaseTS_GR_ForKidCHead(head);
+	//
 	//添加切割引刀线
 	//m_GeomForCut.Add_CutGuideLine(head);
 
@@ -1119,7 +1122,7 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 		GeomEleNode*tempnode;
 		bool m_ifHvkidClose;
 		
-		ofstream outfile("I:\\MATLAB\\DXF\\过渡线01.txt");
+		//ofstream outfile("I:\\MATLAB\\DXF\\过渡线01.txt");
 		if (m_IfDataDisposed)//数据处理完了，保存才有意义
 			{
 			//m_pNestrsltdtND = m_GeomForCut.ChangeSencondCH2FH(m_pNestrsltdtND);
@@ -1233,7 +1236,7 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 		GeomEleNode*tempnode;
 		GeomEleNode*PLastNode=NULL;//保存最后一个封闭环的最后一个图元节点
 		int typegeomele;
-			ofstream outfile("I:\\MATLAB\\DXF\\过渡线11.txt", ios_base::out | ios_base::app);//打开并追加
+			ofstream outfile("I:\\MATLAB\\DXF\\嵌套封闭环.txt", ios_base::out | ios_base::app);//打开并追加
 		
 
 			tempnode = Htemp->FirstGeomele;//封闭环里的第一个数据结点

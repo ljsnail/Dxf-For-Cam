@@ -1596,6 +1596,7 @@ void GeomForCut::Find_AdjustNestCloseHead(NestResultDataNode*head)
 		while (pNextCHead)//遍历完一遍
 		{
 			//给pNextCHead找一个替身pTempNextCHead,
+			a++;
 			pTempNextCHead = pNextCHead;
 			////////////用射线的方式判断这两个封闭环有没有嵌套
 			////////m_G2CloseHeadNest = EstimateCloseHeadNest(pTempCHead, pTempNextCHead);
@@ -1606,7 +1607,7 @@ void GeomForCut::Find_AdjustNestCloseHead(NestResultDataNode*head)
 			{
 				//把第二个封闭环环挂到第一个封闭上
 				pTempNextCHead = m_G2CloseHeadNest.KidCloseHead;
-				SetInSideClose(pTempCHead, pTempNextCHead);
+				SetInSideClose(pTempCHead, pTempNextCHead,head);
 				pNextCHead = m_G2CloseHeadNest.NextCloseHead;//上面的函数已经对这里进行的 pNextCHead->nextGeomcloseNode类似的工作
 			}
 			else//如果上面没有嵌套，那么现在的pNextCHead还没有上面变化，还可以继续找到原来的下一个
@@ -1616,7 +1617,7 @@ void GeomForCut::Find_AdjustNestCloseHead(NestResultDataNode*head)
 			}
 		}	
 		
-		a++;
+		
 		pTempCHead = pTempCHead->nextGeomcloseNode;
 	}
 }//以上代码实现了，单双层判断和外包络矩形的控制点记录
@@ -1761,7 +1762,7 @@ Geom2CloseHeadNest  GeomForCut::EstimateCloseHeadNest(GeomCloseHEAD*pTempCHead, 
 //核心代码！
 //核心代码！
 //把pHNtemp挂到pHtemp的子封闭环上
-void  GeomForCut::SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp)
+void  GeomForCut::SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp, NestResultDataNode*head)
 {
 	
 	GeomCloseHEAD*pKidHtemp=NULL;
@@ -1772,15 +1773,39 @@ void  GeomForCut::SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp)
 	{
 		pHtemp->FirstInsideGCloseNode = pHNtemp;
 		//同时，要把pHNtemp这个双向链表的前后结点的指向更改
-		//这里要注意pHNtemp是最后一个封闭环的情况，但不可能是第一个封闭环
+		//这里要注意pHNtemp是最后一个封闭环的情况，但不可能是第一个封闭环（也有可能是第一个封闭环的！！！）
+		//要区分是首封闭环与尾封闭环同时都是一个封闭环的情况
 		if (pHNtemp->nextGeomcloseNode)//如果pHNtemp不是最后的封闭环
 		{
-			pHNtemp->prevGeomcloseNode->nextGeomcloseNode = pHNtemp->nextGeomcloseNode;//pHNtemp的前面的后面原本是pHNtemp，但现在改是它的后面的那个了
-			pHNtemp->nextGeomcloseNode->prevGeomcloseNode = pHNtemp->prevGeomcloseNode;//pHNtemp的后面的前面原本是pHNtemp，但现在改是它的前面的那个了
+			//如果pHNtemp是首封闭环，那么将下一个封闭环的前节点置位为null
+			if (!(pHNtemp->prevGeomcloseNode))
+			{
+				//将切割图封闭环头结点换成第二个封闭环
+				head->FirstGeomClose = pHNtemp->nextGeomcloseNode;
+				//再调整变为子封闭环后pHNtemp在原来封闭环链中的关系。
+				pHNtemp->nextGeomcloseNode->prevGeomcloseNode = NULL;
+
+			}
+			else//如果pHNtemp不是首封闭环，也不是尾封闭环的话，那么将下一个封闭环的前节点置位为pHNtemp的前节点。
+			{
+				pHNtemp->prevGeomcloseNode->nextGeomcloseNode = pHNtemp->nextGeomcloseNode;//pHNtemp的前面的后面原本是pHNtemp，但现在改是它的后面的那个了
+				pHNtemp->nextGeomcloseNode->prevGeomcloseNode = pHNtemp->prevGeomcloseNode;//pHNtemp的后面的前面原本是pHNtemp，但现在改是它的前面的那个了
+
+			}
 		}
-		else//如果pHNtemp是最后的封闭环节点的情况下
+		//如果pHNtemp是最后的封闭环节点的情况下
+		//要注意整个链表就只有一个封闭环的情况
+		else
 		{
-			pHNtemp->prevGeomcloseNode->nextGeomcloseNode = NULL;
+			if (!(pHNtemp->prevGeomcloseNode))//如果pHNtemp同时也是首封闭环的时候
+			{
+				pHNtemp->nextGeomcloseNode = NULL;//直接置位为NULL
+			}
+			else
+			{
+				pHNtemp->prevGeomcloseNode->nextGeomcloseNode = NULL;
+
+			}
 		}
 		//调整完了之后，pHNtemp就该把前后变为NULL了。
 		pHNtemp->prevGeomcloseNode =pHNtemp->nextGeomcloseNode = NULL;
@@ -1805,7 +1830,7 @@ void  GeomForCut::SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp)
 			{
 				//把第二个封闭环环挂到第一个封闭上
 				pHNtemp = m_G2CloseHeadNest.KidCloseHead;
-				SetInSideClose(pKidHtemp, pHNtemp);
+				SetInSideClose(pKidHtemp, pHNtemp,head);
 			}
 			else//如果没有嵌套，
 			{
@@ -1845,7 +1870,7 @@ void  GeomForCut::SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp)
 						{
 							//把第二个封闭环环挂到第一个封闭上
 							pHNtemp = m_G2CloseHeadNest.KidCloseHead;
-							SetInSideClose(pKidHtemp, pHNtemp);
+							SetInSideClose(pKidHtemp, pHNtemp,head);
 							m_IfCloseNest = true;//说明已经嵌套进去了
 							break;
 						}
