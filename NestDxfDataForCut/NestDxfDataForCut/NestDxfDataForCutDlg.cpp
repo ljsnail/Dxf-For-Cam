@@ -515,16 +515,17 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	////先贪婪算法将所有的封闭环按给定初始顺序
 	//m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);//对于没有嵌套的平面切割图形，dtsp法就用这个。
 
+	//对于有嵌套的封闭环，用以下三个函数（除了aco那个）
 	//划分出不同的封闭环层次
 	m_GeomForCut.Find_AdjustNestCloseHead(head);//嵌套封闭环的嵌套识别工作，就这行代码
 	//////用蚁群算法对第一层封闭环进行路径规划与优化
-	////m_GeomForCut.Base_ACO_ForFirstCHead(head);//未成功，但这是另外一篇EI的工作
-	//m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);
+	//////////m_GeomForCut.Base_ACO_ForFirstCHead(head);//未成功，但这是另外一篇EI的工作
+	m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);
  //  ////根据贪婪算法调整后的第一层封闭环，调整每个封闭环群里面的子封闭环顺序，并调整相应的父封闭环打孔点
-	////m_GeomForCut.BaseTS_GR_ForKidCHead(head);
+	m_GeomForCut.BaseTS_GR_ForKidCHead(head);
 	//
 	//添加切割引刀线
-	//m_GeomForCut.Add_CutGuideLine(head);
+	m_GeomForCut.Add_CutGuideLine(head);
 
 	m_IfDataDisposed = true;
 	return m_IfDataDisposed;
@@ -1310,6 +1311,7 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 					break;
 				case 6:
 					typegeomele = 6;//切割引刀线
+					//typegeomele = 1;//实切直线
 					x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
 					x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
 					y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
