@@ -200,9 +200,11 @@ Line_para CutLeadLine::Get_CutLine_StartPoint(Line_para m_Line, int m_OpenDirect
 	m_CutGuideL.x1 = start.x;
 	m_CutGuideL.y1 = start.y;
 	m_CutGuideL.k = m_Line.k;
-	//如果是单层那么就要往外取值
+	//如果是板材轮廓进入规划，此时板材外轮廓为第一个奇层，那么单层就要往内取值，偶层往外取值
+	//如果是板材轮廓没有进入规划，此时切割部件封闭环为第一个奇层，那么单层就要往外取值，偶层往内取值
 	//如果开口向上，则取y小的，开口向下，则取y大的。
 	//如果开口向左，则取x大的，开口向右，则取x小的。
+	//!m为板材不进入规划，m则是板材进入规划
 	if (m)//单层
 	{
 		switch (m_OpenDirect)

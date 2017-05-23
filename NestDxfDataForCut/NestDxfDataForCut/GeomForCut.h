@@ -1,6 +1,7 @@
 #pragma once
 #include"GeomClose.h"
 #include"CutLeadLine.h"
+
 //这个类主要是实现把之前的封闭环之间串起来切割使用。
 //实现，将封闭环之间排序，对圆这种特殊图形要另外处理，对于圆弧要转换成原来的数据形式
 //包含封闭图元之间的过渡直线
@@ -46,8 +47,10 @@ typedef struct
 typedef struct
 {
 	bool m_IfCloseNest;
+	GeomCloseHEAD*FadCloseHead;
 	GeomCloseHEAD*KidCloseHead;
 	GeomCloseHEAD*NextCloseHead;
+	int type ;//这是判断两者谁是谁嵌套封闭环的标识，如果是后者是前者的封闭环那么type为1，否则为2，默认为1.
 }Geom2CloseHeadNest;
 ////以下为切割引导性相关的数据结构
 ////切割引刀线的数据结构
@@ -165,7 +168,7 @@ public:
 	bool OpenSandValve();//开沙阀
 	bool OpenWaterPump();//开水泵
 	public:
-	//添加工艺
+	//添加工艺第一篇EI的工作
 	//寻找嵌套的封闭环，这一个内容的加入，使得整个路径规划得从来。
 	//创建一块用来存放直线数据点的内存
 	//输入整个排样结果图头结点，找到其中嵌套的封闭环，然后把内环挂到封闭环的子环下
@@ -178,6 +181,13 @@ public:
 	Envelope_Rect m_GemoClosedLimt;
 	//用包络的方式判断后面的封闭环和前面的封闭环是否有嵌套关系
 	Geom2CloseHeadNest JudgeCloseHeadNest(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp);
+	//用包络的方法判断后面的封闭环（已经确定是最外层父封闭环的子封闭环的情况下）与现有父封闭环子封闭环的嵌套关系。
+	//这里与上面不同的地方在于，上面是只判断后者是否为前者的子封闭环的情况，而这里是判断两者之间的嵌套关系。
+	Geom2CloseHeadNest Judge2KidCloseHNest(GeomCloseHEAD*pHKtemp, GeomCloseHEAD*pHNtemp);
+	//输入子封闭环，然后改变该子封闭环下的所有封闭环的奇偶性，用在封闭环1是封闭环2的子封闭环这种情况下。
+	void Change_CloseHSinglelayer(GeomCloseHEAD*pHKtemp);
+	//转换单一封闭环的奇偶层性质，不管其他。
+	void Change_singlelayer(GeomCloseHEAD*phktemp);
 	//保留四位小数
 	double Retain4Decimals(double a);
 	Point m_PointCross;
@@ -189,7 +199,11 @@ public:
 	Point  GetCrossPoint(Line_Cross *m_line1Point, Line_Cross *m_line2Point);
 	//把现在已经知道的子封闭环挂到另一个封闭环上,
 	//第三个参数则是因为当封闭环头结点已经作为子封闭环挂在了其他封闭环时候，则应该把切割图头结点也要将其换另外一个封闭环上挂
-	void SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp,NestResultDataNode*head);
+	//输入三个参数，第一个参数为原来假定是父封闭环的封闭环，第二个参数为将两个封闭环判别后进行区分开的父封闭环与子封闭环，第三参数为切割图头结点。
+	void SetInSideClose(GeomCloseHEAD*pHtemp, Geom2CloseHeadNest m_G2CloseHeadNest, NestResultDataNode*head);
+	//清除识别到有嵌套关系的封闭环的原来封闭环双向链表中的关系，让它干净地进入新的封闭环双向链表中。
+	//返回清除了原先关系的子封闭环头结点指针
+	void ClearCloseHeadOldRela(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp, NestResultDataNode*head);
 	//输入子封闭环的最后节点，改变父封闭环的图元头结点（打孔点）
 	void ChangeOutsideGeomEleNode(GeomCloseHEAD*pKidCloseHead, GeomCloseHEAD*pFadClosedHead);
 	
@@ -208,10 +222,17 @@ public:
 	GeomCloseHEAD*ChangeGeomCHead(GeomCloseHEAD*pNKidCloseHead);
 	//寻找下一个第一层封闭环
 	GeomCloseHEAD*Find_Next_TheFirstLevel(GeomCloseHEAD*pFirstClosedHead);
-	//////////////////////////////////////////////////////////////////////////////////
-	/////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////
 	//以下是求解切割引刀线的相关代码（切割瓷砖和玻璃用，而切割钢铁之类的则不用）
+	///////////////////////////切割引刀线之板材语义信息，引刀线生成，干涉判断，与调整/////////////////////////
 	GeomCloseHEAD*m_ceramic_Head;//保存瓷砖部件的头文件
+	//输入平面切割图头文件，将现在封闭环数据结构中的每一个封闭环的奇偶属性确定下来，为下面添加封闭环的切割引刀线作为判断的准则。
+	void JudgeClosedHead_Odd_even(NestResultDataNode*head);
+	//输入每一个封闭环，写入其奇偶性的标准
+	void WriteClosedHead_Odd_even(GeomCloseHEAD*pClosedH);
+	//输入每一个父封闭环，改写其与子封闭环的奇偶性
+	void KidClosedHead_Odd_even(GeomCloseHEAD*pFtemp);
 	//输入头文件，添加切割引刀线，这是在已经确定了切割控制点之后，也就是在完成了贪婪算法，多重嵌套识别算法，调节切割控制点之后
 	void Add_CutGuideLine(NestResultDataNode*head);
 	CutGuideLine*CreatCutGuideLine(GeomCloseHEAD*Phead); //生成切割引刀线，切割封闭环的头结点
@@ -230,7 +251,8 @@ public:
 	///////////////////////////切割引刀线干涉判断，与调整/////////////////////////
 	///////////////////////////核心代码，核心代码，核心代码,下一篇的工作////////
 	//输入切割图头结点，把封闭环的切割引导线都清理一遍。
-	//NestResultDataNode*CheckCutGuideLINE()
+	NestResultDataNode*CheckCutGuideLINE(NestResultDataNode*head);
+
 
 };
 

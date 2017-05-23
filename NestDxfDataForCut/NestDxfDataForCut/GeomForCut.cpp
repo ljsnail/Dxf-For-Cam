@@ -3,7 +3,7 @@
 #define EPSILON 0.018
 #define WEIGHT_ORIGIN 0.1//·â±Õ»·µ½»ú´²Ô­µã¾àÀëµÄÈ¨ÖØ
 #define WEIGHT_PTP 0.9//·â±Õ»·µ½ÁíÒ»¸ö·â±Õ»·Ö®¼ä¾àÀëµÄÈ¨ÖØ
-#define pi 3.1416;
+
 GeomForCut::GeomForCut()
 {
 	//BatchHEAD m_batchHead = { 0, NULL };//½á¹¹Ìå³õÊ¼»¯
@@ -1213,8 +1213,17 @@ NestResultDataNode* GeomForCut::ChangeSencondCH2FH(NestResultDataNode*head)
 {
 	GeomCloseHEAD*pFirstCloseHead;
 	pFirstCloseHead = head->FirstGeomClose;
-	m_ceramic_Head = pFirstCloseHead;//±£´æ´É×©µÄ²¿¼ş
-	pFirstCloseHead = pFirstCloseHead->nextGeomcloseNode;
+	m_ceramic_Head = pFirstCloseHead;//±£´æ´É×©µÄ²¿¼ş£¬½«À´ÔÚÍâÃæÇĞ¸î Òıµ¶ÏßÅö×²¼ì²âÊ±ºòÊ¹ÓÃ
+	//µ±ÕâÀïÊÇÕû¸öÆ½ÃæÇĞ¸îÍ¼µÄ·â±Õ»·Í·½áµãÊ±ºò£¨Ò²¾ÍÊÇ°å²ÄÍâÂÖÀªÊ±ºò£©£¬ÊÇÃ»ÓĞnextGeomcloseNodeµÄ¡£
+	if (!(pFirstCloseHead->nextGeomcloseNode))//°å²ÄÂÖÀª
+	{
+		pFirstCloseHead = pFirstCloseHead->FirstInsideGCloseNode;
+	}
+	else
+	{
+		pFirstCloseHead = pFirstCloseHead->nextGeomcloseNode;
+
+	}
 	pFirstCloseHead->prevGeomcloseNode = NULL;
 	head->FirstGeomClose = pFirstCloseHead;
 
@@ -1591,7 +1600,7 @@ void GeomForCut::Find_AdjustNestCloseHead(NestResultDataNode*head)
 	pTempCHead->m_Singlelayer = true;//Õâ¸öÊÇ800*800µÄ°å²Ä£¬ÊÇµÚÒ»²ãÒ²¾ÍÊÇµ¥²ã
 	while (pTempCHead)//µ¹ÊıµÚ¶ş¸ö¿ÉÒÔ½øÈëÑ­»·£¬×îºóÒ»¸ö¾ÍÒªÌø³öÑ­»·ÁË
 	{
-		pNextCHead = head->FirstGeomClose;
+ 		pNextCHead = head->FirstGeomClose;
 		//ÕâÊÇ°´ÕÕÃ¿Ò»¸ö¶¼ÊÇ´ó»·µÄ¼ÙÉè½øĞĞ¶ÔÓàÏÂµÄ·â±Õ»·½øĞĞÅÅ²é
 		while (pNextCHead)//±éÀúÍêÒ»±é
 		{
@@ -1605,10 +1614,13 @@ void GeomForCut::Find_AdjustNestCloseHead(NestResultDataNode*head)
 			//Èç¹ûÓĞÇ¶Ì×£¬ÄÇÃ´¾ÍÒª°ÑµÚ¶ş¸ö·â±Õ»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
 			if (m_G2CloseHeadNest.m_IfCloseNest)
 			{
-				//°ÑµÚ¶ş¸ö·â±Õ»·»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
-				pTempNextCHead = m_G2CloseHeadNest.KidCloseHead;
-				SetInSideClose(pTempCHead, pTempNextCHead,head);
+				//ÏÈ±£´æÏÂÒ»¸ö·â±Õ»·µÄÎ»ÖÃ
 				pNextCHead = m_G2CloseHeadNest.NextCloseHead;//ÉÏÃæµÄº¯ÊıÒÑ¾­¶ÔÕâÀï½øĞĞµÄ pNextCHead->nextGeomcloseNodeÀàËÆµÄ¹¤×÷
+				//pTempNextCHead = m_G2CloseHeadNest.KidCloseHead;
+				//°ÑµÚ¶ş¸ö·â±Õ»·»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
+				SetInSideClose(pTempCHead, m_G2CloseHeadNest, head);
+
+				//pNextCHead = m_G2CloseHeadNest.NextCloseHead;//ÉÏÃæµÄº¯ÊıÒÑ¾­¶ÔÕâÀï½øĞĞµÄ pNextCHead->nextGeomcloseNodeÀàËÆµÄ¹¤×÷
 			}
 			else//Èç¹ûÉÏÃæÃ»ÓĞÇ¶Ì×£¬ÄÇÃ´ÏÖÔÚµÄpNextCHead»¹Ã»ÓĞÉÏÃæ±ä»¯£¬»¹¿ÉÒÔ¼ÌĞøÕÒµ½Ô­À´µÄÏÂÒ»¸ö
 			{
@@ -1758,150 +1770,388 @@ Geom2CloseHeadNest  GeomForCut::EstimateCloseHeadNest(GeomCloseHEAD*pTempCHead, 
 		;
 	}
 }
-//ºËĞÄ´úÂë£¡
-//ºËĞÄ´úÂë£¡
-//ºËĞÄ´úÂë£¡
-//°ÑpHNtemp¹Òµ½pHtempµÄ×Ó·â±Õ»·ÉÏ
-void  GeomForCut::SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp, NestResultDataNode*head)
+////ºËĞÄ´úÂë£¡
+////ºËĞÄ´úÂë£¡
+////ºËĞÄ´úÂë£¡
+////°ÑpHNtemp¹Òµ½pHtempµÄ×Ó·â±Õ»·ÉÏ
+////¿ÉÒÔÓÃÕâ¸öËã·¨À´´¦ÀíÁ½¸ö²»Í¬µÄ¹ı³Ì¡£
+//void  GeomForCut::SetInSideClose(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp, NestResultDataNode*head)
+//{
+//	
+//	GeomCloseHEAD*pKidHtemp=NULL;
+//	GeomCloseHEAD*pKidLastClose = NULL;//×Ó·â±Õ»·ËùÔÚµÄ·â±Õ»·Ë«ÏòÁ´±íÖĞµÄ×îºóÒ»¸ö·â±Õ»·Á´±í
+//	bool m_IfCloseNest = false;//ÅĞ¶ÏµÚ¶ş¸ö·â±Õ»·ÊÇ²»ÊÇµÚÒ»¸ö·â±Õ»·µÄ×Ó·â±Õ»·
+//	//ÏÈÒªÅĞ¶ÏpHtempÓĞÃ»ÓĞ×Ó·â±Õ»·£¬Èç¹ûÓĞµÄ»°ÓÖµÃÇø·ÖpHNtempºÍÔ­À´µÄ×Ó·â±Õ»·ÓĞÃ»ÓĞÄÚÇ¶µÄ¹ØÏµ
+//	if (!(pHtemp->FirstInsideGCloseNode))//Èç¹ûÔ­À´²¢Ã»ÓĞ×Ó·â±Õ»·
+//	{
+//		pHtemp->FirstInsideGCloseNode = pHNtemp;
+//		//Í¬Ê±£¬Òª°ÑpHNtempÕâ¸öË«ÏòÁ´±íµÄÇ°ºó½áµãµÄÖ¸Ïò¸ü¸Ä
+//		//ÕâÀïÒª×¢ÒâpHNtempÊÇ×îºóÒ»¸ö·â±Õ»·µÄÇé¿ö£¬µ«²»¿ÉÄÜÊÇµÚÒ»¸ö·â±Õ»·£¨Ò²ÓĞ¿ÉÄÜÊÇµÚÒ»¸ö·â±Õ»·µÄ£¡£¡£¡£©
+//		//ÒªÇø·ÖÊÇÊ×·â±Õ»·ÓëÎ²·â±Õ»·Í¬Ê±¶¼ÊÇÒ»¸ö·â±Õ»·µÄÇé¿ö
+//		if (pHNtemp->nextGeomcloseNode)//Èç¹ûpHNtemp²»ÊÇ×îºóµÄ·â±Õ»·
+//		{
+//			//Èç¹ûpHNtempÊÇÊ×·â±Õ»·£¬ÄÇÃ´½«ÏÂÒ»¸ö·â±Õ»·µÄÇ°½ÚµãÖÃÎ»Îªnull
+//			if (!(pHNtemp->prevGeomcloseNode))
+//			{
+//				//½«ÇĞ¸îÍ¼·â±Õ»·Í·½áµã»»³ÉµÚ¶ş¸ö·â±Õ»·
+//				head->FirstGeomClose = pHNtemp->nextGeomcloseNode;
+//				//ÔÙµ÷Õû±äÎª×Ó·â±Õ»·ºópHNtempÔÚÔ­À´·â±Õ»·Á´ÖĞµÄ¹ØÏµ¡£
+//				pHNtemp->nextGeomcloseNode->prevGeomcloseNode = NULL;
+//
+//			}
+//			else//Èç¹ûpHNtemp²»ÊÇÊ×·â±Õ»·£¬Ò²²»ÊÇÎ²·â±Õ»·µÄ»°£¬ÄÇÃ´½«ÏÂÒ»¸ö·â±Õ»·µÄÇ°½ÚµãÖÃÎ»ÎªpHNtempµÄÇ°½Úµã¡£
+//			{
+//				pHNtemp->prevGeomcloseNode->nextGeomcloseNode = pHNtemp->nextGeomcloseNode;//pHNtempµÄÇ°ÃæµÄºóÃæÔ­±¾ÊÇpHNtemp£¬µ«ÏÖÔÚ¸ÄÊÇËüµÄºóÃæµÄÄÇ¸öÁË
+//				pHNtemp->nextGeomcloseNode->prevGeomcloseNode = pHNtemp->prevGeomcloseNode;//pHNtempµÄºóÃæµÄÇ°ÃæÔ­±¾ÊÇpHNtemp£¬µ«ÏÖÔÚ¸ÄÊÇËüµÄÇ°ÃæµÄÄÇ¸öÁË
+//
+//			}
+//		}
+//		//Èç¹ûpHNtempÊÇ×îºóµÄ·â±Õ»·½ÚµãµÄÇé¿öÏÂ
+//		//Òª×¢ÒâÕû¸öÁ´±í¾ÍÖ»ÓĞÒ»¸ö·â±Õ»·µÄÇé¿ö
+//		else
+//		{
+//			if (!(pHNtemp->prevGeomcloseNode))//Èç¹ûpHNtempÍ¬Ê±Ò²ÊÇÊ×·â±Õ»·µÄÊ±ºò
+//			{
+//				pHNtemp->nextGeomcloseNode = NULL;//Ö±½ÓÖÃÎ»ÎªNULL
+//			}
+//			else
+//			{
+//				pHNtemp->prevGeomcloseNode->nextGeomcloseNode = NULL;
+//
+//			}
+//		}
+//		//µ÷ÕûÍêÁËÖ®ºó£¬pHNtemp¾Í¸Ã°ÑÇ°ºó±äÎªNULLÁË¡£
+//		pHNtemp->prevGeomcloseNode =pHNtemp->nextGeomcloseNode = NULL;
+//		//Ö¸ÏòÆä¸¸½Úµã
+//		pHNtemp->prevOutsideGCloseNode = pHtemp;
+//	}
+//	else//Èç¹ûÏÖÔÚpHtempÒÑ¾­ÓĞÁË×Ó·â±Õ»·ÁË£¬ÄÇÃ´ÒªÅĞ¶ÏÏÖÔÚµÄ×Ó·â±Õ»·ºÍÔ­À´µÄ×Ó·â±Õ»·ÓĞÃ»ÓĞÇ¶Ì×¹ØÏµ
+//	{
+//		pKidHtemp = pHtemp->FirstInsideGCloseNode;
+//		//²»ÒªÈ«²¿±éÀúÒ»±é£¬µ±Ö»ÓĞ×îºóÒ»¸ö·â±Õ»·µÄÊ±ºò¾Í¿ÉÒÔÌø³öÈ¥ÁË£¬ÒòÎªÒªÇ¶Ì×ÆğÂëÒªÁ½¸ö·â±Õ»·
+//		while (pKidHtemp)//°ÑÏÈÓĞµÄ×Ó·â±Õ»·±éÀúÒ»±é
+//		{
+//			//ÕâÊÇ°´ÕÕÃ¿Ò»¸ö¶¼ÊÇ´ó»·µÄ¼ÙÉè½øĞĞ¹æ»®
+//			//ÊäÈëÕâÁ½¸ö·â±Õ»·Í·½áµãÅĞ¶ÏÊÇ·ñÓĞÇ¶Ì×¹ØÏµ
+//			//////////ÅĞ¶ÏÕâÁ½¸ö·â±Õ»·ÓĞÃ»ÓĞÇ¶Ì×
+//			////////m_G2CloseHeadNest = EstimateCloseHeadNest(pKidHtemp, pHNtemp);
+//			//ÓÃ°üÂçµÄ·½Ê½À´ÅĞ¶ÏÁ½¸ö·â±Õ»·ÓĞÃ»ÓĞÇ¶Ì×
+//			m_G2CloseHeadNest = Judge2KidCloseHNest(pKidHtemp, pHNtemp);
+//
+//			//Èç¹ûÓĞÇ¶Ì×£¬ÄÇÃ´¾ÍÒª°ÑµÚ¶ş¸ö·â±Õ»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
+//			if (m_G2CloseHeadNest.m_IfCloseNest)
+//			{
+//				//°ÑµÚ¶ş¸ö·â±Õ»·»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
+//				//pHNtemp = m_G2CloseHeadNest.KidCloseHead;
+//				SetInSideClose(pHtemp,m_G2CloseHeadNest, head);
+//			}
+//			else//Èç¹ûÃ»ÓĞÇ¶Ì×£¬
+//			{
+//				//ÕâÀïÒª°ÑpHNtempÔ­À´µÄ¹ØÏµ½øĞĞ½»½Ó
+//				//×¢Òâ¾­¹ı¼¸´Îµ÷ÕûÖ®ºó£¬ÈÎºÎÒ»¸ö·â±Õ»·¶¼¿ÉÄÜ³ÉÎªµÚÒ»¸ö·â±Õ»·£¬ËùÒÔÒªÏÈÇø·ÖÊÇ²»ÊÇµÚÒ»¸ö·â±Õ»·
+//				if (!(pHNtemp->prevGeomcloseNode))//ÊÇÊ×½áµãµÄÇé¿öÏÂ
+//				{
+//					//½«ÇĞ¸îÍ¼·â±Õ»·Í·½áµã»»³ÉµÚ¶ş¸ö·â±Õ»·
+//					head->FirstGeomClose = pHNtemp->nextGeomcloseNode;
+//					//ÔÙµ÷Õû±äÎª×Ó·â±Õ»·ºópHNtempÔÚÔ­À´·â±Õ»·Á´ÖĞµÄ¹ØÏµ¡£
+//					pHNtemp->nextGeomcloseNode->prevGeomcloseNode = NULL;
+//				}
+//				//ÕâÀïÒª×¢ÒâpHNtempÊÇ×îºóÒ»¸ö·â±Õ»·µÄÇé¿ö£¬µ«²»¿ÉÄÜÊÇµÚÒ»¸ö·â±Õ»·
+//				else if (pHNtemp->nextGeomcloseNode)//Èç¹ûpHNtemp²»ÊÇ×îºóµÄ·â±Õ»·
+//				{
+//					pHNtemp->prevGeomcloseNode->nextGeomcloseNode = pHNtemp->nextGeomcloseNode;//pHNtempµÄÇ°ÃæµÄºóÃæÔ­±¾ÊÇpHNtemp£¬µ«ÏÖÔÚ¸ÄÊÇËüµÄºóÃæµÄÄÇ¸öÁË
+//					pHNtemp->nextGeomcloseNode->prevGeomcloseNode = pHNtemp->prevGeomcloseNode;//pHNtempµÄºóÃæµÄÇ°ÃæÔ­±¾ÊÇpHNtemp£¬µ«ÏÖÔÚ¸ÄÊÇËüµÄÇ°ÃæµÄÄÇ¸öÁË
+//				}
+//				else if (!(pHNtemp->nextGeomcloseNode))//Èç¹ûpHNtempÊÇ×îºóµÄ·â±Õ»·½ÚµãµÄÇé¿öÏÂ
+//				{
+//					pHNtemp->prevGeomcloseNode->nextGeomcloseNode = NULL;
+//				}
+//				//²¢ÁĞ·â±Õ»·µÄ¹ØÏµ
+//				//ÄÇÃ´¾ÍÒª·ÖpKidHtempËùÔÚµÄ×Ó·â±Õ»·Ë«ÏòÁ´±í·â±Õ»·ÁË£¬Èç¹ûÃ»ÓĞÆäËûÖ±½Ó°ÑpHNtemp¹Òµ½pKidHtempºóÃæ¾ÍºÃÁË
+//				if (!(pKidHtemp->nextGeomcloseNode))//Èç¹ûºóÃæÃ»ÓĞÆäËû·â±Õ»·ÁË
+//				{
+//					pKidHtemp->nextGeomcloseNode = pHNtemp;//pKidHtemp×÷ÎªĞÂ½øÈëÁíÒ»¸öÁìÓòµÄ·â±Õ»·£¬ËûÒÑ¾­°ÑÔ­À´µÄ¹ØÏµ½»½ÓÍêÁËÖ®ºó¶ªµôÁË£¬±ä³ÉÁËÃ»ÓĞÉí·İµÄÁË£¬´ËÊ±Ç°ºó½Úµã¶¼ÊÇNULL
+//					//µ÷ÕûÍêÁËÖ®ºó£¬pHNtemp¾Í¸Ã°ÑÕâ¸ö×Ó·â±Õ»·ÀïÃæµÄ¹ØÏµ½¨Á¢ÆğÀ´
+//					pHNtemp->prevGeomcloseNode = pKidHtemp;
+//					pHNtemp->nextGeomcloseNode = NULL;
+//				}
+//				else//pKidHtempËùÔÚµÄ×Ó·â±Õ»·Ë«ÏòÁ´±í·â±Õ»·ºóÃæÓĞÆäËû·â±Õ»·
+//				{
+//					//¼ÈÈ»ºóÃæ»¹ÓĞÆäËû·â±Õ»·£¬ÄÇÃ´ÓĞ¿ÉÄÜÊÇ¸úËüºóÃæµÄ·â±Õ»·Ç¶Ì×£¬¶ø²»ÊÇ¸úÍ·½áµã·â±Õ»·
+//					//ÅĞ¶ÏpHNtempÓëpKidHtempºóÃæµÄ·â±Õ»·ÊÇ·ñ¹¹³ÉÇ¶Ì×¹ØÏµ£¬Èç¹û¹¹³ÉÄÇÃ´Òª¹Òµ½ºóÃæ£¬
+//					//²»ÒªÈ«²¿±éÀúÒ»±é£¬µ±Ö»ÓĞ×îºóÒ»¸ö·â±Õ»·µÄÊ±ºò¾Í¿ÉÒÔÌø³öÈ¥ÁË£¬ÒòÎªÒªÇ¶Ì×ÆğÂëÒªÁ½¸ö·â±Õ»·
+//					pKidHtemp = pKidHtemp->nextGeomcloseNode;
+//					while (pKidHtemp)//°Ñ×Ó·â±Õ»·ÀïÃæÓàÏÂµÄ²¢ÁĞµÄ·â±Õ»·±éÀúÒ»±é
+//					{
+//						//ÓÃ°üÂçµÄ·½Ê½À´ÅĞ¶ÏÁ½¸ö·â±Õ»·ÓĞÃ»ÓĞÇ¶Ì×
+//						//ÕâÀïÓĞ¸öÎÊÌâ£¬Èç¹û´æÔÚ¶àÖØ°üÂçµÄÇé¿öÏÂ£¬Ã»ÓĞ°ì·¨½â¾öpHNtempÊÇ
+//						//pKidHtempÉÏÒ»²ã·â±Õ»·Ê±ºòµÄÅĞ¶Ï£¬¸ù¾İÕâ¸öËã·¨»á½«¸¸²ã·â±Õ»·×ª»¯Îª×Ó²ã·â±Õ»·µÄ·â±Õ»·¡£
+//						m_G2CloseHeadNest = Judge2KidCloseHNest(pKidHtemp, pHNtemp);
+//
+//						//Èç¹ûÓĞÇ¶Ì×£¬ÄÇÃ´¾ÍÒª°ÑµÚ¶ş¸ö·â±Õ»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
+//						if (m_G2CloseHeadNest.m_IfCloseNest)
+//						{
+//							//°ÑµÚ¶ş¸ö·â±Õ»·»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
+//							//pHNtemp = m_G2CloseHeadNest.KidCloseHead;
+//							SetInSideClose(pHtemp, m_G2CloseHeadNest, head);
+//							m_IfCloseNest = true;//ËµÃ÷ÒÑ¾­Ç¶Ì×½øÈ¥ÁË
+//							break;
+//						}
+//						//·ñÔòÕÒµ½×îºóÒ»¸ö£¬È»ºó°ÑpHNtemp¹Òµ½ÆäºóÃæ
+//						if (!(pKidHtemp->nextGeomcloseNode))//Èç¹ûpKidHtempÊÇ×îºóÒ»¸ö
+//						{
+//							pKidLastClose = pKidHtemp;//ÕâÊÇ×îºóÒ»¸ö·â±Õ»·£¬»áµ½ÕâÀ´£¬ËµÃ÷£¬×îºóÒ»¸ö·â±Õ»·ºÍpHNtempÒ²Ã»ÓĞÇ¶Ì×µÄ¹ØÏµ
+//							m_IfCloseNest = false;
+//						}
+//						pKidHtemp = pKidHtemp->nextGeomcloseNode;
+//					}			
+//					if (!(m_IfCloseNest))
+//					{
+//						pKidLastClose->nextGeomcloseNode = pHNtemp;
+//						//µ÷ÕûÍêÁËÖ®ºó£¬pHNtemp¾Í¸Ã°ÑÕâ¸ö×Ó·â±Õ»·ÀïÃæµÄ¹ØÏµ½¨Á¢ÆğÀ´
+//						pHNtemp->prevGeomcloseNode = pKidLastClose;
+//						pHNtemp->nextGeomcloseNode = NULL;
+//					}
+//					
+//				}
+//				
+//			}
+//			//Õâ¸öwhileÑ­»·²»ĞèÒªÔÙ´ÓÏÂÃæÕâ¸ö´úÂëÈ¥Ñ­»·£¬ÒòÎªÕâÊÇÒ»¸ö×Ôµİ¹éµÄº¯Êı£¬µ±È¥µ½ÉÏÃæµÄelseÊ±ºò£¬Õû¸öwhileÆäÊµÓ¦¸ÃÊÇÒªÍ£Ö¹ÁË
+//			//pKidHtemp = pKidHtemp->nextGeomcloseNode;
+//			//Èç¹ûÓÃÉÏÃæµÄ´úÂë£¬½«»áÊ¹µÃpKidHtemp»á¸ú×Ô¼ºÑ­»·Ò»´Î
+//			break;
+//		}
+//	}
+//}
+
+//Çå³ıÊ¶±ğµ½ÓëÏÖÓĞ×Ó·â±Õ»·ÓĞÇ¶Ì×¹ØÏµµÄ·â±Õ»·ÔÚÔ­À´·â±Õ»·Ë«ÏòÁ´±íÖĞµÄ¹ØÏµ£¬ÈÃËü¸É¾»µØ½øÈëĞÂµÄ·â±Õ»·Ë«ÏòÁ´±íÖĞ¡£
+//Ò»°ãÖ»»áÓĞÒÔÏÂ¼¸ÖÖ¹ØÏµ£¬ÆäÒ»ÊÇÇĞ¸îÍ¼·â±Õ»·Í·½áµã£¬Æä¶şÊÇÒ»°ã½Úµã£¬ÆäÈıÊÇÎ²½Úµã¡£¾ÍÕâÈıÖÖ¡£
+//»¹Òª×¢ÒâºóÃæÕâ¸ö·â±ÕÓĞ¿ÉÄÜÊÇ×Ó·â±Õ»·£¬ÄÇÃ´¾ÍÒªµ÷Õû¸¸×Ó¹ØÏµÓëĞÖµÜ·â±Õ»·¹ØÏµ£¡£¡Õâ¸ö²ÅÊÇÖØµã¡£
+//Èı¸ö²ÎÊı£¬µÚÒ»¸öÎªÊ¶±ğºóµÄ¸¸·â±Õ»·£¬µÚ¶ş¸öÎªÊ¶±ğºóµÄ×Ó·â±Õ»·£¬µÚÈı¸öÎªÆ½ÃæÇĞ¸îÍ¼Í·½áµã£¬Ö»¶ÔÊ¶±ğºóµÄ×Ó·â±Õ»·½øĞĞ
+void GeomForCut::ClearCloseHeadOldRela(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp, NestResultDataNode*head)
 {
-	
-	GeomCloseHEAD*pKidHtemp=NULL;
-	GeomCloseHEAD*pKidLastClose = NULL;//×Ó·â±Õ»·ËùÔÚµÄ·â±Õ»·Ë«ÏòÁ´±íÖĞµÄ×îºóÒ»¸ö·â±Õ»·Á´±í
-	bool m_IfCloseNest = false;//ÅĞ¶ÏµÚ¶ş¸ö·â±Õ»·ÊÇ²»ÊÇµÚÒ»¸ö·â±Õ»·µÄ×Ó·â±Õ»·
-	//ÏÈÒªÅĞ¶ÏpHtempÓĞÃ»ÓĞ×Ó·â±Õ»·£¬Èç¹ûÓĞµÄ»°ÓÖµÃÇø·ÖpHNtempºÍÔ­À´µÄ×Ó·â±Õ»·ÓĞÃ»ÓĞÄÚÇ¶µÄ¹ØÏµ
-	if (!(pHtemp->FirstInsideGCloseNode))//Èç¹ûÔ­À´²¢Ã»ÓĞ×Ó·â±Õ»·
+	int a = 0;
+	//ÅĞ¶ÏpHNtempÊÇ²»ÊÇÒÑ¾­±»ÇåÀí¹ıÁË,ËÄÏòÁ´±íÖ¸Ïò¶¼ÊÇNULL
+	if ((pHNtemp->prevGeomcloseNode == NULL) && (pHNtemp->nextGeomcloseNode == NULL) && (pHNtemp->prevOutsideGCloseNode == NULL))//×¢ÒâpHNtemp->FirstInsideGCloseNodeÊÇ²»ĞèÒªÅĞ¶ÏÊÇ·ñÎªNULLµÄ£¬ÒòÎªµ÷Õû²»Éæ¼°Æä×Ó·â±Õ»·µÄÖ¸Ïò
 	{
-		pHtemp->FirstInsideGCloseNode = pHNtemp;
-		//Í¬Ê±£¬Òª°ÑpHNtempÕâ¸öË«ÏòÁ´±íµÄÇ°ºó½áµãµÄÖ¸Ïò¸ü¸Ä
-		//ÕâÀïÒª×¢ÒâpHNtempÊÇ×îºóÒ»¸ö·â±Õ»·µÄÇé¿ö£¬µ«²»¿ÉÄÜÊÇµÚÒ»¸ö·â±Õ»·£¨Ò²ÓĞ¿ÉÄÜÊÇµÚÒ»¸ö·â±Õ»·µÄ£¡£¡£¡£©
-		//ÒªÇø·ÖÊÇÊ×·â±Õ»·ÓëÎ²·â±Õ»·Í¬Ê±¶¼ÊÇÒ»¸ö·â±Õ»·µÄÇé¿ö
-		if (pHNtemp->nextGeomcloseNode)//Èç¹ûpHNtemp²»ÊÇ×îºóµÄ·â±Õ»·
+		a++;
+	}
+	else//Èç¹ûÃ»ÓĞ±»ÇåÀí¹ı£¬ÄÇÃ´¾ÍÒªÇåÀí
+	{
+		//ÇåÀíĞÖµÜ·â±Õ»·Ë«ÏòÁ´±í
+		//µ±pHNtempÊÇ·â±Õ»·Ê×½áµãÊ±ºò
+		if (!(pHNtemp->prevGeomcloseNode))//ÄÜ½øÀ´ËµÃ÷ÊÇÊ×½áµã£¬Ò²ÓĞ¿ÉÄÜÊÇ¸¸·â±Õ»·µÄµÚÒ»×Ó·â±Õ»·
 		{
-			//Èç¹ûpHNtempÊÇÊ×·â±Õ»·£¬ÄÇÃ´½«ÏÂÒ»¸ö·â±Õ»·µÄÇ°½ÚµãÖÃÎ»Îªnull
-			if (!(pHNtemp->prevGeomcloseNode))
+			//ÒªÅĞ¶ÏÊÇÕû¸öÇĞ¸îÆ½ÃæÍ¼µÄÊ×½áµã»¹ÊÇ×Ó·â±Õ»·Ë«ÏòÁ´±íÖĞµÄÊ×½áµã
+			//Èç¹ûÊÇÕû¸öÇĞ¸îÆ½ÃæÍ¼µÄÊ×½áµã
+			if (pHNtemp == head->FirstGeomClose)
 			{
 				//½«ÇĞ¸îÍ¼·â±Õ»·Í·½áµã»»³ÉµÚ¶ş¸ö·â±Õ»·
 				head->FirstGeomClose = pHNtemp->nextGeomcloseNode;
 				//ÔÙµ÷Õû±äÎª×Ó·â±Õ»·ºópHNtempÔÚÔ­À´·â±Õ»·Á´ÖĞµÄ¹ØÏµ¡£
 				pHNtemp->nextGeomcloseNode->prevGeomcloseNode = NULL;
-
 			}
-			else//Èç¹ûpHNtemp²»ÊÇÊ×·â±Õ»·£¬Ò²²»ÊÇÎ²·â±Õ»·µÄ»°£¬ÄÇÃ´½«ÏÂÒ»¸ö·â±Õ»·µÄÇ°½ÚµãÖÃÎ»ÎªpHNtempµÄÇ°½Úµã¡£
+			else//½ö½öÊÇ×Ó·â±Õ»·Ë«ÏòÁ´±íÖĞµÄÊ×½áµã
 			{
-				pHNtemp->prevGeomcloseNode->nextGeomcloseNode = pHNtemp->nextGeomcloseNode;//pHNtempµÄÇ°ÃæµÄºóÃæÔ­±¾ÊÇpHNtemp£¬µ«ÏÖÔÚ¸ÄÊÇËüµÄºóÃæµÄÄÇ¸öÁË
-				pHNtemp->nextGeomcloseNode->prevGeomcloseNode = pHNtemp->prevGeomcloseNode;//pHNtempµÄºóÃæµÄÇ°ÃæÔ­±¾ÊÇpHNtemp£¬µ«ÏÖÔÚ¸ÄÊÇËüµÄÇ°ÃæµÄÄÇ¸öÁË
-
+				//»¹ÒªÅĞ¶ÏÊÇ²»ÊÇÖ»ÓĞÒ»¸ö×Ó·â±Õ»·ÔÚÕâ¸öË«ÏòÁ´±íÖĞ
+				//Ö»ÓĞÒ»¸ö£¬ÄÇÃ´¾ÍÊÇÍ¬Ê±Ò²ÊÇÎ²·â±Õ»·
+				if (!(pHNtemp->nextGeomcloseNode))
+				{
+					pHNtemp->nextGeomcloseNode = pHNtemp->prevGeomcloseNode = NULL;
+				}
+				else//»¹ÓĞÆäËûĞÖµÜ·â±Õ»·½Úµã
+				{
+					pHNtemp->nextGeomcloseNode->prevGeomcloseNode = NULL;
+				}
 			}
 		}
-		//Èç¹ûpHNtempÊÇ×îºóµÄ·â±Õ»·½ÚµãµÄÇé¿öÏÂ
-		//Òª×¢ÒâÕû¸öÁ´±í¾ÍÖ»ÓĞÒ»¸ö·â±Õ»·µÄÇé¿ö
-		else
+			//µ«pHNtempÊÇÎ²·â±Õ»·Ê±£¬Ç°ÃæÒÑ¾­´¦ÀíÁËÍ¬Ê±ÊÇÊ×Î²·â±Õ»·µÄÇé¿ö£¨ÕâÀï¾ÍÖ»ÓÃ´¦Àí¼òµ¥µÄÎ²½Úµã£©
+		else if (!(pHNtemp->nextGeomcloseNode))
 		{
-			if (!(pHNtemp->prevGeomcloseNode))//Èç¹ûpHNtempÍ¬Ê±Ò²ÊÇÊ×·â±Õ»·µÄÊ±ºò
-			{
-				pHNtemp->nextGeomcloseNode = NULL;//Ö±½ÓÖÃÎ»ÎªNULL
-			}
-			else
-			{
-				pHNtemp->prevGeomcloseNode->nextGeomcloseNode = NULL;
-
-			}
+			pHNtemp->prevGeomcloseNode->nextGeomcloseNode = NULL;
+		}
+		else//²»ÊÇÊ×½áµã£¬²»ÊÇÎ²½Úµã£¬ÊÇÒ»°ã½Úµã
+		{
+			pHNtemp->prevGeomcloseNode->nextGeomcloseNode = pHNtemp->nextGeomcloseNode;//pHNtempµÄÇ°ÃæµÄºóÃæÔ­±¾ÊÇpHNtemp£¬µ«ÏÖÔÚ¸ÄÊÇËüµÄºóÃæµÄÄÇ¸öÁË
+			pHNtemp->nextGeomcloseNode->prevGeomcloseNode = pHNtemp->prevGeomcloseNode;//pHNtempµÄºóÃæµÄÇ°ÃæÔ­±¾ÊÇpHNtemp£¬µ«ÏÖÔÚ¸ÄÊÇËüµÄÇ°ÃæµÄÄÇ¸öÁË
+		}
+		//ÇåÀí¸¸×Ó·â±Õ»·Ë«ÏòÁ¿±í
+		//µ±pHNtempÊÇÊ××Ó·â±Õ»·
+		if (pHNtemp->prevOutsideGCloseNode)//ÄÜ½øÀ´ËµÃ÷ÊÇÊ××Ó·â±Õ»·£¬¼´prevOutsideGCloseNodeÖ¸Ïò²»ÎªNULL
+		{
+			//½«¸¸·â±Õ»·Ö¸ÏòµÄÊ××Ó·â±Õ»·¸ÄÎªpHtemp
+			pHNtemp->prevOutsideGCloseNode->FirstInsideGCloseNode = pHtemp;
+			pHtemp->prevOutsideGCloseNode = pHNtemp->prevOutsideGCloseNode;
+		}
+		else//²»ÊÇÊ××Ó·â±Õ»·Ê±,ÄÇÃ´¸¸×Ó·â±Õ»·Ë«ÏòÁ´±íÖ¸Ïò¾Í²»ĞèÒª¸Ä±äÁË¡£
+		{
+			;
 		}
 		//µ÷ÕûÍêÁËÖ®ºó£¬pHNtemp¾Í¸Ã°ÑÇ°ºó±äÎªNULLÁË¡£
-		pHNtemp->prevGeomcloseNode =pHNtemp->nextGeomcloseNode = NULL;
-		//Ö¸ÏòÆä¸¸½Úµã
-		pHNtemp->prevOutsideGCloseNode = pHtemp;
+		pHNtemp->prevGeomcloseNode = pHNtemp->nextGeomcloseNode = pHNtemp->prevOutsideGCloseNode = NULL;
+		
 	}
-	else//Èç¹ûÏÖÔÚpHtempÒÑ¾­ÓĞÁË×Ó·â±Õ»·ÁË£¬ÄÇÃ´ÒªÅĞ¶ÏÏÖÔÚµÄ×Ó·â±Õ»·ºÍÔ­À´µÄ×Ó·â±Õ»·ÓĞÃ»ÓĞÇ¶Ì×¹ØÏµ
+}
+
+//ºËĞÄ´úÂë£¬½«Ç¶Ì×·â±Õ»··Ö±ğ¹Òµ½ºÏÊÊµÄÎ»ÖÃÉÏÈ¥¡£
+//·â±Õ»·µÄÆæÅ¼ĞÔÒÑ¾­ÔÚÅĞ¶ÏÊ±ºò´¦ÀíÍê±ÏÁË¡£
+//²åÈëµÄ¸ù±¾Ë¼ÏëÊÇ£¬½«·â±Õ»·Ô­À´µÄË«ÏòÁ´±íÖĞµÄ¹ØÏµ´¦Àí¸É¾»£¬È»ºó¸ù¾İĞÂµÄ¹ØÏµÔÚË«ÏòÁ´±íÖĞ´î½¨ĞÂµÄ¹ØÏµ¡£
+void  GeomForCut::SetInSideClose(GeomCloseHEAD*pFHtemp, Geom2CloseHeadNest m_G2CloseHeadNest, NestResultDataNode*head)
+{
+	Geom2CloseHeadNest m_G2CloseHeadNest_Local;//Ö»ÔÚ±¾º¯ÊıÖĞµ÷ÓÃµÄ±äÁ¿
+	GeomCloseHEAD*pKidHtemp = NULL;
+	GeomCloseHEAD*pKidLastClose = NULL;//×Ó·â±Õ»·ËùÔÚµÄ·â±Õ»·Ë«ÏòÁ´±íÖĞµÄ×îºóÒ»¸ö·â±Õ»·Á´±í
+	GeomCloseHEAD*pKidNHtemp = NULL;//ÓÃÔÚcase2ÉÏ£¬ÓÃÀ´´ú±í×Ó·â±Õ»·µÄĞÖµÜ·â±Õ»·
+	GeomCloseHEAD*pHtemp;//¾­ÓÉÅĞ¶ÏºóÉú³ÉµÄ¸¸·â±Õ»·
+	GeomCloseHEAD*pHNtemp;//¾­ÓÉÅĞ¶ÏºóÉú³ÉµÄ×Ó·â±Õ»·
+	bool m_IfCloseNest = false;//ÅĞ¶ÏµÚ¶ş¸ö·â±Õ»·ÊÇ²»ÊÇµÚÒ»¸ö·â±Õ»·µÄ×Ó·â±Õ»·
+	//ÒòÎªÏÖÔÚ½«Á½¸ö·â±Õ»·Ö®¼äµÄ¹ØÏµ´¦Àí³ÉÁË3ÖÖÇé¿ö£¬ËùÒÔÒªÓÃµ½switch caseµÄÅĞ¶ÏÓï¾ä¡£
+	switch (m_G2CloseHeadNest.type)
 	{
-		pKidHtemp = pHtemp->FirstInsideGCloseNode;
-		//²»ÒªÈ«²¿±éÀúÒ»±é£¬µ±Ö»ÓĞ×îºóÒ»¸ö·â±Õ»·µÄÊ±ºò¾Í¿ÉÒÔÌø³öÈ¥ÁË£¬ÒòÎªÒªÇ¶Ì×ÆğÂëÒªÁ½¸ö·â±Õ»·
-		while (pKidHtemp)//°ÑÏÈÓĞµÄ×Ó·â±Õ»·±éÀúÒ»±é
+	case 1://×îÀíÏëµÄÇé¿ö£¬¼´Ç°ÃæµÄ·â±Õ»·¾ÍÊÇºóÃæ·â±Õ»·µÄ¸¸·â±Õ»·
+		  //´ËÎªÔ­À´Ç¶Ì×·â±Õ»·Ê¶±ğÖ®ºó¹Ò¿¿µÄÍêÕû´¦ÀíËã·¨£¬µ«ÕâÖ»ÊÇÆäÖĞÒ»ÖÖ¡£
+		 //ÏÈÒªÅĞ¶ÏpHtempÓĞÃ»ÓĞ×Ó·â±Õ»·£¬Èç¹ûÓĞµÄ»°ÓÖµÃÇø·ÖpHNtempºÍÔ­À´µÄ×Ó·â±Õ»·ÓĞÃ»ÓĞÄÚÇ¶µÄ¹ØÏµ
+		pHtemp = pFHtemp;
+		pHNtemp = m_G2CloseHeadNest.KidCloseHead;//·½±ãµ÷ÓÃ¶øÒÑ¡£
+		//Í¬Ê±£¬Òª°ÑpHNtempÕâ¸öË«ÏòÁ´±íµÄÇ°ºó½áµãµÄÖ¸Ïò¸ü¸Ä
+		ClearCloseHeadOldRela(pHtemp,pHNtemp, head);
+		//ÒÔÉÏÊÇ½«pHNtempÔ­À´·â±Õ»·Ë«ÏòÁ´±íÖĞµÄ¹ØÏµÇå³ıµô£¬ÈÃËüÄÜ¸É¾»À´µ½ĞÂµÄ·â±Õ»·Àï¡£
+		if (!(pHtemp->FirstInsideGCloseNode))//Èç¹ûÔ­À´²¢Ã»ÓĞ×Ó·â±Õ»·
 		{
-			//ÕâÊÇ°´ÕÕÃ¿Ò»¸ö¶¼ÊÇ´ó»·µÄ¼ÙÉè½øĞĞ¹æ»®
-			//ÊäÈëÕâÁ½¸ö·â±Õ»·Í·½áµãÅĞ¶ÏÊÇ·ñÓĞÇ¶Ì×¹ØÏµ
-			//////////ÅĞ¶ÏÕâÁ½¸ö·â±Õ»·ÓĞÃ»ÓĞÇ¶Ì×
-			////////m_G2CloseHeadNest = EstimateCloseHeadNest(pKidHtemp, pHNtemp);
-			//ÓÃ°üÂçµÄ·½Ê½À´ÅĞ¶ÏÁ½¸ö·â±Õ»·ÓĞÃ»ÓĞÇ¶Ì×
-			m_G2CloseHeadNest = JudgeCloseHeadNest(pKidHtemp, pHNtemp);
-
-			//Èç¹ûÓĞÇ¶Ì×£¬ÄÇÃ´¾ÍÒª°ÑµÚ¶ş¸ö·â±Õ»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
-			if (m_G2CloseHeadNest.m_IfCloseNest)
-			{
-				//°ÑµÚ¶ş¸ö·â±Õ»·»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
-				pHNtemp = m_G2CloseHeadNest.KidCloseHead;
-				SetInSideClose(pKidHtemp, pHNtemp,head);
-			}
-			else//Èç¹ûÃ»ÓĞÇ¶Ì×£¬
-			{
-				//ÕâÀïÒª°ÑpHNtempÔ­À´µÄ¹ØÏµ½øĞĞ½»½Ó
-				//ÕâÀïÒª×¢ÒâpHNtempÊÇ×îºóÒ»¸ö·â±Õ»·µÄÇé¿ö£¬µ«²»¿ÉÄÜÊÇµÚÒ»¸ö·â±Õ»·
-				if (pHNtemp->nextGeomcloseNode)//Èç¹ûpHNtemp²»ÊÇ×îºóµÄ·â±Õ»·
-				{
-					pHNtemp->prevGeomcloseNode->nextGeomcloseNode = pHNtemp->nextGeomcloseNode;//pHNtempµÄÇ°ÃæµÄºóÃæÔ­±¾ÊÇpHNtemp£¬µ«ÏÖÔÚ¸ÄÊÇËüµÄºóÃæµÄÄÇ¸öÁË
-					pHNtemp->nextGeomcloseNode->prevGeomcloseNode = pHNtemp->prevGeomcloseNode;//pHNtempµÄºóÃæµÄÇ°ÃæÔ­±¾ÊÇpHNtemp£¬µ«ÏÖÔÚ¸ÄÊÇËüµÄÇ°ÃæµÄÄÇ¸öÁË
-				}
-				else//Èç¹ûpHNtempÊÇ×îºóµÄ·â±Õ»·½ÚµãµÄÇé¿öÏÂ
-				{
-					pHNtemp->prevGeomcloseNode->nextGeomcloseNode = NULL;
-				}
-				//²¢ÁĞ·â±Õ»·µÄ¹ØÏµ
-				//ÄÇÃ´¾ÍÒª·ÖpKidHtempËùÔÚµÄ×Ó·â±Õ»·Ë«ÏòÁ´±í·â±Õ»·ÁË£¬Èç¹ûÃ»ÓĞÆäËûÖ±½Ó°ÑpHNtemp¹Òµ½pKidHtempºóÃæ¾ÍºÃÁË
-				if (!(pKidHtemp->nextGeomcloseNode))//Èç¹ûºóÃæÃ»ÓĞÆäËû·â±Õ»·ÁË
-				{
-					pKidHtemp->nextGeomcloseNode = pHNtemp;//pKidHtemp×÷ÎªĞÂ½øÈëÁíÒ»¸öÁìÓòµÄ·â±Õ»·£¬ËûÒÑ¾­°ÑÔ­À´µÄ¹ØÏµ½»½ÓÍêÁËÖ®ºó¶ªµôÁË£¬±ä³ÉÁËÃ»ÓĞÉí·İµÄÁË£¬´ËÊ±Ç°ºó½Úµã¶¼ÊÇNULL
-					//µ÷ÕûÍêÁËÖ®ºó£¬pHNtemp¾Í¸Ã°ÑÕâ¸ö×Ó·â±Õ»·ÀïÃæµÄ¹ØÏµ½¨Á¢ÆğÀ´
-					pHNtemp->prevGeomcloseNode = pKidHtemp;
-					pHNtemp->nextGeomcloseNode = NULL;
-				}
-				else//pKidHtempËùÔÚµÄ×Ó·â±Õ»·Ë«ÏòÁ´±í·â±Õ»·ºóÃæÓĞÆäËû·â±Õ»·
-				{
-					//¼ÈÈ»ºóÃæ»¹ÓĞÆäËû·â±Õ»·£¬ÄÇÃ´ÓĞ¿ÉÄÜÊÇ¸úËüºóÃæµÄ·â±Õ»·Ç¶Ì×£¬¶ø²»ÊÇ¸úÍ·½áµã·â±Õ»·
-					//ÅĞ¶ÏpHNtempÓëpKidHtempºóÃæµÄ·â±Õ»·ÊÇ·ñ¹¹³ÉÇ¶Ì×¹ØÏµ£¬Èç¹û¹¹³ÉÄÇÃ´Òª¹Òµ½ºóÃæ£¬
-					//²»ÒªÈ«²¿±éÀúÒ»±é£¬µ±Ö»ÓĞ×îºóÒ»¸ö·â±Õ»·µÄÊ±ºò¾Í¿ÉÒÔÌø³öÈ¥ÁË£¬ÒòÎªÒªÇ¶Ì×ÆğÂëÒªÁ½¸ö·â±Õ»·
-					pKidHtemp = pKidHtemp->nextGeomcloseNode;
-					while (pKidHtemp)//°Ñ×Ó·â±Õ»·ÀïÃæÓàÏÂµÄ²¢ÁĞµÄ·â±Õ»·±éÀúÒ»±é
-					{
-						//ÓÃ°üÂçµÄ·½Ê½À´ÅĞ¶ÏÁ½¸ö·â±Õ»·ÓĞÃ»ÓĞÇ¶Ì×
-						m_G2CloseHeadNest = JudgeCloseHeadNest(pKidHtemp, pHNtemp);
-
-						//Èç¹ûÓĞÇ¶Ì×£¬ÄÇÃ´¾ÍÒª°ÑµÚ¶ş¸ö·â±Õ»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
-						if (m_G2CloseHeadNest.m_IfCloseNest)
-						{
-							//°ÑµÚ¶ş¸ö·â±Õ»·»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
-							pHNtemp = m_G2CloseHeadNest.KidCloseHead;
-							SetInSideClose(pKidHtemp, pHNtemp,head);
-							m_IfCloseNest = true;//ËµÃ÷ÒÑ¾­Ç¶Ì×½øÈ¥ÁË
-							break;
-						}
-						//·ñÔòÕÒµ½×îºóÒ»¸ö£¬È»ºó°ÑpHNtemp¹Òµ½ÆäºóÃæ
-						if (!(pKidHtemp->nextGeomcloseNode))//Èç¹ûpKidHtempÊÇ×îºóÒ»¸ö
-						{
-							pKidLastClose = pKidHtemp;//ÕâÊÇ×îºóÒ»¸ö·â±Õ»·£¬»áµ½ÕâÀ´£¬ËµÃ÷£¬×îºóÒ»¸ö·â±Õ»·ºÍpHNtempÒ²Ã»ÓĞÇ¶Ì×µÄ¹ØÏµ
-							m_IfCloseNest = false;
-						}
-						pKidHtemp = pKidHtemp->nextGeomcloseNode;
-					}			
-					if (!(m_IfCloseNest))
-					{
-						pKidLastClose->nextGeomcloseNode = pHNtemp;
-						//µ÷ÕûÍêÁËÖ®ºó£¬pHNtemp¾Í¸Ã°ÑÕâ¸ö×Ó·â±Õ»·ÀïÃæµÄ¹ØÏµ½¨Á¢ÆğÀ´
-						pHNtemp->prevGeomcloseNode = pKidLastClose;
-						pHNtemp->nextGeomcloseNode = NULL;
-					}
-					
-				}
-				
-			}
-			//Õâ¸öwhileÑ­»·²»ĞèÒªÔÙ´ÓÏÂÃæÕâ¸ö´úÂëÈ¥Ñ­»·£¬ÒòÎªÕâÊÇÒ»¸ö×Ôµİ¹éµÄº¯Êı£¬µ±È¥µ½ÉÏÃæµÄelseÊ±ºò£¬Õû¸öwhileÆäÊµÓ¦¸ÃÊÇÒªÍ£Ö¹ÁË
-			//pKidHtemp = pKidHtemp->nextGeomcloseNode;
-			//Èç¹ûÓÃÉÏÃæµÄ´úÂë£¬½«»áÊ¹µÃpKidHtemp»á¸ú×Ô¼ºÑ­»·Ò»´Î
-			break;
+			pHtemp->FirstInsideGCloseNode = pHNtemp;
+			//Ö¸ÏòÆä¸¸½Úµã
+			pHNtemp->prevOutsideGCloseNode = pHtemp;
 		}
+		else//Èç¹ûÏÖÔÚpHtempÒÑ¾­ÓĞÁË×Ó·â±Õ»·ÁË£¬ÄÇÃ´ÒªÅĞ¶ÏÏÖÔÚµÄ×Ó·â±Õ»·ºÍÔ­À´µÄ×Ó·â±Õ»·ÓĞÃ»ÓĞÇ¶Ì×¹ØÏµ£¬´ËÊ±µ÷ÓÃµÄÊÇJudge2KidCloseHNest£¨£©Ëã·¨£¬Òª¿¼ÂÇÇ°ºóË­ÊÇ¸¸×ÓµÄ¹ØÏµ£¬²»ÔÙÊÇÖ»¿¼ÂÇºóÕßÊÇ²»ÊÇÇ°ÕßµÄ×Ó·â±Õ»·µÄÎÊÌâ¡£
+		{
+			pKidHtemp = pHtemp->FirstInsideGCloseNode;
+			//²»ÒªÈ«²¿±éÀúÒ»±é£¬µ±Ö»ÓĞ×îºóÒ»¸ö·â±Õ»·µÄÊ±ºò¾Í¿ÉÒÔÌø³öÈ¥ÁË£¬ÒòÎªÒªÇ¶Ì×ÆğÂëÒªÁ½¸ö·â±Õ»·
+			//while (pKidHtemp)//°ÑÏÈÓĞµÄ×Ó·â±Õ»·±éÀúÒ»±é
+			//{
+				//ÓÃ°üÂçµÄ·½Ê½À´ÅĞ¶ÏÁ½¸ö·â±Õ»·ÓĞÃ»ÓĞÇ¶Ì×£¬ÕâÀïÒªÏêÏ¸ÅĞ¶Ï¡£
+				m_G2CloseHeadNest_Local = Judge2KidCloseHNest(pKidHtemp, pHNtemp);
+				
+				//Èç¹ûÓĞÇ¶Ì×£¬ÄÇÃ´¾ÍÒª°ÑµÚ¶ş¸ö·â±Õ»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
+				if (m_G2CloseHeadNest_Local.m_IfCloseNest)
+				{
+					//°ÑµÚ¶ş¸ö·â±Õ»·»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
+					//pHNtemp = m_G2CloseHeadNest.KidCloseHead;
+					SetInSideClose(pKidHtemp, m_G2CloseHeadNest_Local, head);//ÕâÑù¾ÍÄÜÒ»Ö±½«×Ó·â±Õ»·ÕÒµ½×îµ×²ã
+					break;
+				}
+				else//Èç¹ûÃ»ÓĞÇ¶Ì×£¬
+				{
+					//ÄÇ¾ÍÊÇ²¢ÁĞ·â±Õ»·µÄ¹ØÏµ
+					//ÄÇÃ´¾ÍÒª·ÖpKidHtempËùÔÚµÄ×Ó·â±Õ»·Ë«ÏòÁ´±í·â±Õ»·ÁË£¬Èç¹ûÃ»ÓĞÆäËûÖ±½Ó°ÑpHNtemp¹Òµ½pKidHtempºóÃæ¾ÍºÃÁË
+					if (!(pKidHtemp->nextGeomcloseNode))//Èç¹ûºóÃæÃ»ÓĞÆäËû·â±Õ»·ÁË
+					{
+						pKidHtemp->nextGeomcloseNode = pHNtemp;//pKidHtemp×÷ÎªĞÂ½øÈëÁíÒ»¸öÁìÓòµÄ·â±Õ»·£¬ËûÒÑ¾­°ÑÔ­À´µÄ¹ØÏµ½»½ÓÍêÁËÖ®ºó¶ªµôÁË£¬±ä³ÉÁËÃ»ÓĞÉí·İµÄÁË£¬´ËÊ±Ç°ºó½Úµã¶¼ÊÇNULL
+						//µ÷ÕûÍêÁËÖ®ºó£¬pHNtemp¾Í¸Ã°ÑÕâ¸ö×Ó·â±Õ»·ÀïÃæµÄ¹ØÏµ½¨Á¢ÆğÀ´
+						pHNtemp->prevGeomcloseNode = pKidHtemp;
+						pHNtemp->nextGeomcloseNode = NULL;
+						break;
+					}
+					else//pKidHtempËùÔÚµÄ×Ó·â±Õ»·Ë«ÏòÁ´±í·â±Õ»·ºóÃæÓĞÆäËû·â±Õ»·
+					{
+						//¼ÈÈ»ºóÃæ»¹ÓĞÆäËû·â±Õ»·£¬ÄÇÃ´ÓĞ¿ÉÄÜÊÇ¸úËüºóÃæµÄ·â±Õ»·Ç¶Ì×£¬¶ø²»ÊÇ¸úÍ·½áµã·â±Õ»·
+						//ÅĞ¶ÏpHNtempÓëpKidHtempºóÃæµÄ·â±Õ»·ÊÇ·ñ¹¹³ÉÇ¶Ì×¹ØÏµ£¬Èç¹û¹¹³ÉÄÇÃ´Òª¹Òµ½ºóÃæ£¬
+						//²»ÒªÈ«²¿±éÀúÒ»±é£¬µ±Ö»ÓĞ×îºóÒ»¸ö·â±Õ»·µÄÊ±ºò¾Í¿ÉÒÔÌø³öÈ¥ÁË£¬ÒòÎªÒªÇ¶Ì×ÆğÂëÒªÁ½¸ö·â±Õ»·
+						pKidHtemp = pKidHtemp->nextGeomcloseNode;
+						while (pKidHtemp)//°Ñ×Ó·â±Õ»·ÀïÃæÓàÏÂµÄ²¢ÁĞµÄ·â±Õ»·±éÀúÒ»±é
+						{
+							//ÓÃ°üÂçµÄ·½Ê½À´ÅĞ¶ÏÁ½¸ö·â±Õ»·ÓĞÃ»ÓĞÇ¶Ì×
+							//ÕâÀïÓĞ¸öÎÊÌâ£¬Èç¹û´æÔÚ¶àÖØ°üÂçµÄÇé¿öÏÂ£¬Ã»ÓĞ°ì·¨½â¾öpHNtempÊÇ
+							//pKidHtempÉÏÒ»²ã·â±Õ»·Ê±ºòµÄÅĞ¶Ï£¬¸ù¾İÕâ¸öËã·¨»á½«¸¸²ã·â±Õ»·×ª»¯Îª×Ó²ã·â±Õ»·µÄ·â±Õ»·¡£
+							m_G2CloseHeadNest_Local = Judge2KidCloseHNest(pKidHtemp, pHNtemp);
+
+							//Èç¹ûÓĞÇ¶Ì×£¬ÄÇÃ´¾ÍÒª°ÑµÚ¶ş¸ö·â±Õ»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
+							if (m_G2CloseHeadNest_Local.m_IfCloseNest)
+							{
+								//°ÑµÚ¶ş¸ö·â±Õ»·»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
+								//pHNtemp = m_G2CloseHeadNest.KidCloseHead;
+								SetInSideClose(pKidHtemp, m_G2CloseHeadNest_Local, head);
+								m_IfCloseNest = true;//ËµÃ÷ÒÑ¾­Ç¶Ì×½øÈ¥ÁË
+								break;
+							}
+							//·ñÔòÕÒµ½×îºóÒ»¸ö£¬È»ºó°ÑpHNtemp¹Òµ½ÆäºóÃæ
+							if (!(pKidHtemp->nextGeomcloseNode))//Èç¹ûpKidHtempÊÇ×îºóÒ»¸ö
+							{
+								pKidLastClose = pKidHtemp;//ÕâÊÇ×îºóÒ»¸ö·â±Õ»·£¬»áµ½ÕâÀ´£¬ËµÃ÷£¬×îºóÒ»¸ö·â±Õ»·ºÍpHNtempÒ²Ã»ÓĞÇ¶Ì×µÄ¹ØÏµ
+								m_IfCloseNest = false;
+							}
+							pKidHtemp = pKidHtemp->nextGeomcloseNode;
+						}
+						if (!(m_IfCloseNest))//Òª×ö¸ö±êÖ¾Î»ÒªÅĞ¶ÏÊ²Ã´Ê±ºòÌø³öwhileÑ­»·
+						{
+							pKidLastClose->nextGeomcloseNode = pHNtemp;
+							//µ÷ÕûÍêÁËÖ®ºó£¬pHNtemp¾Í¸Ã°ÑÕâ¸ö×Ó·â±Õ»·ÀïÃæµÄ¹ØÏµ½¨Á¢ÆğÀ´
+							pHNtemp->prevGeomcloseNode = pKidLastClose;
+							pHNtemp->nextGeomcloseNode = NULL;
+						}
+
+					}
+
+				}
+			//}
+		}
+		break;
+		//×¢Òâ£¬ÄÜ½øÈëµ½case 2ËµÃ÷ÊÇ½«¸¸·â±Õ»·£¨Ô­À´µÄºó·â±Õ»·£©ÒÑ¾­ÇåÀí¹ıÒ»±éÁË£¬¶øÏÖÔÚÒªÇåÀíµÄÊÇÔ­À´µÄÇ°·â±Õ»·£¨×Ó·â±Õ»·£©
+	case 2://µ±ºóÃæµÄ·â±Õ»·²ÅÊÇÇ°ÃæµÄ·â±Õ»·µÄ¸¸·â±Õ»·£¬´ËÊ±ÒªÈÏÕæ´¦ÀíÕâÖÖÇé¿ö
+		   //´ËÊ±Òª·ÖÖÓÇé¿ö£¬Çé¿öÒ»ÊÇ£ºÇ°Ãæ·â±Õ»·ÊÇ¸¸·â±Õ»·Ö¸ÏòµÄµÚÒ»¸ö×Ó·â±Õ»·£¬Çé¿ö¶şÊÇ£ºÇ°Ãæ·â±Õ»·ÊÇ¸¸·â±Õ»·µÄ×Ó·â±Õ»·Ë«ÏòÁ´±íÖĞµÄÆäÖĞÒ»¸ö¡£
+		pHtemp = m_G2CloseHeadNest.FadCloseHead;//ÕâÊÇÔ­À´·â±Õ»·ÖĞµÄºóÃæÄÇ¸ö·â±Õ»·
+		pHNtemp = m_G2CloseHeadNest.KidCloseHead;//ÕâÊÇÔ­À´·â±Õ»·ÖĞµÄÇ°ÃæÄÇ¸ö·â±Õ»·
+		pKidNHtemp = pHNtemp;
+		//Í¬Ê±£¬Òª°ÑpHNtempÕâ¸öË«ÏòÁ´±íµÄÇ°ºó½áµãµÄÖ¸Ïò¸ü¸Ä£¬pHtempÎªºóÃæµÄ·â±Õ»·
+		ClearCloseHeadOldRela(pHtemp, pHNtemp, head);
+		//ÒÔÉÏÊÇ½«pHNtempÔ­À´·â±Õ»·Ë«ÏòÁ´±íÖĞµÄ¹ØÏµÇå³ıµô£¬ÈÃËüÄÜ¸É¾»À´µ½ĞÂµÄ·â±Õ»·Àï¡£
+		//ÏÖÔÚÖ»ÓÃ¿¼ÂÇ½«¸¸×Ó·â±Õ»·µÄ¹Ò¿¿ÖØĞÂ¹Ò¾ÍºÃÁË¡£
+		if (!(pHtemp->FirstInsideGCloseNode))//pHtempÔ­À´Ã»ÓĞ×Ó·â±Õ»·Ê±ºò
+		{
+			pHtemp->FirstInsideGCloseNode = pHNtemp;
+			pHNtemp->prevOutsideGCloseNode = pHtemp;
+		}
+		else//Èç¹ûpHtempÒÑ¾­ÓĞ×Ó·â±Õ»·ÁË£¬ÄÇÃ´¾ÍÓ¦¸ÃÊÇÕÒµ½×îºóÄÇ¸ö×Ó·â±Õ»·¹ÒÉÏÈ¥
+		{
+			pKidLastClose = pHtemp->FirstInsideGCloseNode;
+			while (pKidLastClose)//ÕÒµ½×îºóÒ»¸ö·â±Õ»·
+			{
+				pKidLastClose = pKidLastClose->nextGeomcloseNode;
+			}
+			pKidLastClose->nextGeomcloseNode = pHNtemp;
+			pHNtemp->prevGeomcloseNode = pKidLastClose;
+		}
+		//ÒÔÉÏÖ»ÊÇ½â¾öÁËºóÃæ·â±Õ»·ÊÇÇ°Ãæ·â±Õ»·µÄ¸¸·â±Õ»·Çé¿ö£¬µ«ÊÇÈç¹ûÇ°Ãæ×Ó·â±Õ»·µÄĞÖµÜ·â±Õ»·ÖĞÒ²ÓĞºóÃæ·â±Õ»·µÄ×Ó·â±Õ»·£¬ÄÇÃ´»¹µÃ¼ÌĞø²éÕÒ¡£
+		if (pKidNHtemp->nextGeomcloseNode)//Ô­À´µÄ×Ó·â±Õ»·»¹ÓĞĞÖµÜ·â±Õ»·
+		{
+			pKidNHtemp = pKidNHtemp->nextGeomcloseNode;
+			while (pKidNHtemp)//Òª°ÑÓàÏÂµÄĞÖµÜ·â±Õ»·¹ıÒ»±é
+			{
+				//ÒòÎªÏÖÔÚÒÑ¾­»ù±¾Ã÷È·£¬ºóÃæµÄ·â±Õ»·ÊÇÇ°Ãæ·â±Õ»·µÄ¸¸·â±Õ»·£¬ÄÇÃ´ÏÖÔÚÒªÕÒ»¹ÓĞÃ»ÓĞ×Ó·â±Õ»·£¬ËùÒÔ¾ÍÅĞ¶ÏºóÕßÊÇ²»ÊÇÇ°ÕßµÄ×Ó·â±Õ»·¾ÍºÃ¡£
+				m_G2CloseHeadNest_Local = JudgeCloseHeadNest(pHtemp, pKidNHtemp);
+				//Èç¹ûÓĞÇ¶Ì×£¬ÄÇÃ´¾ÍÒª¹Òµ½ºÏÊÊµØ·½
+				if (m_G2CloseHeadNest_Local.m_IfCloseNest)
+				{
+					//°ÑµÚ¶ş¸ö·â±Õ»·»·¹Òµ½µÚÒ»¸ö·â±ÕÉÏ
+					//pHNtemp = m_G2CloseHeadNest.KidCloseHead;
+					SetInSideClose(pHtemp, m_G2CloseHeadNest_Local, head);
+				}
+				else//Èç¹ûÃ»ÓĞÇ¶Ì×ÁË£¬ÄÇÃ´¾Í¼ÌĞøÑ­»·¡£
+					pKidNHtemp = pKidNHtemp->nextGeomcloseNode;
+			}
+				pKidNHtemp = pKidNHtemp->nextGeomcloseNode;
+			}
+		else//Èç¹ûÇ°ÃæµÄ×Ó·â±Õ»·Ã»ÓĞÁËĞÖµÜ·â±Õ»·£¬ÄÇÃ´Õâ¸öÅĞ¶Ï½áÊøÁË¡£
+		{
+			;
+		}
+		break;
+	case 3:
+			break;
+	default:
+		break;
 	}
 }
 //Çó·â±Õ»·µÄ°üÂç¾ØĞÎxyµÄ¼«ÏŞÖµ
-
 void  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 {
 	GeomEleNode*ptempGelenode;
@@ -2039,7 +2289,9 @@ Geom2CloseHeadNest  GeomForCut::JudgeCloseHeadNest(GeomCloseHEAD*pTempCHead, Geo
 	if (((x1_min <=x2_min ) && (x2_max <= x1_max)) && ((y1_min <= y2_min) && (y2_max<=y1_max)))
 	{
 		//Èç¹ûÓĞ½»µãµÄÇé¿öÏÂ£¬ÄÇÃ´Ó¦¸Ã°ÑÕâ¸ö·â±Õ»·2¹Òµ½·â±Õ»·1ÖĞ£¬×÷ÎªËüµÄ×Ó·â±Õ»·
+		m_G2CloseHeadNest.type = 1;//2ÊÇ1µÄ×Ó·â±Õ»·£»
 		m_G2CloseHeadNest.m_IfCloseNest = true;
+		m_G2CloseHeadNest.FadCloseHead = pTempCHead;
 		m_G2CloseHeadNest.KidCloseHead = pTempNextCHead;
 		//¸ù¾İ¸¸·â±Õ»·ÊÇµ¥Ë«²ãÀ´ÅĞ¶Ï×Ó·â±Õ»·µÄµ¥Ë«²ã
 		if (pTempCHead->m_Singlelayer)//ÄÜ½øÀ´ËµÃ÷ÊÇµ¥²ã£¬ÒòÎªÄ¬ÈÏÊÇµ¥²ã
@@ -2055,11 +2307,141 @@ Geom2CloseHeadNest  GeomForCut::JudgeCloseHeadNest(GeomCloseHEAD*pTempCHead, Geo
 	}
 	else//²»ÔÚÕâ¸ö·¶Î§ÄÚ£¬ËµÃ÷²»ÊÇ½»µã
 	{
+		m_G2CloseHeadNest.type = 3;//2Óë1µÄ²»¾ß±¸Ç¶Ì×¹ØÏµ£»
 		m_G2CloseHeadNest.m_IfCloseNest = false;
 		m_G2CloseHeadNest.KidCloseHead = pTempNextCHead;
 		m_G2CloseHeadNest.NextCloseHead = pTempNextCHead->nextGeomcloseNode;
 	}
 	return m_G2CloseHeadNest;
+}
+//ÓÃ°üÂçµÄ·½·¨ÅĞ¶ÏºóÃæµÄ·â±Õ»·pHNtemp£¨ÒÑ¾­È·¶¨pHNtempÊÇ×îÍâ²ã¸¸·â±Õ»·µÄ×Ó·â±Õ»·µÄÇé¿öÏÂ£©ÓëÏÖÓĞ¸¸·â±Õ»·×Ó·â±Õ»·pHKtempµÄÇ¶Ì×¹ØÏµ¡£
+//ÕâÀïÓëÉÏÃæ²»Í¬µÄµØ·½ÔÚÓÚ£¬ÉÏÃæÊÇÖ»ÅĞ¶ÏºóÕßÊÇ·ñÎªÇ°ÕßµÄ×Ó·â±Õ»·µÄÇé¿ö£¬¶øÕâÀïÊÇÅĞ¶ÏÁ½ÕßÖ®¼äµÄÇ¶Ì×¹ØÏµ¡£
+Geom2CloseHeadNest GeomForCut::Judge2KidCloseHNest(GeomCloseHEAD*pHKtemp, GeomCloseHEAD*pHNtemp)
+{
+	Envelope_Rect m_GeomClosed1, m_GeomClosed2;
+	double x1_min, x1_max, y1_min, y1_max;//Ñ°ÕÒ·â±Õ»·1µÄ°üÂç¾ØĞÎµÄ·¶Î§
+	double x2_min, x2_max, y2_min, y2_max;//Ñ°ÕÒ·â±Õ»·1µÄ°üÂç¾ØĞÎµÄ·¶Î§
+	//ÇóÁ½¸ö·â±Õ»·µÄ°üÂç¾ØĞÎµÄ·¶Î§
+	GetLimtofGeomClosed(pHKtemp);
+	GetLimtofGeomClosed(pHNtemp);
+	m_GeomClosed1 = pHKtemp->m_GemoClosedLimt;
+	m_GeomClosed2 = pHNtemp->m_GemoClosedLimt;
+	//¶ÔÊıÖµ±£ÁôËÄÎ»Ğ¡Êı
+	x1_min = m_GeomClosed1.x_min;
+	x1_max = m_GeomClosed1.x_max;
+	y1_min = m_GeomClosed1.y_min;
+	y1_max = m_GeomClosed1.y_max;
+	x2_min = m_GeomClosed2.x_min;
+	x2_max = m_GeomClosed2.x_max;
+	y2_min = m_GeomClosed2.y_min;
+	y2_max = m_GeomClosed2.y_max;
+	//ÒÔÉÏÒÑ¾­°Ñ°üÂç¾ØĞÎµÄ·¶Î§Çó³öÀ´ÁË
+	//ÏÂÃæ½øĞĞ¶ÔÁ½¸ö¾ØĞÎÊÇ·ñÇ¶Ì×½øĞĞÅĞ¶Ï
+	//ÕâÀïÒªÅĞ¶ÏÁ½¸ö·â±Õ»·Ö®¼äµÄÇ¶Ì×¹ØÏµ£¬Ò»°ã»áÓĞÈıÖÖ¹ØÏµ£¬·â±ÕÒÔ²»Í¬µÄtypeÀ´´ú±í
+	//type=1´ú±íºóÕß·â±Õ»·ÊÇÇ°Õß·â±Õ»·µÄ×Ó·â±Õ»·£¬type=2´ú±íÇ°Õß·â±Õ»·ÊÇºóÕß·â±Õ»·µÄ×Ó·â±Õ»·£¬type=3´ú±íÇ°ºóÁ½Õß·â±Õ»·Ã»ÓĞÇ¶Ì×¹ØÏµ£¬±Ë´ËÖ®¼äÊÇÆ½ĞĞµÄ¹ØÏµ¡£
+	//ÕâÀïÄ¬ÈÏÍ¬¸ö·â±Õ»·ÀïµÄÊıÖµ£¬min<max
+	//Èç¹ûºóÕßÊÇÇ°ÕßµÄ×Ó·â±Õ»·µÄÇé¿öÏÂ
+	if (((x1_min <= x2_min) && (x2_max <= x1_max)) && ((y1_min <= y2_min) && (y2_max <= y1_max)))
+	{
+		//Èç¹ûÓĞ½»µãµÄÇé¿öÏÂ£¬ÄÇÃ´Ó¦¸Ã°ÑÕâ¸ö·â±Õ»·2¹Òµ½·â±Õ»·1ÖĞ£¬×÷ÎªËüµÄ×Ó·â±Õ»·
+		m_G2CloseHeadNest.m_IfCloseNest = true;
+		m_G2CloseHeadNest.type = 1;//·â±Õ»·2ÊÇ·â±Õ»·1µÄ×Ó·â±Õ»·
+		m_G2CloseHeadNest.FadCloseHead = pHKtemp;
+		m_G2CloseHeadNest.KidCloseHead = pHNtemp;
+		//¸ù¾İ¸¸·â±Õ»·ÊÇµ¥Ë«²ãÀ´ÅĞ¶Ï×Ó·â±Õ»·µÄµ¥Ë«²ã
+		if (pHKtemp->m_Singlelayer)//ÄÜ½øÀ´ËµÃ÷ÊÇµ¥²ã£¬ÒòÎªÄ¬ÈÏÊÇµ¥²ã
+		{
+			pHNtemp->m_Singlelayer = false;//ÒòÎªËüÒÑ¾­ÊÇÈË¼ÒµÄ×Ó·â±Õ»·£¬¶øËûµùÊÇµ¥²ã£¬Ëû¾ÍµÃÊÇË«²ã
+		}
+		else//pTempCHead->m_SinglelayerÈç¹û¸¸·â±Õ»·ÊÇË«²ã£¬ÄÇÃ´×Ó·â±Õ»·¾ÍµÃÊÇµ¥²ã£¬Ò²¾ÍÊÇ²»ÓÃ±ä
+		{
+			pHNtemp->m_Singlelayer = true;//¸¸ÊÇË«²ãµÄÊ±ºò£¬ÕâÀïÓ¦¸ÃÊÇµ¥²ãÁË
+		}
+		m_G2CloseHeadNest.NextCloseHead = pHNtemp->nextGeomcloseNode;
+
+	}
+	//Èç¹ûºóÕßÊÇÇ°ÕßµÄ¸¸·â±Õ»·µÄÇé¿öÏÂ
+	//ÕâÊÇÖØµãÒª¹Ø×¢µÄÎÊÌâ
+	else if (((x2_min <= x1_min) && (x1_max <= x2_max)) && ((y2_min <= y1_min) && (y1_max <= y2_max)))
+	{
+		//Èç¹ûÓĞ½»µãµÄÇé¿öÏÂ£¬ÄÇÃ´Ó¦¸Ã°ÑÕâ¸ö·â±Õ»·1¹Òµ½ĞÂÀ´µÄ·â±Õ»·2ÖĞ£¬×÷ÎªËüµÄ×Ó·â±Õ»·
+		//ËùÒÔÓĞ¼¸¸öÎÊÌâÒª¸ü¸Ä£¬µÚÒ»¸ö±ãÊÇÈç¹û·â±Õ»·1ÊÇÉÏÒ»²ã¸¸²ãÖ±½ÓÖ¸¶¨µÄ×Ó·â±Õ»·£¬ÄÇÃ´¾ÍÒª°ÑÕâ¸ö¼Ì³Ğ¹ØÏµÒ²×ª¸ø·â±Õ»·2,Èç¹û²»ÊÇÖ±½Ó¼Ì³ĞÔò²»ĞèÒª¿¼ÂÇÕâ¸ö
+		//µÚ¶ş¸ö±ãÊÇÏÖÔÚÕâĞ©×Ó·â±Õ»·µÄÆæÅ¼²ãÎÊÌâ£¬·â±Õ»·1µÄÆæÅ¼²ãÌØĞÔÒª¸øÓè·â±Õ»·2£¬·â±Õ»·1ÒÔ¼°×Ô¼º×Ó·â±Õ»·µÄÆæÅ¼²ãĞÅÏ¢¶¼ÒªÖØĞÂ¸Ä±ä                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+		m_G2CloseHeadNest.m_IfCloseNest = true;
+		m_G2CloseHeadNest.type = 2;//·â±Õ»·2ÊÇ·â±Õ»·1µÄ×Ó·â±Õ»·
+		m_G2CloseHeadNest.FadCloseHead = pHNtemp;//Éí·İµ÷»»
+		m_G2CloseHeadNest.KidCloseHead = pHKtemp;
+		//¸ù¾İ¸¸·â±Õ»·ÊÇµ¥Ë«²ãÀ´ÅĞ¶Ï×Ó·â±Õ»·µÄµ¥Ë«²ã
+		if (pHKtemp->m_Singlelayer)//ÄÜ½øÀ´ËµÃ÷ÊÇµ¥²ã£¬ÒòÎªÄ¬ÈÏÊÇµ¥²ã
+		{
+			pHNtemp->m_Singlelayer = true;//ÒòÎªËüÒÑ¾­ÊÇÈË¼ÒµÄ×Ó·â±Õ»·£¬¶øËûµùÊÇµ¥²ã£¬Ëû¾ÍµÃÊÇË«²ã
+		}
+		else//pTempCHead->m_SinglelayerÈç¹û¸¸·â±Õ»·ÊÇË«²ã£¬ÄÇÃ´×Ó·â±Õ»·¾ÍµÃÊÇµ¥²ã£¬Ò²¾ÍÊÇ²»ÓÃ±ä
+		{
+			pHNtemp->m_Singlelayer = true;//¸¸ÊÇË«²ãµÄÊ±ºò£¬ÕâÀïÓ¦¸ÃÊÇµ¥²ãÁË
+		}
+		Change_CloseHSinglelayer(pHKtemp);//Ô­À´µÄ×Ó²ã·â±Õ»·Ò²Òª½øĞĞÆæÅ¼²ãµÄ¸Ä±ä
+		m_G2CloseHeadNest.NextCloseHead = pHNtemp->nextGeomcloseNode;
+	}
+	else		
+	{
+		m_G2CloseHeadNest.type = 3;//·â±Õ»·2Óë·â±Õ»·1µÄÃ»ÓĞ¹ØÏµ
+		m_G2CloseHeadNest.m_IfCloseNest = false;//Ö»ÒªÊÇfalseÔòÏÂÃæ¶¼¿ÉÒÔ²»ÓÃ¿´ÁË¡£
+		m_G2CloseHeadNest.KidCloseHead = pHNtemp;
+		m_G2CloseHeadNest.NextCloseHead = pHNtemp->nextGeomcloseNode;
+	}
+	return m_G2CloseHeadNest;
+}
+//ÊäÈë×Ó·â±Õ»·£¬È»ºó¸Ä±ä¸Ã×Ó·â±Õ»·ÏÂµÄËùÓĞ·â±Õ»·µÄÆæÅ¼ĞÔ£¬ÓÃÔÚ·â±Õ»·1ÊÇ·â±Õ»·2µÄ×Ó·â±Õ»·ÕâÖÖÇé¿öÏÂ¡£
+//¸ü»»µÄÔ­ÔòÊÇ½«ÏÖÔÚµÄÖµ¸Ä±ä¾ÍºÃ¡£
+void GeomForCut::Change_CloseHSinglelayer(GeomCloseHEAD*pHKtemp)
+{
+	GeomCloseHEAD*phktemp;//µ«1·â±Õ»·ÊÇ2·â±Õ»·µÄ×Ó·â±Õ»·Ê±ºò£¬ÓÃÀ´¶Ô1µÄ×Ó·â±Õ»·½øĞĞÆæÅ¼²ãÇó½â
+	GeomCloseHEAD*phkbtemp;//µ«1·â±Õ»·ÊÇ2·â±Õ»·µÄ×Ó·â±Õ»·Ê±ºò£¬ÓÃÀ´¶Ô1µÄ×Ó·â±Õ»·µÄĞÖµÜ·â±Õ»·½øĞĞÆæÅ¼²ãÇó½â
+	//½øÀ´¾ÍÊÇÒª°Ñ×Ô¼ºµÄÆæÅ¼ĞÔ¸Ä±äµÄÁË
+	Change_singlelayer(pHKtemp);
+	//È»ºó¿´¿´ÓĞÃ»ÓĞ×Ó·â±Õ»·ºÍ×Ó·â±Õ»·ÓĞÃ»ÓĞĞÖµÜ·â±Õ»·ÁË£¬Èç¹ûÓĞÒ²ÓĞ°ÑÕâĞ©¸Ä±ä¡£
+	//Èç¹ûpHKtempÓĞ×Ó²ã£¬ÄÇÃ´Òª¶Ô×Ó²ãµÄÒ²½øĞĞ¸Ä±ä
+	//ÒÔÏÂÊÇÌåÏÖÁË´Ó¸¸×Ó·â±Õ»·ÕâÒ»²ã¸Ä±äµ½×Ó·â±Õ»·µÄĞÖµÜ·â±Õ»·ÕâÒ»²ãµÄ¸Ä±ä
+	if (pHKtemp->FirstInsideGCloseNode)
+	{
+		phktemp = pHKtemp->FirstInsideGCloseNode;
+		while (phktemp)//½«ËùÓĞ×Ó²ã½øĞĞ¸Ä±ä,Ö±µ½×îºóÒ»²ã×Ó²ã
+			{
+				if (phktemp->nextGeomcloseNode)//×Ó·â±Õ»·ÓÖÓĞĞÖµÜ·â±Õ»·
+					{
+						phkbtemp = phktemp->nextGeomcloseNode;
+						while (phkbtemp)//½«×Ó·â±Õ»·µÄĞÖµÜ·â±Õ»·Ò²±éÀúÒ»±é£¬¸Ä±äÆäÆæÅ¼ĞÔ
+						{
+							Change_singlelayer(phkbtemp);
+							phkbtemp = phktemp->nextGeomcloseNode;
+						}
+					}
+				else//Èç¹û×Ó·â±Õ»·Ã»ÓĞĞÖµÜ·â±Õ»·£¬ÄÇÃ´¾Í²»ÓÃ¹ÜÕâ¸ö
+				{
+					;
+				}
+				Change_singlelayer(phktemp);
+				phktemp = phktemp->FirstInsideGCloseNode;
+			}
+	}
+	else//Èç¹ûÃ»ÓĞ×Ó·â±Õ»·£¬ÄÇÃ´¾Í²»ÓÃ¹ÜÕâ¸ö
+	{
+		;
+	}
+}
+//×ª»»µ¥Ò»·â±Õ»·µÄÆæÅ¼²ãĞÔÖÊ£¬²»¹ÜÆäËû¡£
+//ÒòÎªÕâÀïµÄÆæÅ¼²ãÊÇÖ®Ç°ÒÑ¾­È·¶¨ºÃµÄ£¬ÄÇÃ´ÏÖÔÚ²»ÓÃ¹ÜÉÏÏÂÊÇÊ²Ã´£¬Ö»ÓÃÖªµÀÏÖÔÚÓëÖ®Ç°²»Ò»Ñù¾ÍºÃÁË
+void GeomForCut::Change_singlelayer(GeomCloseHEAD*phktemp)
+{
+	if (phktemp->m_Singlelayer)//ÄÜ½øÀ´´ú±íÊÇÆæ²ã
+	{
+		phktemp->m_Singlelayer = false;
+	}
+	else//·ñÔòËµÃ÷ÏÖÔÚÊÇÅ¼²ã£¬ÄÇÃ´¾Í¸ÃÊÇ±äÎªÆæ²ãÁË
+	{
+		phktemp->m_Singlelayer = true;
+	}
 }
 //ºËĞÄËã·¨
 //ºËĞÄËã·¨
@@ -2673,11 +3055,92 @@ GeomCloseHEAD*GeomForCut::Find_Next_TheFirstLevel(GeomCloseHEAD*pFirstClosedHead
 	
 }
 ////////////////////////////////////Ìí¼ÓÇĞ¸îÒıµ¶Ïß//////////////////////////////////////////
-////Ìí¼ÓÇĞ¸îÒıµ¶Ïß
-//void GeomForCut::Add_CutGuideLine(NestResultDataNode*head)
-//{
-//
-//}
+//ÊäÈëÆ½ÃæÇĞ¸îÍ¼Í·ÎÄ¼ş£¬½«ÏÖÔÚ·â±Õ»·Êı¾İ½á¹¹ÖĞµÄÃ¿Ò»¸ö·â±Õ»·µÄÆæÅ¼ÊôĞÔÈ·¶¨ÏÂÀ´£¬ÎªÏÂÃæÌí¼Ó·â±Õ»·µÄÇĞ¸îÒıµ¶Ïß×÷ÎªÅĞ¶ÏµÄ×¼Ôò¡£
+void GeomForCut::JudgeClosedHead_Odd_even(NestResultDataNode*head)
+{
+	//Á½¸öÑ­»·£¬ÒÔµÚÒ»²ã·â±Õ»·µÄĞÖµÜ·â±Õ»·Ö®¼äµÄ±éÀúÖ÷Ñ­»·£¬ÒÔÃ¿Ò»¸öµÚÒ»²ã·â±Õ»·µÄ×Ó·â±Õ»·Îª´ÎÑ­»·¡£
+	GeomCloseHEAD*pFtemp;//ÓÃÀ´Ö¸´úµÚÒ»²ã·â±Õ»·Í·½áµã
+	bool m_IfHaveKidCH;//¼ÇÂ¼Ä³¸ö·â±Õ»·ÊÇ·ñÓĞ×Ó·â±Õ»·¡£
+	pFtemp = head->FirstGeomClose;
+	//µÚÒ»²ãÑ­»·£¬Ö÷Ñ­»·
+	while (pFtemp)//µÚÒ»²ã·â±Õ»·¼äµÄÑ­»·£¬±éÀúµ½×îºóÒ»¸ö
+	{
+		//ÅĞ¶Ï·â±Õ»·ÊÇ·ñÓĞ×Ó·â±Õ»·
+		m_IfHaveKidCH = IfIncludeKidClose(pFtemp);
+		if (!(m_IfHaveKidCH))//Èç¹ûÃ»ÓĞ×Ó·â±Õ»·
+		{
+			WriteClosedHead_Odd_even(pFtemp);
+		}
+		else//Èç¹ûÓĞ×Ó·â±Õ»·µÄÇé¿öÏÂ
+		{
+			KidClosedHead_Odd_even(pFtemp);
+		}
+		pFtemp = pFtemp->nextGeomcloseNode;
+	}
+}
+//ÊäÈëÃ¿Ò»¸ö¸¸·â±Õ»·£¬¸ÄĞ´ÆäÓë×Ó·â±Õ»·µÄÆæÅ¼ĞÔ¡£
+void GeomForCut::KidClosedHead_Odd_even(GeomCloseHEAD*pFtemp)
+{
+	GeomCloseHEAD*pKtemp;//ÓÃÀ´Ö¸´ú×Ó·â±Õ»·Í·½áµã
+	bool m_IfHaveKidCH;//¼ÇÂ¼Ä³¸ö·â±Õ»·ÊÇ·ñÓĞ×Ó·â±Õ»·¡£
+	//¸Ä±ä¸¸·â±Õ»·µÄÆæÅ¼ÌØĞÔ
+	WriteClosedHead_Odd_even(pFtemp);
+	pKtemp = pFtemp->FirstInsideGCloseNode;
+	//µÚ¶ş²ãÑ­»·£¬Õë¶ÔÄÚ²¿×Ó·â±Õ»·µÄÆæÅ¼ĞÔ½øĞĞµ÷Õû,Ò²ÊÇ¶ÔÍ¬Ò»²ã½øĞĞµ÷Õû
+	while (pKtemp)
+	{
+		//ÅĞ¶Ï×Ó·â±Õ»·µÄĞÖµÜ·â±Õ»·ÊÇ·ñÓĞ×Ó·â±Õ»·
+		m_IfHaveKidCH = IfIncludeKidClose(pKtemp);
+		if (!(m_IfHaveKidCH))//Èç¹ûÃ»ÓĞ×Ó·â±Õ»·
+		{
+			WriteClosedHead_Odd_even(pKtemp);
+		}
+		else//Èç¹ûÓĞ×Ó·â±Õ»·µÄÇé¿öÏÂ
+		{
+			KidClosedHead_Odd_even(pKtemp);
+		}
+		pKtemp = pKtemp->nextGeomcloseNode;
+	}
+}
+
+
+
+//ÊäÈëÃ¿Ò»¸ö·â±Õ»·£¬Ğ´ÈëÆäÆæÅ¼ĞÔµÄ±ê×¼
+//Ã¿Ò»¸ö·â±Õ»·µÄÆæÅ¼ĞÔ¶¼ÊÇÓÉ´Ëº¯ÊıĞ´Èë
+void  GeomForCut::WriteClosedHead_Odd_even(GeomCloseHEAD*pClosedH)
+{
+	GeomCloseHEAD*pFClosedH;//´æ·Å¸¸·â±Õ»·
+	//ÅĞ¶ÏµÄ×¼ÔòÊÇÍ¬ĞÖµÜ·â±Õ»·²ãµÄ·â±Õ»·ÆäÆæÅ¼ĞÔÒ»ÖÂ£¬¶ø¸¸×Ó·â±Õ»·²ãµÄ·â±Õ»·µÄÆæÅ¼ĞÔÏà´í¡£
+	//Ö÷Òª·ÖÈç¹ûÊÇ·â±Õ»·Ë«ÏòÁ´±íµÄÊ×·â±Õ»·£¬ÄÇÃ´ÆäÆæÅ¼ĞÔ¸ù¾İ¸¸·â±Õ»·À´È·¶¨£¨Ïà·´£©
+	//Èç¹û²»ÊÇ£¬ÄÇÃ´ÆäÆæÅ¼ĞÔ¸ù¾İÍ¬²ãĞÖµÜ·â±Õ»·µÄÆæÅ¼ĞÔÀ´¶¨£¨ÏàÍ¬£©
+
+	//·â±Õ»·ĞÖµÜË«ÏòÁ´±íµÄÍ·½áµã
+	if (!(pClosedH->prevGeomcloseNode))
+	{
+		//»¹ÒªÇø·ÖÈç¹ûÊÇÇĞ¸îÍ¼µÄµÚÒ»²ã¸¸·â±Õ»·Ê±£¬ÄÇÃ´Ò»¶¨ÊÇÆæ²ã
+		if (!(pClosedH->prevOutsideGCloseNode))//Æ½ÃæÇĞ¸îÍ¼µÄÊ×·â±Õ»·
+		{
+			pClosedH->m_Singlelayer = true;
+		}
+		else//·ñÔòÔòÊÇÓĞ¸¸·â±Õ»·µÄ
+		{
+			pFClosedH = pClosedH->prevOutsideGCloseNode;
+			if (pFClosedH->m_Singlelayer)//ÊÇÆæ
+			{
+				pClosedH->m_Singlelayer = false;
+			}
+			else//ÊÇÅ¼
+			{
+				pClosedH->m_Singlelayer = true;
+			}
+		}
+
+	}
+	else//·â±Õ»·ĞÖµÜË«ÏòÁ´±íÖĞµÄÆäËû½Úµã£¬×¢ÒâÕâÀïÓĞ·â±Õ»·Ç°Ïò½Úµã,´ËÊ±Í¬Ò»²ã·â±Õ»·µÄÆæÅ¼ĞÔÏàÍ¬
+	{
+		pClosedH->m_Singlelayer = pClosedH->prevGeomcloseNode->m_Singlelayer;
+	}
+}
 
 //***************************************Ã»ÓĞÓÃµ½**************************************************//
 //Çó½âÊ×Í¼ÔªºÍÎ²Í¼ÔªµÄÖ±ÏßµÄĞ±ÂÊ£¬ÓÃ´ËĞ±ÂÊÀ´È·¶¨ÇĞ¸îÒıµ¶ÏßµÄĞ±ÂÊ
@@ -2905,7 +3368,8 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓĞ×Ó·â±Õ»·µ
 //Èç¹û²»ºÏÊÊµÄ»°£¬»¹Òª¶Ô·â±Õ»·µÄÇĞ¸î¿ØÖÆµã½øĞĞÖØĞÂÑ¡Ôñ
  void GeomForCut::CreatCutGuideLINE(GeomCloseHEAD*Phead)//ÊäÈëÃ¿Ò»¸ö·â±Õ»·£¬È»ºó¶ÔÆä½øĞĞÇĞ¸î Òıµ¶ÏßµÄÌí¼Ó¡£
 {
-	 GeomEleNode*newNode = (GeomEleNode*)malloc(sizeof(GeomEleNode));
+	 GeomEleNode*cut_in_Node = (GeomEleNode*)malloc(sizeof(GeomEleNode));//ÇĞ¸îÒıÈëÏß
+	 GeomEleNode*cut_out_Node = (GeomEleNode*)malloc(sizeof(GeomEleNode));//ÇĞ¸îÒı³öÏß
 	GeomCloseHEAD*ptemp;//±¸ÓÃ·â±Õ»·½Úµã
 	GeomEleNode*Fnode,*Enode;
 	Line_para m_startline, m_endline;//·â±Õ»·Ê×Í¼Ôª½ÚµãºÍÎ²Í¼Ôª½ÚµãµÄ»ù±¾Êı¾İ
@@ -2933,18 +3397,39 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓĞ×Ó·â±Õ»·µ
 	//µ÷ÓÃÇĞ¸îÒıµ¶Ïßº¯Êı
 	m_cutline = m_CutLeadLine.Get_CutLeadLine(m_startline, m_endline, m_Singlelayer);
 	//½«ÇĞ¸îÒıµ¶ÏßÒ²Ò»²¢±£´æÎªÍ¬Ò»µÄÍ¼Ôª¸ñÊ½
-	newNode->m_GeomStandData.GeoEle_start_x0 = m_cutline.x0;
-	newNode->m_GeomStandData.GeoEle_start_y0 = m_cutline.y0;
-	newNode->m_GeomStandData.GeoEle_start_x1 = m_cutline.x1;
-	newNode->m_GeomStandData.GeoEle_start_y1 = m_cutline.y1;
-	newNode->m_GeomStandData.k = m_cutline.k;
-	newNode->m_GeomStandData.m_typegeomele = 6;//ÇĞ¸îÒıµ¶ÏßµÄ±ê×¼
+	cut_in_Node->m_GeomStandData.GeoEle_start_x0 = m_cutline.x0;
+	cut_in_Node->m_GeomStandData.GeoEle_start_y0 = m_cutline.y0;
+	cut_in_Node->m_GeomStandData.GeoEle_start_x1 = m_cutline.x1;
+	cut_in_Node->m_GeomStandData.GeoEle_start_y1 = m_cutline.y1;
+	cut_in_Node->m_GeomStandData.k = m_cutline.k;
+	cut_in_Node->m_GeomStandData.m_typegeomele = 6;//ÇĞ¸îÒıµ¶ÏßµÄ±ê×¼
+	//¶ÔÓÚÖ±ÏßĞÍµÄÇĞ¸îÒıµ¶Ïß¶øÑÔ£¬cut_inÓëcut_outµÄÊı¾İÊÇÒ»ÑùµÄ£¬µ«ÆğÂëÎ»ÖÃÒªµ÷»»
+	cut_out_Node->m_GeomStandData.GeoEle_start_x0 = m_cutline.x1;
+	cut_out_Node->m_GeomStandData.GeoEle_start_y0 = m_cutline.y1;
+	cut_out_Node->m_GeomStandData.GeoEle_start_x1 = m_cutline.x0;
+	cut_out_Node->m_GeomStandData.GeoEle_start_y1 = m_cutline.y0;
+	cut_out_Node->m_GeomStandData.k = m_cutline.k;
+	cut_out_Node->m_GeomStandData.m_typegeomele = 6;//ÇĞ¸îÒıµ¶ÏßµÄ±ê×¼
 	//ÖØµã£¡£¡£¡
 	//´Ó´Ë·â±Õ»·µÄÍ·½áµã²»ÔÙÊÇµÚÒ»¸ö·â±Õ»·Í¼Ôª£¬¶øÊÇÇĞ¸îÒıµ¶Ïß
 	//µÚ¶ş¸ö²ÅÊÇÔ­À´¹²ÓĞµÄÍ¼Ôª¡£
-	Phead->FirstGeomele = newNode;//ÇĞ¸îÒıµ¶ÏßÎªÊ×Í¼Ôª
-	newNode->nextGeomeleNode = Fnode;//Ö¸ÏòÔ­À´µÄÊ×Í¼Ôª
-	newNode->prevGeomeleNode = NULL;//×ÔÈ»Ëü¾Í³ÉÁËµÚÒ»¸öÁË
-	Fnode->prevGeomeleNode = newNode;//Ô­À´Ç°ÃæÖ¸ÏòµÄÊÇNULL
+	Phead->FirstGeomele = cut_in_Node;//ÇĞ¸îÒıµ¶ÏßÎªÊ×Í¼Ôª
+	cut_in_Node->nextGeomeleNode = Fnode;//Ö¸ÏòÔ­À´µÄÊ×Í¼Ôª
+	cut_in_Node->prevGeomeleNode = NULL;//×ÔÈ»Ëü¾Í³ÉÁËµÚÒ»¸öÁË
+	Fnode->prevGeomeleNode = cut_in_Node;//Ô­À´Ç°ÃæÖ¸ÏòµÄÊÇNULL
+	//ÉèÖÃcut_out
+	Enode->nextGeomeleNode = cut_out_Node;//Ô­À´·â±Õ»·µÄ×îºóÒ»¸öÍ¼ÔªÖ¸ÏòµÄÊÇNULL£¬ÏÖÔÚÖ¸Ïòcut_out
+	cut_out_Node->prevGeomeleNode = Enode;
+	cut_out_Node->nextGeomeleNode = NULL;
 	//Èç´Ë·â±Õ»·¾Í¼ÓÉÏÁËÇĞ¸îÒıµ¶Ïß
 }
+ //ºËĞÄ´úÂë£¬ºËĞÄ´úÂë£¬ºËĞÄ´úÂë
+ //ÇĞ¸îÒıµ¶Ïß¸ÉÉæÅĞ¶ÏËã·¨
+ //ÊäÈëÒÑ¾­ÉèÖÃºÃÇĞ¸îÒıµ¶ÏßµÄÆ½ÃæÇĞ¸îÍ¼Ö¸Õë£¬È»ºó¶ÔÃ¿Ò»¸ö·â±Õ»·µÄÇĞ¸îÒıµ¶Ïß½øĞĞ¸ÉÉæÅĞ¶Ï£¬²¢µ÷Õû
+ //Êä³öÒÑ¾­½«ÇĞ¸îÒıµ¶Ïß¸ÉÉæµ÷ÕûºóÆ½ÃæÇĞ¸îÍ¼Ö¸Õë¡£
+ //×¢ÒâÕâÀïÊÇÒÑ¾­½«·â±Õ»·È«²¿°²×°Ç¶Ì×µÄË³Ğò¹Ò¿¿Íê±Ï£¬ËùÒÔ£¬Òª°²×°¶ÁÈ¡·â±Õ»·µÄ·½Ê½½øĞĞ·â±Õ»·µÄÇĞ¸îÒıµ¶Ïß¸ÉÉæ¼ì²â
+ NestResultDataNode* GeomForCut::CheckCutGuideLINE(NestResultDataNode*head)
+ {
+	 return NULL;
+ }
+

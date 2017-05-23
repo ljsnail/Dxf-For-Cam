@@ -238,7 +238,7 @@ void CNestDxfDataForCutDlg::OnOpenFile()//打开一次就是一张图纸
 {
 	// TODO:  在此添加控件通知处理程序代码
 	//打开图纸导入图纸结点
-    m_NewDxf= true;//新图纸
+	m_NewDxf = true;//新图纸
 	NestResult_ID++;
 	m_pNestrsltdtND = m_GeomForCut.CreatNestResultNode(NestResult_ID);//在初始化时候记录这是打开的第几张图纸
 	m_pBatchHead = m_GeomForCut.AddNestRsltDtNode(m_pBatchHead, m_pNestrsltdtND);//把新生成的结点挂在生产批次指向的图纸双向链表中
@@ -503,6 +503,7 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 		}
 		m_pNestrsltdtND->nextNestResultDataNode->FirstGeomClose = NULL;//既然圆已经从这个链表头里面退出来了，那么就该让其下面变为表。
 	}
+	//板材外轮廓不进入规划阶段，所以，这里对于切割引刀线而言是奇外偶里。
 	head = m_GeomForCut.ChangeSencondCH2FH(head);//这里先要把第一层板材的去掉，但同时应该是要把第一层板材的数据保存出来的。
 	//以上以及将所有的封闭环处理好了。
 	//TSP两步法的代码，以下三行
@@ -513,9 +514,9 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	//m_GeomForCut.ChangeEleNode_Avoid_Impact(m_pNestrsltdtND);
 	////////////////另一种处理方式//////////////////////////////////
 	////先贪婪算法将所有的封闭环按给定初始顺序
-	//m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);//对于没有嵌套的平面切割图形，dtsp法就用这个。
+	m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);//对于没有嵌套的平面切割图形，dtsp法就用这个。
 
-	//对于有嵌套的封闭环，用以下三个函数（除了aco那个）
+	//对于有嵌套的封闭环，用以下三个函数（除了ACO那个）
 	//划分出不同的封闭环层次
 	m_GeomForCut.Find_AdjustNestCloseHead(head);//嵌套封闭环的嵌套识别工作，就这行代码
 	//////用蚁群算法对第一层封闭环进行路径规划与优化
@@ -525,7 +526,11 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	m_GeomForCut.BaseTS_GR_ForKidCHead(head);
 	//
 	//添加切割引刀线
+	//先写入封闭环的奇偶性
+	m_GeomForCut.JudgeClosedHead_Odd_even(head);
+	//在封闭环奇偶性的确定里封闭环奇偶性后，写入切割引刀线
 	m_GeomForCut.Add_CutGuideLine(head);
+	//head = m_GeomForCut.ChangeSencondCH2FH(head);//这里先要把第一层板材的去掉，但同时应该是要把第一层板材的数据保存出来的。
 
 	m_IfDataDisposed = true;
 	return m_IfDataDisposed;
@@ -1133,7 +1138,7 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 				{
 				
 					//要判断是否有子封闭环， 
-				m_ifHvkidClose = IfIncludeKidClose(pTheFirstLevelCloseHead);
+				m_ifHvkidClose = m_GeomForCut.IfIncludeKidClose(pTheFirstLevelCloseHead);
 					if (m_ifHvkidClose)
 					{
 						//既然有子封闭环，那么就在子封闭环里把整一个封闭嵌套的所有数据读完
@@ -1154,14 +1159,6 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 		}
 
 }
-	//判断此是否包含有子封闭环
-	bool  CNestDxfDataForCutDlg::IfIncludeKidClose(GeomCloseHEAD*pTemp)
-	{
-		if (pTemp->FirstInsideGCloseNode)
-			return true;
-		else
-			return false;
-	}
 	//读取封闭环内部子封闭环的数据
 	//这个代码是把这个大封闭环的数据从里到外全部读取出来
 	void CNestDxfDataForCutDlg::ReadKidCloseHeadData(GeomCloseHEAD*pTemp)
@@ -1212,7 +1209,7 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 			while (NextCHtemp)//全部遍历
 			{
 				//要判断是否有子封闭环， 
-				m_ifotherHvkidClose = IfIncludeKidClose(NextCHtemp);
+				m_ifotherHvkidClose = m_GeomForCut.IfIncludeKidClose(NextCHtemp);
 				if (m_ifotherHvkidClose)
 				{
 					//既然有子封闭环，那么就在子封闭环里把整一个封闭嵌套的所有数据读完
@@ -1243,7 +1240,7 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 			tempnode = Htemp->FirstGeomele;//封闭环里的第一个数据结点
 			x1_tran = tempnode->m_GeomStandData.GeoEle_start_x0;
 			y1_tran = tempnode->m_GeomStandData.GeoEle_start_y0;
-			typegeomele = 4;//空跑直线
+  			typegeomele = 4;//空跑直线
 			if (m_NewDxf == true)//表明这是新图片
 			{
 				x0_tran = 0.0;
