@@ -251,7 +251,12 @@ public:
 	///////////////////////////切割引刀线干涉判断，与调整/////////////////////////
 	///////////////////////////核心代码，核心代码，核心代码,下一篇的工作////////
 	//输入切割图头结点，把封闭环的切割引导线都清理一遍。
-	NestResultDataNode*CheckCutGuideLINE(NestResultDataNode*head);
+	void CheckCutGuideLINE(NestResultDataNode*head);
+	//输入每一个父封闭环，判断其与子封闭环的切割引导线是否存在干涉现象。
+	void CheckFKCutGuideLINE(GeomCloseHEAD*pFtemp);
+
+	//输入封闭环，保存板材外轮廓的封闭环头文件（父层封闭环一定要与板材封闭环轮廓判断）与平面切割图头结点（不一定能用得上），判断其切割引导线与其他封闭环是否有干涉，如果有则返回封闭头结点，没有则返回NULL
+	bool CheckCGLineInter(GeomCloseHEAD*pCHtemp, GeomCloseHEAD*m_ceramic_Head);
 
 
 };

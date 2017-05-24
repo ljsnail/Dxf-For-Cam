@@ -179,7 +179,7 @@ Line_para 	CutLeadLine::Get_CutLine_Point(Point start, double k)
 	double a, b, r;
 	a = start.x;
 	b = start.y;
-	r = 25.0;//引刀线长度
+	r = m_CutLineLength;//引刀线长度
 	x1 = a + sqrt(r*r / (1 + k*k));
 	y1 = b + k*sqrt(r*r / (1 + k*k));
 	x2 = a - sqrt(r*r / (1 + k*k));
@@ -340,6 +340,92 @@ Line_para CutLeadLine::Get_CutLeadLine(Line_para a, Line_para b, bool m)
 	m_CutGuideL = Get_CutLine_StartPoint(m_Line, m_opendirect, m, start);
 	return m_CutGuideL;
 }
+//核心代码
+//核心代码
+//核心代码
+//切割引导线干涉判断，输入当前需要判断切割引导线的封闭环，然后判断其与包括自身在内的兄弟封闭环是否干涉。
+bool CutLeadLine::JudgeCGLineVSGeomclosedH(GeomCloseHEAD*pCHtemp)
+{
+	GeomCloseHEAD*pHtemp;//用来存储封闭环双向链表头结点
+	GeomCloseHEAD*pHOVtemp;//用来存储奇偶层封闭环头结点
+	GeomEleNode*pCGLine;//用来存储切割引导线基本图元
+	bool m_IfCGLIeter = false;//存储是否切割引导线干涉判断值,初始化为未干涉
+	bool m_Singlelayer=pCHtemp->m_Singlelayer;//加入奇偶层性质可以减少判别的数量
+	pCGLine = pCHtemp->FirstGeomele;//切割引导线
+	if (m_Singlelayer)//封闭环是奇层时候，则判断封闭环所在的一圈
+	{
+		pHOVtemp = pCHtemp;//奇层封闭环则要判断的这一圈封闭环是本身所在的
+	}
+	else//封闭环是偶层时候
+	{
+		pHOVtemp = pCHtemp->FirstInsideGCloseNode;//偶层封闭环时，则要判断的这一圈封闭环则是子封闭环所在的
+	}
+	//以上确定了所要循环的封闭环到底是本身层还是子层
+	//下面要确定循环的开始，然后将整个封闭环双向链表全部循环一遍
+	//（但这样算法会慢，以后可以考虑在一个阈值范围内的兄弟封闭环中考虑干涉。）
+	//（但这样算法会慢，以后可以考虑在一个阈值范围内的兄弟封闭环中考虑干涉。）
+	//（但这样算法会慢，以后可以考虑在一个阈值范围内的兄弟封闭环中考虑干涉。）
+	if (!(pHOVtemp->prevGeomcloseNode))//如果该封闭环是首节点
+	{
+		pHtemp = pHOVtemp;//循环从它本身开始
+	}
+	//如果不是首结点，那么也该让其回到首结点去遍历
+	else
+	{
+		pHtemp = pHOVtemp;
+		while (pHtemp)//寻找首节点
+		{
+			pHtemp = pHtemp->prevGeomcloseNode;
+		}
+	}
+	//以上已经找到了封闭环的兄弟封闭环的头结点pHtemp
+	while (pHtemp && (!m_IfCGLIeter))//将整个封闭环双向链表遍历，就算是该封闭环双向链表只有一个也可以
+	{
+		m_IfCGLIeter = JudgeCGLineVSOneClosedHead(pCGLine, pHtemp);
+		if (m_IfCGLIeter)//如果有一个地方干涉了，那么就退出
+		{
+			return true;
+			break;
+		}
+		pHtemp = pHtemp->nextGeomcloseNode;
+	}
+		return false;	
+}
+
+//核心代码
+//核心代码
+//核心代码
+//切割引导线干涉判断,输入切割引导线与任意一个封闭环，判断其是否干涉，这是最核心代码
+bool CutLeadLine::JudgeCGLineVSOneClosedHead(GeomEleNode*pCGLinetemp, GeomCloseHEAD*pCHtemp)
+{
+	GeomEleNode*pCGeomtemp;//存储封闭环的基本图元（现在只是考虑了直线类型的)
+	pCGeomtemp = pCHtemp->FirstGeomele->nextGeomeleNode;//注意 pCHtemp->FirstGeomele是切割引导线，而后面的才是封闭环本身的基本图元
+	bool m_IfCGLIeter = false;//存储是否切割引导线干涉判断值,初始化为未干涉
+	//要将这个封闭环的从第二个基本图元节点到倒数第二个基本图元节点进行判断是否有干涉，核心代码
+	while ((pCGeomtemp->nextGeomeleNode) && (!m_IfCGLIeter))//到倒数第二个就好了，因为倒数第一个还是切割引导线
+	{
+		m_IfCGLIeter = If_HaveCGLineInterPoint(pCGLinetemp, pCGeomtemp);
+		//如果有干涉那么就可以返回这个封闭环了。这个代码只是在做干涉判断而已
+		if (m_IfCGLIeter)
+		{
+			return true;
+			break;
+		}
+		pCGeomtemp = pCGeomtemp->nextGeomeleNode;//注意 pCHtemp->FirstGeomele是切割引导线，而后面的才是封闭环本身的基本图元
+	}
+	return false;
+}
+//干涉的原则是交点在切割引导线的两个点之间。
+bool CutLeadLine::If_HaveCGLineInterPoint(GeomEleNode*pCGLinetemp, GeomEleNode*pCGeomtemp)
+{
+	return true;
+}
+//输入切割切割引导线有干涉的封闭环，然后调整其切割引导线
+void CutLeadLine::ChangeCGLine(GeomCloseHEAD*pCHtemp)
+{
+
+}
+
 
 
 
