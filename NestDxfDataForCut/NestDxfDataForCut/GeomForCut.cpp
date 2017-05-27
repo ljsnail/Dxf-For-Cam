@@ -3508,7 +3508,7 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓĞ×Ó·â±Õ»·µ
 	  GeomEleNode*pCGLinetemp;//´æ´¢µ±Ç°·â±Õ»·µÄÇĞ¸îÒıµ¼Ïß
 	  bool m_Singlelayer ;
 	  //ÏÈÅĞ¶Ï·â±Õ»·Óë±¾ÉíËùÔÚ·â±Õ»·Ë«ÏòÁ´±í£¨Ææ²ã·â±Õ»·£©»ò×Ó·â±Õ»·Ë«ÏòÁ´±íÊÇ·ñÓĞ¸ÉÉæ£¨Å¼²ã·â±Õ»·£©¡£
-	  m_IfCGLIeter = m_CutLeadLine.JudgeCGLineVSGeomclosedH(pCHtemp);
+	  m_IfCGLIeter = m_CutLeadLine.JudgeCGLineVSGeomclosedH(pCHtemp, m_ceramic_Head);
 	  if (m_IfCGLIeter)//Èç¹û¸ú±¾Éí·â±Õ»·Ë«ÏòÁ´±íÓĞ¸ÉÉæ£¨Ææ²ã·â±Õ»·),»òÓë×Ó²ã·â±Õ»·Ë«ÏòÁ´±íÓĞ¸ÉÉæ£¨Å¼²ã·â±Õ»·£©
 	  {
 		  return true;//Ö±½ÓÍË³ö£¬²»ĞèÒª½øĞĞÏÂÒ»²½µÄÅĞ¶ÏÁË¡£
@@ -3545,7 +3545,7 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓĞ×Ó·â±Õ»·µ
 		  }
 		  pCGLinetemp = pCHtemp->FirstGeomele;
 		  //ÊäÈëµ±Ç°·â±Õ»·µÄÇĞ¸îÒıµ¼Ïß£¬ºÍĞèÒªµ¥¶ÀÅĞ¶ÏµÄ·â±Õ»·£¬ÅĞ¶ÏÆäÇĞ¸îÒıµ¼ÏßÊÇ·ñÓĞ¸ÉÉæ¡£
-		  m_IfCGLIeter = m_CutLeadLine.JudgeCGLineVSOneClosedHead(pCGLinetemp, pHtemp);
+		  m_IfCGLIeter = m_CutLeadLine.JudgeCGLineVSOneClosedHead(pCGLinetemp, pHtemp, m_ceramic_Head);
 		  if (m_IfCGLIeter)//Èç¹û¸ú±¾Éí·â±Õ»·Ë«ÏòÁ´±íÓĞ¸ÉÉæ£¨Ææ²ã·â±Õ»·),»òÓë×Ó²ã·â±Õ»·Ë«ÏòÁ´±íÓĞ¸ÉÉæ£¨Å¼²ã·â±Õ»·£©
 		  {
 			  return true;//Ö±½ÓÍË³ö£¬²»ĞèÒª½øĞĞÏÂÒ»²½µÄÅĞ¶ÏÁË¡£

@@ -344,7 +344,7 @@ Line_para CutLeadLine::Get_CutLeadLine(Line_para a, Line_para b, bool m)
 //核心代码
 //核心代码
 //切割引导线干涉判断，输入当前需要判断切割引导线的封闭环，然后判断其与包括自身在内的兄弟封闭环是否干涉。
-bool CutLeadLine::JudgeCGLineVSGeomclosedH(GeomCloseHEAD*pCHtemp)
+bool CutLeadLine::JudgeCGLineVSGeomclosedH(GeomCloseHEAD*pCHtemp, GeomCloseHEAD*m_ceramic_Head)
 {
 	GeomCloseHEAD*pHtemp;//用来存储封闭环双向链表头结点
 	GeomCloseHEAD*pHOVtemp;//用来存储奇偶层封闭环头结点
@@ -373,7 +373,7 @@ bool CutLeadLine::JudgeCGLineVSGeomclosedH(GeomCloseHEAD*pCHtemp)
 	else
 	{
 		pHtemp = pHOVtemp;
-		while (pHtemp)//寻找首节点
+		while (pHtemp->prevGeomcloseNode)//寻找首节点
 		{
 			pHtemp = pHtemp->prevGeomcloseNode;
 		}
@@ -381,7 +381,7 @@ bool CutLeadLine::JudgeCGLineVSGeomclosedH(GeomCloseHEAD*pCHtemp)
 	//以上已经找到了封闭环的兄弟封闭环的头结点pHtemp
 	while (pHtemp && (!m_IfCGLIeter))//将整个封闭环双向链表遍历，就算是该封闭环双向链表只有一个也可以
 	{
-		m_IfCGLIeter = JudgeCGLineVSOneClosedHead(pCGLine, pHtemp);
+		m_IfCGLIeter = JudgeCGLineVSOneClosedHead(pCGLine, pHtemp, m_ceramic_Head);
 		if (m_IfCGLIeter)//如果有一个地方干涉了，那么就退出
 		{
 			return true;
@@ -396,34 +396,210 @@ bool CutLeadLine::JudgeCGLineVSGeomclosedH(GeomCloseHEAD*pCHtemp)
 //核心代码
 //核心代码
 //切割引导线干涉判断,输入切割引导线与任意一个封闭环，判断其是否干涉，这是最核心代码
-bool CutLeadLine::JudgeCGLineVSOneClosedHead(GeomEleNode*pCGLinetemp, GeomCloseHEAD*pCHtemp)
+bool CutLeadLine::JudgeCGLineVSOneClosedHead(GeomEleNode*pCGLinetemp, GeomCloseHEAD*pCHtemp, GeomCloseHEAD*m_ceramic_Head)
 {
 	GeomEleNode*pCGeomtemp;//存储封闭环的基本图元（现在只是考虑了直线类型的)
-	pCGeomtemp = pCHtemp->FirstGeomele->nextGeomeleNode;//注意 pCHtemp->FirstGeomele是切割引导线，而后面的才是封闭环本身的基本图元
 	bool m_IfCGLIeter = false;//存储是否切割引导线干涉判断值,初始化为未干涉
-	//要将这个封闭环的从第二个基本图元节点到倒数第二个基本图元节点进行判断是否有干涉，核心代码
-	while ((pCGeomtemp->nextGeomeleNode) && (!m_IfCGLIeter))//到倒数第二个就好了，因为倒数第一个还是切割引导线
+	//注意：但pCHtemp是板材外轮廓时候，要从第一个直线开始直到最后一个直线为止。
+	if (pCHtemp == m_ceramic_Head)
 	{
-		m_IfCGLIeter = If_HaveCGLineInterPoint(pCGLinetemp, pCGeomtemp);
-		//如果有干涉那么就可以返回这个封闭环了。这个代码只是在做干涉判断而已
-		if (m_IfCGLIeter)
+		pCGeomtemp = pCHtemp->FirstGeomele;//注意 pCHtemp为板材外轮廓时候没有切割引刀线
+		//要将板材外轮廓的从第一个基本图元节点到倒数第一个基本图元节点进行判断是否有干涉，核心代码
+		while ((pCGeomtemp) && (!m_IfCGLIeter))//到倒数第一个，因为板材外轮廓没有切割引导线
 		{
-			return true;
-			break;
+			m_IfCGLIeter = If_HaveCGLineInterPoint(pCGLinetemp, pCGeomtemp);
+			//如果有干涉那么就可以返回这个封闭环了。这个代码只是在做干涉判断而已
+			if (m_IfCGLIeter)
+			{
+				return true;
+				break;
+			}
+			pCGeomtemp = pCGeomtemp->nextGeomeleNode;//注意 pCHtemp->FirstGeomele是切割引导线，而后面的才是封闭环本身的基本图元
 		}
-		pCGeomtemp = pCGeomtemp->nextGeomeleNode;//注意 pCHtemp->FirstGeomele是切割引导线，而后面的才是封闭环本身的基本图元
+		return false;
 	}
-	return false;
+	else//其他切割封闭环则有切割引刀线
+	{
+		pCGeomtemp = pCHtemp->FirstGeomele->nextGeomeleNode;//注意 pCHtemp->FirstGeomele是切割引导线，而后面的才是封闭环本身的基本图元
+		//要将这个封闭环的从第二个基本图元节点到倒数第二个基本图元节点进行判断是否有干涉，核心代码
+		while ((pCGeomtemp->nextGeomeleNode) && (!m_IfCGLIeter))//到倒数第二个就好了，因为倒数第一个还是切割引导线
+		{
+			m_IfCGLIeter = If_HaveCGLineInterPoint(pCGLinetemp, pCGeomtemp);
+			//如果有干涉那么就可以返回这个封闭环了。这个代码只是在做干涉判断而已
+			if (m_IfCGLIeter)
+			{
+				return true;
+				break;
+			}
+			pCGeomtemp = pCGeomtemp->nextGeomeleNode;//注意 pCHtemp->FirstGeomele是切割引导线，而后面的才是封闭环本身的基本图元
+		}
+		return false;
+	}
 }
 //干涉的原则是交点在切割引导线的两个点之间。
+//输入切割引刀线与另一个直线，求其交点，然后判断交点是否在切割引刀线的两个点之间
 bool CutLeadLine::If_HaveCGLineInterPoint(GeomEleNode*pCGLinetemp, GeomEleNode*pCGeomtemp)
 {
-	return true;
+	Point m_CGLineStart, m_CGLineEnd;//存储切割引刀线的起止点
+	Point m_LineStart, m_LineEnd;//存储要判断直线的起止点
+	Point m_InterPoint;//交点
+	Line_Inter m_CGLine, m_Line;//存储切割引刀线与疑似干涉直线的abc参数
+	Line_Point m_CGlinePoint;//存储切割引刀线中xy的坐标顺序
+	double m_x, m_y;
+	//存储切割引刀线的控制点
+	m_CGLineStart.x = pCGLinetemp->m_GeomStandData.GeoEle_start_x0;
+	m_CGLineStart.y = pCGLinetemp->m_GeomStandData.GeoEle_start_y0;
+	m_CGLineEnd.x = pCGLinetemp->m_GeomStandData.GeoEle_start_x1;
+	m_CGLineEnd.y = pCGLinetemp->m_GeomStandData.GeoEle_start_y1;
+	//存储待判断线段的控制点
+	m_LineStart.x = pCGeomtemp->m_GeomStandData.GeoEle_start_x0;
+	m_LineStart.y = pCGeomtemp->m_GeomStandData.GeoEle_start_y0;
+	m_LineEnd.x = pCGeomtemp->m_GeomStandData.GeoEle_start_x1;
+	m_LineEnd.y = pCGeomtemp->m_GeomStandData.GeoEle_start_y1;
+	//求两条直线的交点
+	//先求直线的标准参数abc
+	m_CGLine = GetLine(m_CGLineStart, m_CGLineEnd);
+	m_Line = GetLine(m_LineStart, m_LineEnd);
+	//求交点
+	m_InterPoint = GetCrossPoint(m_CGLine, m_Line);
+	//判断交点是不是在切割引导线的范围内。
+	//先将切割引导线的两个端点值按大小排序范围
+	m_CGlinePoint = GetPointOrder(m_CGLineStart, m_CGLineEnd);
+	if ((m_CGlinePoint.x_min <= m_InterPoint.x) && (m_InterPoint.x <= m_CGlinePoint.x_max) && (m_CGlinePoint.y_min <= m_InterPoint.y) && (m_InterPoint.y <= m_CGlinePoint.y_max))
+	{
+		//判断交点与切割线终点是否重合
+		if ((fabs(m_InterPoint.x - m_CGLineEnd.x) < EPSILON) && (fabs(m_InterPoint.y - m_CGLineEnd.y) < EPSILON))//说明如今这两点相同，那么不是干涉，而是同个封闭环中切割引导线与封闭环的连接点
+		{
+			return  false;
+		}
+		else
+		{
+			return  true;
+		}
+	}
+	else
+	{
+		return  false;
+	}
 }
+//输入直线的两个端点值，然后求标准直线的abc三个参数
+Line_Inter CutLeadLine::GetLine(Point m_StratPoint, Point m_EndPoint)
+{
+	Line_Inter m_Line;
+	m_Line.a = m_StratPoint.y - m_EndPoint.y;
+	m_Line.b = m_EndPoint.x - m_StratPoint.x;
+	m_Line.c = m_StratPoint.x*m_EndPoint.y - m_EndPoint.x*m_StratPoint.y;
+	return m_Line;
+}
+//输入切割引刀线以及另一条疑似有干涉的线段的abc参数，求交点
+Point CutLeadLine::GetCrossPoint(Line_Inter l1, Line_Inter l2)
+{
+	Point pTemp;
+	double D;//如果D=0说明两条直线是平行的。目前没有做这一块工作
+	D = l1.a*l2.b - l2.a*l1.b;
+	Point p;
+	pTemp.x = (l1.b*l2.c - l2.b*l1.c) / D;
+	pTemp.y = (l1.c*l2.a - l2.c*l1.a) / D;
+	return pTemp;//返回了交点
+}
+//求切割引导线两个端点四个点之间的范围
+Line_Point  CutLeadLine::GetPointOrder(Point m_StratPoint, Point m_EndPoint)
+{
+	Line_Point m_point;
+	//求x的范围
+	if (m_StratPoint.x <= m_EndPoint.x)
+	{
+		m_point.x_min = m_StratPoint.x;
+		m_point.x_max = m_EndPoint.x;
+	}
+	else
+	{
+		m_point.x_min = m_EndPoint.x;
+		m_point.x_max = m_StratPoint.x;
+	}
+	//求y的范围
+	if (m_StratPoint.y <= m_EndPoint.y)
+	{
+		m_point.y_min = m_StratPoint.y;
+		m_point.y_max = m_EndPoint.y;
+	}
+	else
+	{
+		m_point.y_min = m_EndPoint.y;
+		m_point.y_max = m_StratPoint.y;
+	}
+	return m_point;
+}
+
 //输入切割切割引导线有干涉的封闭环，然后调整其切割引导线
 void CutLeadLine::ChangeCGLine(GeomCloseHEAD*pCHtemp)
 {
-
+	GeomEleNode*cut_in_Node = (GeomEleNode*)malloc(sizeof(GeomEleNode));//切割引入线
+	GeomEleNode*cut_out_Node = (GeomEleNode*)malloc(sizeof(GeomEleNode));//切割引出线
+	//将原来的切割引导线与生产原来切割引导线的一条边重新生成切割引导线
+	GeomCloseHEAD*ptemp;//备用封闭环节点
+	GeomEleNode*Fnode, *Enode;
+	GeomEleNode*node;
+	Line_para m_startline, m_endline;//封闭环首图元节点和尾图元节点的基本数据
+	Line_para m_cutline;//切割引刀线的核心参数
+	double x0_min, y0_min, x0_max, y0_max;
+	double x1_min, y1_min, x1_max, y1_max;
+	bool m_Singlelayer;
+	m_Singlelayer = pCHtemp->m_Singlelayer;
+	//只测试直线类型的图元,并不考虑是否有交涉，不考虑圆
+	Fnode = pCHtemp->FirstGeomele;//切割引导线
+	Enode = Fnode->nextGeomeleNode;
+	while (Enode->nextGeomeleNode->nextGeomeleNode)//生成原来切割引导线的其中一条母线，注意不是最后一个基本图元是倒数第二个，此时Enode是组成封闭环原来最后一个图元。
+	{
+		Enode = Enode->nextGeomeleNode;
+	}
+	//以下用的是角平分线法
+	//首图元节点
+	/*m_startline.x0 = Fnode->m_GeomStandData.GeoEle_start_x0;
+	m_startline.y0 = Fnode->m_GeomStandData.GeoEle_start_y0;
+	m_startline.x1 = Fnode->m_GeomStandData.GeoEle_start_x1;
+	m_startline.y1 = Fnode->m_GeomStandData.GeoEle_start_y1;*/
+	m_startline.x0 = Fnode->m_GeomStandData.GeoEle_start_x1;
+	m_startline.y0 = Fnode->m_GeomStandData.GeoEle_start_y1;
+	m_startline.x1 = Fnode->m_GeomStandData.GeoEle_start_x0;
+	m_startline.y1 = Fnode->m_GeomStandData.GeoEle_start_y0;
+	//尾图元节点，要注意首尾对调
+	m_endline.x0 = Enode->m_GeomStandData.GeoEle_start_x1;
+	m_endline.y0 = Enode->m_GeomStandData.GeoEle_start_y1;
+	m_endline.x1 = Enode->m_GeomStandData.GeoEle_start_x0;
+	m_endline.y1 = Enode->m_GeomStandData.GeoEle_start_y0;
+	//调用切割引刀线函数
+	m_cutline =Get_CutLeadLine(m_startline, m_endline, m_Singlelayer);
+	//将切割引刀线也一并保存为同一的图元格式
+	cut_in_Node->m_GeomStandData.GeoEle_start_x0 = m_cutline.x0;
+	cut_in_Node->m_GeomStandData.GeoEle_start_y0 = m_cutline.y0;
+	cut_in_Node->m_GeomStandData.GeoEle_start_x1 = m_cutline.x1;
+	cut_in_Node->m_GeomStandData.GeoEle_start_y1 = m_cutline.y1;
+	cut_in_Node->m_GeomStandData.k = m_cutline.k;
+	cut_in_Node->m_GeomStandData.m_typegeomele = 6;//切割引刀线的标准
+	//对于直线型的切割引刀线而言，cut_in与cut_out的数据是一样的，但起码位置要调换
+	cut_out_Node->m_GeomStandData.GeoEle_start_x0 = m_cutline.x1;
+	cut_out_Node->m_GeomStandData.GeoEle_start_y0 = m_cutline.y1;
+	cut_out_Node->m_GeomStandData.GeoEle_start_x1 = m_cutline.x0;
+	cut_out_Node->m_GeomStandData.GeoEle_start_y1 = m_cutline.y0;
+	cut_out_Node->m_GeomStandData.k = m_cutline.k;
+	cut_out_Node->m_GeomStandData.m_typegeomele = 6;//切割引刀线的标准
+	//重点！！！
+	//因为现在的封闭环是带有切入线与切出线的，所以要先将原来的切入线切出线去除掉
+	//然后将现在的切入线切出线挂到封闭环的原来第二个和倒数第二个基本图元上
+	pCHtemp->FirstGeomele = cut_in_Node;//切割引刀线为首图元
+	cut_in_Node->nextGeomeleNode = Fnode->nextGeomeleNode;//指向原来的第二个图元
+	cut_in_Node->prevGeomeleNode = NULL;//自然它就成了第一个了
+	Fnode->nextGeomeleNode->prevGeomeleNode = cut_in_Node;//原来前面指向的是NULL
+	//经过以上调整Fnode已经没有利用价值了,要把这块内存释放掉
+	free(Fnode);
+	//设置cut_out
+	node = Enode->nextGeomeleNode;//原来切割引导线的引出线
+	free(node);//释放掉原来切割引出线这一块内存
+	Enode->nextGeomeleNode = cut_out_Node;//原来封闭环的最后一个图元指向的是node，现在指向cut_out
+	cut_out_Node->prevGeomeleNode = Enode;
+	cut_out_Node->nextGeomeleNode = NULL;
+	//如此封闭环就加上了新的切割引刀线
 }
 
 

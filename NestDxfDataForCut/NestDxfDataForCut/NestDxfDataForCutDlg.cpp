@@ -530,6 +530,8 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	m_GeomForCut.JudgeClosedHead_Odd_even(head);
 	//在封闭环奇偶性的确定里封闭环奇偶性后，写入切割引刀线
 	m_GeomForCut.Add_CutGuideLine(head);
+	//写完切割 引导线之后要进行切割引刀线的判断
+	m_GeomForCut.CheckCutGuideLINE(head);
 	//head = m_GeomForCut.ChangeSencondCH2FH(head);//这里先要把第一层板材的去掉，但同时应该是要把第一层板材的数据保存出来的。
 
 	m_IfDataDisposed = true;
