@@ -323,7 +323,7 @@ Line_para CutLeadLine::Get_CutLine_StartPoint(Line_para m_Line, int m_OpenDirect
 	return m_CutGuideL;
 }
 //输入起止封闭环基本图元，和封闭环单双性质，求切割引刀线基本参数
-Line_para CutLeadLine::Get_CutLeadLine(Line_para a, Line_para b, bool m)
+Line_para CutLeadLine::Get_CutLeadLine(Line_para a, Line_para b, bool m, int m_TypeCGLine)
 {
 	Point start;
 	double k = 0.0;
@@ -337,7 +337,14 @@ Line_para CutLeadLine::Get_CutLeadLine(Line_para a, Line_para b, bool m)
 	m_opendirect = Get_OpenDirect(a, b);//判断夹角开口方向
 	k = Get_k_twoK(a.k, b.k, m_opendirect);//求切割引刀线斜率
 	m_Line = Get_CutLine_Point(start, k);
-	m_CutGuideL = Get_CutLine_StartPoint(m_Line, m_opendirect, m, start);
+	if (1==m_TypeCGLine)//按照封闭环奇偶层信息生成切割引导线
+	{
+		m_CutGuideL = Get_CutLine_StartPoint(m_Line, m_opendirect, m, start);
+	}
+	else//此时m_TypeCGLine=2;要按照调整切割引导线的方式生成
+	{
+		m_CutGuideL = Get_ChangeCutLine_StartPoint(m_Line, m_opendirect, start);
+	}
 	return m_CutGuideL;
 }
 //核心代码
@@ -445,6 +452,8 @@ bool CutLeadLine::If_HaveCGLineInterPoint(GeomEleNode*pCGLinetemp, GeomEleNode*p
 	Point m_InterPoint;//交点
 	Line_Inter m_CGLine, m_Line;//存储切割引刀线与疑似干涉直线的abc参数
 	Line_Point m_CGlinePoint;//存储切割引刀线中xy的坐标顺序
+	Line_Point m_linePoint;//存储干涉线中xy的坐标顺序
+
 	double m_x, m_y;
 	//存储切割引刀线的控制点
 	m_CGLineStart.x = pCGLinetemp->m_GeomStandData.GeoEle_start_x0;
@@ -465,18 +474,35 @@ bool CutLeadLine::If_HaveCGLineInterPoint(GeomEleNode*pCGLinetemp, GeomEleNode*p
 	//判断交点是不是在切割引导线的范围内。
 	//先将切割引导线的两个端点值按大小排序范围
 	m_CGlinePoint = GetPointOrder(m_CGLineStart, m_CGLineEnd);
-	if ((m_CGlinePoint.x_min <= m_InterPoint.x) && (m_InterPoint.x <= m_CGlinePoint.x_max) && (m_CGlinePoint.y_min <= m_InterPoint.y) && (m_InterPoint.y <= m_CGlinePoint.y_max))
+	//再将与之干涉的线的两个端点值按大小排序范围
+	m_linePoint = GetPointOrder(m_LineStart, m_LineEnd);
+	//先排除交点不在干涉线范围内的点
+	//如果交点在干涉线内，说明是实际相交
+	if ((m_linePoint.x_min <= m_InterPoint.x) && (m_InterPoint.x <= m_linePoint.x_max) && (m_linePoint.y_min <= m_InterPoint.y) && (m_InterPoint.y <= m_linePoint.y_max))
 	{
-		//判断交点与切割线终点是否重合
-		if ((fabs(m_InterPoint.x - m_CGLineEnd.x) < EPSILON) && (fabs(m_InterPoint.y - m_CGLineEnd.y) < EPSILON))//说明如今这两点相同，那么不是干涉，而是同个封闭环中切割引导线与封闭环的连接点
+		//再判断交点在不在切割引导线内，如果在说明是实际相交
+		if ((m_CGlinePoint.x_min <= m_InterPoint.x) && (m_InterPoint.x <= m_CGlinePoint.x_max) && (m_CGlinePoint.y_min <= m_InterPoint.y) && (m_InterPoint.y <= m_CGlinePoint.y_max))
+		{
+			m_x = fabs(m_InterPoint.x - m_CGLineEnd.x);
+			m_y = fabs(m_InterPoint.y - m_CGLineEnd.y);
+			//判断交点与切割线终点是否重合
+			if ((m_x< EPSILON) && (m_y< EPSILON))//说明如今这两点相同，那么不是干涉，而是同个封闭环中切割引导线与封闭环的连接点
+			{
+				return  false;
+			}
+			//否则就是实际的干涉
+			else
+			{
+				return  true;
+			}
+		}
+		//否则只是切割引刀线的延伸线与之相交
+		else
 		{
 			return  false;
 		}
-		else
-		{
-			return  true;
-		}
 	}
+	//说明是假相交
 	else
 	{
 		return  false;
@@ -542,6 +568,7 @@ void CutLeadLine::ChangeCGLine(GeomCloseHEAD*pCHtemp)
 	GeomEleNode*node;
 	Line_para m_startline, m_endline;//封闭环首图元节点和尾图元节点的基本数据
 	Line_para m_cutline;//切割引刀线的核心参数
+	int m_TypeCGLine = 2;//生成切割引导线的方式，2为调整生成
 	double x0_min, y0_min, x0_max, y0_max;
 	double x1_min, y1_min, x1_max, y1_max;
 	bool m_Singlelayer;
@@ -569,7 +596,7 @@ void CutLeadLine::ChangeCGLine(GeomCloseHEAD*pCHtemp)
 	m_endline.x1 = Enode->m_GeomStandData.GeoEle_start_x0;
 	m_endline.y1 = Enode->m_GeomStandData.GeoEle_start_y0;
 	//调用切割引刀线函数
-	m_cutline =Get_CutLeadLine(m_startline, m_endline, m_Singlelayer);
+	m_cutline = Get_CutLeadLine(m_startline, m_endline, m_Singlelayer, m_TypeCGLine);
 	//将切割引刀线也一并保存为同一的图元格式
 	cut_in_Node->m_GeomStandData.GeoEle_start_x0 = m_cutline.x0;
 	cut_in_Node->m_GeomStandData.GeoEle_start_y0 = m_cutline.y0;
@@ -601,7 +628,73 @@ void CutLeadLine::ChangeCGLine(GeomCloseHEAD*pCHtemp)
 	cut_out_Node->nextGeomeleNode = NULL;
 	//如此封闭环就加上了新的切割引刀线
 }
+//调整切割引刀线中取切割引刀线控制点的方法
+//此时不管奇层层，都往内取
+Line_para  CutLeadLine::Get_ChangeCutLine_StartPoint(Line_para m_Line, int m_OpenDirect, Point start)
+{
+	Line_para m_CutGuideL;
+	m_CutGuideL.x1 = start.x;
+	m_CutGuideL.y1 = start.y;
+	m_CutGuideL.k = m_Line.k;
+	//往里取
+	//如果开口向上，则取y大的，开口向下，则取y小的。
+	//如果开口向左，则取x小的，开口向右，则取x大的。
+		switch (m_OpenDirect)
+		{
+		case 1://开口向上
+			if (m_Line.y0<m_Line.y1)
+			{
+				m_CutGuideL.x0 = m_Line.x1;
+				m_CutGuideL.y0 = m_Line.y1;
+			}
+			else
+			{
+				m_CutGuideL.x0 = m_Line.x0;
+				m_CutGuideL.y0 = m_Line.y0;
+			}
+			break;
+		case 2://开口向下
+			if (m_Line.y0<m_Line.y1)
+			{
+				m_CutGuideL.x0 = m_Line.x0;
+				m_CutGuideL.y0 = m_Line.y0;
+			}
+			else
+			{
+				m_CutGuideL.x0 = m_Line.x1;
+				m_CutGuideL.y0 = m_Line.y1;
+			}
+			break;
+		case 3://开口向左
+			if (m_Line.x0<m_Line.x1)
+			{
+				m_CutGuideL.x0 = m_Line.x0;
+				m_CutGuideL.y0 = m_Line.y0;
+			}
+			else
+			{
+				m_CutGuideL.x0 = m_Line.x1;
+				m_CutGuideL.y0 = m_Line.y1;
+			}
+			break;
+		case 4://开口向右
+			if (m_Line.x0<m_Line.x1)
+			{
+				m_CutGuideL.x0 = m_Line.x1;
+				m_CutGuideL.y0 = m_Line.y1;
+			}
+			else
+			{
+				m_CutGuideL.x0 = m_Line.x0;
+				m_CutGuideL.y0 = m_Line.y0;
+			}
+			break;
+		default:
+			break;
+		}
 
+	return m_CutGuideL;
+}
 
 
 

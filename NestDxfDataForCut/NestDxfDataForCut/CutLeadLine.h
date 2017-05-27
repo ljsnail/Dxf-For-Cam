@@ -41,9 +41,9 @@ public:
 	Line_para Get_CutLine_Point(Point start, double k);					
 	//输出初步生成的切割引刀线图元
 	Line_para Get_CutLine_StartPoint(Line_para m_Line, int m_OpenDirect, bool m, Point start);
-	//输入起止封闭环基本图元，和封闭环单双性质，求切割引刀线基本参数
-	//给外部调用的API
-	Line_para Get_CutLeadLine(Line_para a, Line_para b, bool m);
+	//输入起止封闭环基本图元，和封闭环单双性质，求切割引刀线基本参数,以及生成切割引导线的方式
+	//给外部调用的API，其中m为封闭环的奇偶层信息，m_TypeCGLine为生成切割引导线的方式，1为按奇偶层生成，2为按调整方式生成
+	Line_para Get_CutLeadLine(Line_para a, Line_para b, bool m,int m_TypeCGLine);
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -60,8 +60,13 @@ public:
 	Point GetCrossPoint(Line_Inter l1, Line_Inter l2);
 	//求切割引导线两个端点四个点之间的范围
 	Line_Point GetPointOrder(Point m_StratPoint, Point m_EndPoint);
+
 	//输入切割切割引导线有干涉的封闭环，然后调整其切割引导线
 	void ChangeCGLine(GeomCloseHEAD*pCHtemp);
+	//调整切割引刀线中取切割引刀线控制点的方法
+	//此时不管奇层层，都往内取
+	Line_para Get_ChangeCutLine_StartPoint(Line_para m_Line, int m_OpenDirect, Point start);
+
 
 };
 

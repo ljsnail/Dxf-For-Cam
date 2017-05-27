@@ -3377,6 +3377,7 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓÐ×Ó·â±Õ»·µ
 	double x0_min, y0_min, x0_max, y0_max;
 	double x1_min, y1_min, x1_max, y1_max;
 	bool m_Singlelayer;
+	int m_TypeCGLine = 1;//ÎªÁËÓëÇÐ¸îÒýµ¶Ïßµ÷ÕûËã·¨ÖÐÉú³ÉÇÐ¸îÒýµ¼Ïß·½Ê½½øÐÐÇø·Ö£¬´ÓÕâÀï½øÈëµÄm_TypeCGLineÎª1£¬´Óµ÷ÕûÄÇ±ß½øÈëµÄm_TypeCGLineÎª2.
 	m_Singlelayer = Phead->m_Singlelayer;
 	//Ö»²âÊÔÖ±ÏßÀàÐÍµÄÍ¼Ôª,²¢²»¿¼ÂÇÊÇ·ñÓÐ½»Éæ£¬²»¿¼ÂÇÔ²
 	Fnode = Phead->FirstGeomele;
@@ -3395,7 +3396,7 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓÐ×Ó·â±Õ»·µ
 	m_endline.x1 = Enode->m_GeomStandData.GeoEle_start_x0;
 	m_endline.y1 = Enode->m_GeomStandData.GeoEle_start_y0;
 	//µ÷ÓÃÇÐ¸îÒýµ¶Ïßº¯Êý
-	m_cutline = m_CutLeadLine.Get_CutLeadLine(m_startline, m_endline, m_Singlelayer);
+	m_cutline = m_CutLeadLine.Get_CutLeadLine(m_startline, m_endline, m_Singlelayer, m_TypeCGLine);
 	//½«ÇÐ¸îÒýµ¶ÏßÒ²Ò»²¢±£´æÎªÍ¬Ò»µÄÍ¼Ôª¸ñÊ½
 	cut_in_Node->m_GeomStandData.GeoEle_start_x0 = m_cutline.x0;
 	cut_in_Node->m_GeomStandData.GeoEle_start_y0 = m_cutline.y0;
@@ -3446,10 +3447,14 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓÐ×Ó·â±Õ»·µ
 		 {
 			 //ÅÐ¶ÏÒª×ñÑ­Ææ²ãÍùÍâ£¬Å¼²ãÍùÀïÅÐ¶ÏµÄÔ­Ôò
 			 m_IfCGLIeter = CheckCGLineInter(pFtemp, m_ceramic_Head);
-			 if (m_IfCGLIeter)//ÄÜ½øÀ´ËµÃ÷ÊÇÓÐ¸ÉÉæµÄ
+			 //½øÀ´ÁË¾ÍÒªµ÷ºÃ²ÅÄÜ³öÈ¥
+			 while (m_IfCGLIeter)
 			 {
+				 //ÅÐ¶ÏÒª×ñÑ­Ææ²ãÍùÍâ£¬Å¼²ãÍùÀïÅÐ¶ÏµÄÔ­Ôò
 				 m_CutLeadLine.ChangeCGLine(pFtemp);
+				 m_IfCGLIeter = CheckCGLineInter(pFtemp, m_ceramic_Head);
 			 }
+			 
 		 }
 		 else//Èç¹ûÓÐ×Ó·â±Õ»·µÄÇé¿öÏÂ
 		 {
@@ -3466,10 +3471,14 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓÐ×Ó·â±Õ»·µ
 	 bool m_IfCGLIeter = false;//´æ´¢ÊÇ·ñÇÐ¸îÒýµ¼Ïß¸ÉÉæÅÐ¶ÏÖµ,³õÊ¼»¯ÎªÎ´¸ÉÉæ
 	 //ÅÐ¶ÏÒª×ñÑ­Ææ²ãÍùÍâ£¬Å¼²ãÍùÀïÅÐ¶ÏµÄÔ­Ôò
 	 m_IfCGLIeter = CheckCGLineInter(pFtemp, m_ceramic_Head);
-	 if (m_IfCGLIeter)//ÄÜ½øÀ´ËµÃ÷ÊÇÓÐ¸ÉÉæµÄ
+	 //½øÀ´ÁË¾ÍÒªµ÷ºÃ²ÅÄÜ³öÈ¥
+	 while (m_IfCGLIeter)
 	 {
+		 //ÅÐ¶ÏÒª×ñÑ­Ææ²ãÍùÍâ£¬Å¼²ãÍùÀïÅÐ¶ÏµÄÔ­Ôò
 		 m_CutLeadLine.ChangeCGLine(pFtemp);
+		 m_IfCGLIeter = CheckCGLineInter(pFtemp, m_ceramic_Head);
 	 }
+
 	 pKtemp = pFtemp->FirstInsideGCloseNode;
 	 //µÚ¶þ²ãÑ­»·£¬Õë¶ÔÄÚ²¿×Ó·â±Õ»·µÄÆæÅ¼ÐÔ½øÐÐµ÷Õû,Ò²ÊÇ¶ÔÍ¬Ò»²ã½øÐÐµ÷Õû
 	 while (pKtemp)
@@ -3478,12 +3487,15 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓÐ×Ó·â±Õ»·µ
 		 m_IfHaveKidCH = IfIncludeKidClose(pKtemp);
 		 if (!(m_IfHaveKidCH))//Èç¹ûÃ»ÓÐ×Ó·â±Õ»·
 		 {
-			 //ÅÐ¶ÏÒª×ñÑ­Ææ²ãÍùÍâ£¬Å¼²ãÍùÀïÅÐ¶ÏµÄÔ­Ôò
+			 //½øÀ´ÁË¾ÍÒª°Ñ×Ô¼º¸øµ÷ºÃ²ÅÄÜ³öÈ¥
 			 m_IfCGLIeter = CheckCGLineInter(pFtemp, m_ceramic_Head);
-			 if (m_IfCGLIeter)//ÄÜ½øÀ´ËµÃ÷ÊÇÓÐ¸ÉÉæµÄ
+			 while (m_IfCGLIeter)
 			 {
-				 m_CutLeadLine.ChangeCGLine(pFtemp);
+				 //ÅÐ¶ÏÒª×ñÑ­Ææ²ãÍùÍâ£¬Å¼²ãÍùÀïÅÐ¶ÏµÄÔ­Ôò
+					 m_CutLeadLine.ChangeCGLine(pFtemp);
+					 m_IfCGLIeter = CheckCGLineInter(pFtemp, m_ceramic_Head);
 			 }
+			
 		 }
 		 else//Èç¹ûÓÐ×Ó·â±Õ»·µÄÇé¿öÏÂ
 		 {
@@ -3522,7 +3534,7 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓÐ×Ó·â±Õ»·µ
 			  ptemp = pCHtemp;
 			  if (ptemp->prevGeomcloseNode)//Èç¹û²»ÊÇÊ×·â±Õ»·½áµã
 			  {
-				  while (ptemp)//ÕÒµ½ÆäÊ×½Úµã·â±Õ»·
+				  while (ptemp->prevGeomcloseNode)//ÕÒµ½ÆäÊ×½Úµã·â±Õ»·
 				  {
 					  ptemp = ptemp->prevGeomcloseNode;
 				  }
