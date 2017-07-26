@@ -505,6 +505,8 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	}
 	//板材外轮廓不进入规划阶段，所以，这里对于切割引刀线而言是奇外偶里。
 	head = m_GeomForCut.ChangeSencondCH2FH(head);//这里先要把第一层板材的去掉，但同时应该是要把第一层板材的数据保存出来的。
+	//后续对每一个封闭环的四个包络角点用得挺多，所以，专门写一个算法来遍历所有封闭环的包络矩形的控制角点。
+	m_GeomForCut.GetLimtofGeomClosed(head);
 	//以上以及将所有的封闭环处理好了。
 	//TSP两步法的代码，以下三行
 	//m_GeomForCut.ChangeEleNodeOfGeomClosed_origin(m_pNestrsltdtND);//可惜这代码没有起到任何效果，原因之一可能是封闭环本身就没有分清楚，其二是处理的算法有问题。
@@ -515,7 +517,6 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	////////////////另一种处理方式//////////////////////////////////
 	////先贪婪算法将所有的封闭环按给定初始顺序
 	m_GeomForCut.BaseTS_GR_ForCutPathPlan(head);//对于没有嵌套的平面切割图形，dtsp法就用这个。
-
 	//对于有嵌套的封闭环，用以下三个函数（除了ACO那个）
 	//划分出不同的封闭环层次
 	m_GeomForCut.Find_AdjustNestCloseHead(head);//嵌套封闭环的嵌套识别工作，就这行代码
@@ -531,7 +532,7 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	//在封闭环奇偶性的确定里封闭环奇偶性后，写入切割引刀线
 	m_GeomForCut.Add_CutGuideLine(head);
 	//写完切割 引导线之后要进行切割引刀线的判断
-	m_GeomForCut.CheckCutGuideLINE(head);
+	//m_GeomForCut.CheckCutGuideLINE(head);
 	//head = m_GeomForCut.ChangeSencondCH2FH(head);//这里先要把第一层板材的去掉，但同时应该是要把第一层板材的数据保存出来的。
 
 	m_IfDataDisposed = true;

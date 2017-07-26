@@ -68,6 +68,22 @@ typedef struct
 	GeomEleNode*nextGelenode;//指向后一个封闭环GeomCloseHEAD结点,因为这里是引刀线，所以这里只能指向封闭环的第一个头结点
 	bool if_CutGuideLine;//作为切割引刀线的判断，默认为ture
 }CutGuideLine;
+//创建一个返回两个点的数据结构，即是求圆弧圆心的内外区域坐标
+typedef struct
+{
+	Point P_arc_out;//外部区域的圆心
+	Point P_arc_in;//内部区域的圆心
+	bool If_select;//记录是否已经选择到了，默认是false，如果选择到了则是true.
+}Arc_Point;
+//切割引导线的数据结构
+//包含了圆弧与直线等类型的切割引导线
+typedef struct
+{
+	GLINE m_line_in,m_line_out;
+	GARC m_arc_in,m_arc_out;
+	Point P_AuxiStart,P_AuxiEnd;//切割引导线的起点与终点，是留给指引过渡线用的，也为将来判断切割引导线干涉提供了判断的依据
+	bool m_IfLine;//切割引导线类型，true默认是直线型，false为圆弧。
+}AuxiliarPath;
 ////创建一个数据结构，保存去掉板材框后的排样图纸头文件和板材框封闭环头文件
 ////在进行切割路径规划和引刀线添加前的预处理
 //typedef struct
@@ -138,35 +154,6 @@ public:
 public:
 
 	int i,j,a;
-////////////////////////////////////for taiji controller////////////////
-public:
-	//回机床原点
-	bool reback_origin_point(bool gobackorigin);
-	//标定工件坐标原点,可人工控制机床点动
-	bool demarcate(double x, double y, double z, double A, double B, double C);//判断是否到达工件坐标系原点，其中xyz可以人工手动调节机床沿xyz方向运动
-	void RunForXaixs(double x);//人工调节x轴方向的运动；
-	void RunForYaixs(double y);//人工调节Y轴方向的运动；
-	void RunForZaixs(double z);//人工调节Z轴方向的运动；
-	void RunForAaix(double x); //人工调节A轴方向的运动；
-	void RunForBaix(double x); //人工调节B轴方向的运动；
-	void RunForCaix(double x); //人工调节C轴方向的运动；
-	double GetDemarcatePoint(double x, double y, double z, double A, double B, double C);//保存工件坐标系原点相对于机床原点的坐标值
-	
-	//运动过程速度可调节
-	double GetSpeed(double v);//这个是本地API,非太极控制卡提供
-	double SetSpeed(double v);//把本地的获取的速度值传给控制卡
-	double ReceiveEncodeSpeed();//获取机床运动的实际速度值
-	void ChangeSpeed(double v);//这个是本地API,计算所需要改变后的速度值
-	//运动控制
-	bool RunLine(double x0, double y0, double x1, double y1, double v);//输入DXF里面的直线的起始终止点，驱动控制卡发送指令控制机床走直线,其中xy坐标均是原始坐标，没有经过标定后转化，v为速度
-	bool RunArc(double Angle_start, double Angle_end, double r, double Arccent_x, double Arccent_y, double v);//输入DXF里面的ARC的起始角度，终止角度，半径，圆心坐标，运动速度（均为原始参数），驱动控制卡发送指令控制机床走ARC。
-	bool RunCircle( double Arccent_x, double Arccent_y,double R, double v);//输入DXF里面的CIRCLE的圆心坐标，半径，运动速度（均为原始参数），驱动控制卡发送指令控制机床走circle。
-	void Suspend();//运动暂停
-	void ReStart();//运动继续
-	//外围电路
-	bool OpenWaterJet();//开高压水柱
-	bool OpenSandValve();//开沙阀
-	bool OpenWaterPump();//开水泵
 	public:
 	//添加工艺第一篇EI的工作
 	//寻找嵌套的封闭环，这一个内容的加入，使得整个路径规划得从来。
@@ -175,6 +162,8 @@ public:
 	void Find_AdjustNestCloseHead(NestResultDataNode*head);
 	//判断第二个封闭环在不在第一个封闭环里面
 	Geom2CloseHeadNest EstimateCloseHeadNest(GeomCloseHEAD*pHtemp, GeomCloseHEAD*pHNtemp);
+	//求所有封闭环的包络矩形的控制角点
+	void GetLimtofGeomClosed(NestResultDataNode*head);
 	//求单个封闭环包络矩形的xy最值
 	void GetLimtofGeomClosed(GeomCloseHEAD*pHtemp);
 	//包络封闭环的数据
@@ -235,9 +224,7 @@ public:
 	void KidClosedHead_Odd_even(GeomCloseHEAD*pFtemp);
 	//输入头文件，添加切割引刀线，这是在已经确定了切割控制点之后，也就是在完成了贪婪算法，多重嵌套识别算法，调节切割控制点之后
 	void Add_CutGuideLine(NestResultDataNode*head);
-	CutGuideLine*CreatCutGuideLine(GeomCloseHEAD*Phead); //生成切割引刀线，切割封闭环的头结点
 	CutGuideLine*CreatCutGuideLine_Circle(GeomEleNode*Pnode,bool m_bilayer); //求圆的切割引刀线
-	CutGuideLine*CreatCutGuideLine_Polygon(GeomEleNode*Pnode, bool m_bilayer); //求多边形（非圆）的切割引刀线
 	double CalculateSlope(GeomEleNode*pGnode);//输入一个基本图元数据结构，求解其首图元和尾图元直线的斜率
 	//以上求切割引刀线的方式过于复杂了
 	//提出一种基于封闭环之间的逻辑层次感念的材料去留切割引刀线问题
@@ -245,6 +232,12 @@ public:
 	void CreatCutGuideLINE(GeomCloseHEAD*Phead);//输入每一个封闭环，然后对其进行切割 引刀线的添加。
 	bool IfIncludeKidClose(GeomCloseHEAD*Phead);//输入一个封闭环，判断是否有子封闭环
 	void Add_KidCloseCutLine(GeomCloseHEAD*Phead);//输入一个含有子封闭环的封闭环，给它添加切割引刀线
+	//还是要分直线，圆，圆弧的切割引导线的生成方式的不同。
+	//由直线构成的封闭环，其生成切割引导线的方法
+	Line_para CreatCutGuideLINE_Polygon(GeomCloseHEAD*Phead, int m_TypeCGLine);
+	//由圆型构成的封闭环，其生成切割引导线的方法
+	Line_para CreatCutGuideLine_Circle(GeomCloseHEAD*Phead, int m_TypeCGLine);
+
 	//用上CutLeadLine这个类
 	CutLeadLine m_CutLeadLine;
 	//////////////////////////////////////////////////////////////////////////////
@@ -257,6 +250,25 @@ public:
 
 	//输入封闭环，保存板材外轮廓的封闭环头文件（父层封闭环一定要与板材封闭环轮廓判断）与平面切割图头结点（不一定能用得上），判断其切割引导线与其他封闭环是否有干涉，如果有则返回封闭头结点，没有则返回NULL
 	bool CheckCGLineInter(GeomCloseHEAD*pCHtemp, GeomCloseHEAD*m_ceramic_Head);
+	/////////////////////////////////////////////////////////////////////////////////////////////
+	///////////上面的切割引导线生成方式是角平分线以及两点连线法//////////////////////////////////////
+	///////////下面的切割引导线生成方式是圆弧法与切线法//////////////////////////////////////
+	//输入一个封闭环头结点，之后对此封闭环头结点进行设置切割引导线
+	void CreatCutAuxiliaryPath(GeomCloseHEAD*pCHtemp);
+	//多边形与圆弧之类结合的圆弧切割引导线生成方式。将切割引导线直接在此生成，不再提高外部接口。
+	void CreatCutAuxiliaryPath_Polygon(GeomCloseHEAD*pCHtemp, int m_TypeCGLine);
+	//输入封闭环，圆弧与封闭环的切点，切割引导线母线，求圆弧圆心坐标。
+	Arc_Point GetArccentPoint(GeomCloseHEAD*pCHtemp, Line_para m_line, Point P_mid);
+	//这个函数将求得圆弧切割引导线的参数，并将圆弧切割引导线添加到封闭环上。
+	//输入圆弧的起止点，圆弧的圆心，圆弧与封闭环的切点，封闭环。
+	//在这个函数里设置切割引导线
+	void SetCutAuxiliaryPath(Line_para m_arc_auxi_SEP, Point P_mid, Point P_arccent, GeomCloseHEAD*pCHtemp);
+	//将切割引导线作为封闭环的固有节点添加进去。
+	//m_auxiliaryPath是存储的切割引导线的数据信息，P_mid是圆弧切割引导线的与封闭环的切点,pCHtemp为封闭环头结点
+	//在这个函数里将切割引导线挂靠到封闭环上
+	void AddAuxiNodeToCH(AuxiliarPath m_auxiliaryPath, Point P_mid, GeomCloseHEAD*pCHtemp);
+	//将 三个切割封闭环的基元挂到封闭环上，并调整封闭环中的基元位置。
+	void AddThreeNodeToCH(GeomEleNode*Add_more_Node, GeomEleNode*cut_in_Node, GeomEleNode*cut_out_Node, GeomCloseHEAD*pCHtemp);
 
 
 };

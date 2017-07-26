@@ -3,7 +3,7 @@
 #include"GeomClose.h"
 //#include<gl.h>
 #define pii 3.1416;
-#define m_CutLineLength  25;
+//#define m_CutLineLength  25;
 #define EPSILON 0.001
 struct Line_para
 {
@@ -21,11 +21,11 @@ struct Line_Point//求切割引导线的两个端点四个坐标的范围
 {
 	double x_min, x_max, y_min,y_max;
 };
-struct Point
-{
-	double x;
-	double y;
-};
+//struct Point
+//{
+//	double x;
+//	double y;
+//};
 class CutLeadLine
 {
 public:
@@ -40,11 +40,18 @@ public:
 	//输出在切割引刀线上到切割控制点距离等于引刀线长度的两个点
 	Line_para Get_CutLine_Point(Point start, double k);					
 	//输出初步生成的切割引刀线图元
+	//给直线类型的切割引刀线用的
 	Line_para Get_CutLine_StartPoint(Line_para m_Line, int m_OpenDirect, bool m, Point start);
+	//给圆类型的切割引导线用的，少了中间的开口方向参数m_OpenDirect
+	Line_para Get_CutLine_StartPoint(Line_para m_Line, Point Circle_Center, bool m, Point start);
 	//输入起止封闭环基本图元，和封闭环单双性质，求切割引刀线基本参数,以及生成切割引导线的方式
-	//给外部调用的API，其中m为封闭环的奇偶层信息，m_TypeCGLine为生成切割引导线的方式，1为按奇偶层生成，2为按调整方式生成
+	//直线类型的切割引导线
+	//给外部调用的API，其中a为封闭环的第一条基本直线段图元，b为最后一条基本直线段图元。其中m为封闭环的奇偶层信息，m_TypeCGLine为生成切割引导线的方式，1为按奇偶层生成，2为按调整方式生成
 	Line_para Get_CutLeadLine(Line_para a, Line_para b, bool m,int m_TypeCGLine);
-
+	//圆类型的切割引导线
+	//由于圆类型的切割引导线生产的方式是两点连线法，所以输入上一个封闭环的切割控制点，和当前封闭环的切割控制点，其中m_Singlelayer为封闭环的奇偶层信息，m_TypeCGLine为生成切割引导线的方式，1为按奇偶层生成，2为按调整方式生成
+	//其中参数Last_GClose为上一个封闭环的切割控制点，Current_GClose为当前圆的切割控制点，
+	Line_para Get_CutLeadLine(Point Last_GClose, Point Current_GClose, Point Circle_Center, bool m_Singlelayer, int m_TypeCGLine);
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	//切割引导线干涉判断，输入当前需要判断切割引导线的封闭环，然后判断其与包括自身在内的兄弟封闭环是否干涉。
@@ -66,7 +73,10 @@ public:
 	//调整切割引刀线中取切割引刀线控制点的方法
 	//此时不管奇层层，都往内取
 	Line_para Get_ChangeCutLine_StartPoint(Line_para m_Line, int m_OpenDirect, Point start);
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//新的获取切割引导线的方式///////////////////
+	///////////////////////////////////////////////////////
 
-
+	
 };
 

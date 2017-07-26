@@ -184,13 +184,25 @@ Line_para 	CutLeadLine::Get_CutLine_Point(Point start, double k)
 	y1 = b + k*sqrt(r*r / (1 + k*k));
 	x2 = a - sqrt(r*r / (1 + k*k));
 	y2 = b - k*sqrt(r*r / (1 + k*k));
-	Lp.x0 = x1;
-	Lp.x1 = x2;
-	Lp.y0 = y1;
-	Lp.y1 = y2;
+	//先预处理，将x0定义为比x1小的坐标
+	if (x1<=x2)
+	{
+		Lp.x0 = x1;
+		Lp.x1 = x2;
+		Lp.y0 = y1;
+		Lp.y1 = y2;
+	}
+	else
+	{
+		Lp.x0 = x2;
+		Lp.x1 = x1;
+		Lp.y0 = y2;
+		Lp.y1 = y1;
+	}
 	Lp.k = k;//保存切割引刀线的斜率，以后用得着
 	return Lp;
 }
+//给直线类型的加入切割引刀线
 //根据开口方向和封闭环单双层取其中一个值作为切割引刀线的起点
 //输入两个可疑值，输入开口方向，输入单双层,输入切割控制点
 //输出切割引刀线图元
@@ -322,6 +334,60 @@ Line_para CutLeadLine::Get_CutLine_StartPoint(Line_para m_Line, int m_OpenDirect
 	}
 	return m_CutGuideL;
 }
+//给圆类型的切割引导线用的，少了中间的开口方向参数m_OpenDirect,多了圆心坐标Circle_Center
+Line_para CutLeadLine::Get_CutLine_StartPoint(Line_para m_Line, Point Circle_Center, bool m, Point start)
+{
+	Line_para m_CutGuideLine;
+	Point p1, p2;
+	double d1,d2;//求两点之间的距离
+	m_CutGuideLine.x1 = start.x;//start就是圆原来的切割控制点
+	m_CutGuideLine.y1 = start.y;
+	p1.x = m_Line.x0;
+	p1.y = m_Line.y0;
+	p2.x = m_Line.x1;
+	p2.y = m_Line.y1;
+	//求m_Line两个点到圆心的距离
+	d1 = sqrt((p1.x - Circle_Center.x)*(p1.x - Circle_Center.x) + (p1.y - Circle_Center.y)*(p1.y - Circle_Center.y));
+	d2 = sqrt((p2.x - Circle_Center.x)*(p2.x - Circle_Center.x) + (p2.y - Circle_Center.y)*(p2.y - Circle_Center.y));
+
+	//对于圆来说区分了奇偶层之后，就只剩下选圆内的点还是圆外的点的问题了。
+	//现在是去掉了板材外轮廓，所以是单层往外取，双层往里取
+	//这里涉及到m_Line中的两个点，该如何选择？
+	//应该是要把圆的圆心也加入进来，双层往里选则选离圆心近的，单层往外选则选离圆心远的
+	if (m)//单层
+	{
+		//往外选,则应该选择远离圆心的
+		if (d1<d2)
+		{
+			m_CutGuideLine.x0 = m_Line.x1;
+			m_CutGuideLine.y0 = m_Line.y1;
+			
+		}
+		else
+		{
+			m_CutGuideLine.x0 = m_Line.x0;
+			m_CutGuideLine.y0 = m_Line.y0;
+		}
+	}
+	else//双层
+	{
+		//往里选，则选靠近圆心的
+		if (d1<d2)
+		{
+			m_CutGuideLine.x0 = m_Line.x0;
+			m_CutGuideLine.y0 = m_Line.y0;
+			
+		}
+		else
+		{
+			m_CutGuideLine.x0 = m_Line.x1;
+			m_CutGuideLine.y0 = m_Line.y1;
+		}
+	}
+	return m_CutGuideLine;
+}
+
+//直线类型的切割引导线的生产方式
 //输入起止封闭环基本图元，和封闭环单双性质，求切割引刀线基本参数
 Line_para CutLeadLine::Get_CutLeadLine(Line_para a, Line_para b, bool m, int m_TypeCGLine)
 {
@@ -330,7 +396,7 @@ Line_para CutLeadLine::Get_CutLeadLine(Line_para a, Line_para b, bool m, int m_T
 	Line_para m_Line;
 	Line_para m_CutGuideL;
 	int m_opendirect;//开口方向判断,1向上开，2向下开，3向左开，4向右开
-	start.x = a.x0;
+	start.x = a.x0;//获取切割控制点
 	start.y = a.y0;
 	a.k = Get_k_twoPoint(a);
 	b.k = Get_k_twoPoint(b);
@@ -347,6 +413,38 @@ Line_para CutLeadLine::Get_CutLeadLine(Line_para a, Line_para b, bool m, int m_T
 	}
 	return m_CutGuideL;
 }
+//圆类型的切割引导线
+//由于圆类型的切割引导线生产的方式是两点连线法，所以输入上一个封闭环的切割控制点，和当前封闭环的切割控制点，其中m_Singlelayer为封闭环的奇偶层信息，m_TypeCGLine为生成切割引导线的方式，1为按奇偶层生成，2为按调整方式生成
+//其中参数Last_GClose为上一个封闭环的切割控制点，Current_GClose为当前圆的切割控制点，
+Line_para  CutLeadLine::Get_CutLeadLine(Point Last_GClose, Point Current_GClose, Point Circle_Center, bool m_Singlelayer, int m_TypeCGLine)
+{
+	Point start;
+	double k = 0.0;
+	Line_para m_MLine;//切割引导线的母线
+	Line_para m_Line;//切割引导线
+	Line_para m_CutGuideLine;
+	start.x = Current_GClose.x;
+	start.y = Current_GClose.y;
+	m_MLine.x0 = Current_GClose.x;
+	m_MLine.y0 = Current_GClose.y;
+	m_MLine.x1 = Last_GClose.x;
+	m_MLine.y1 = Last_GClose.y;
+	k = Get_k_twoPoint(m_MLine);
+	m_Line = Get_CutLine_Point(start, k);
+	if (1 == m_TypeCGLine)//按照封闭环奇偶层信息生成切割引导线
+	{
+		m_CutGuideLine = Get_CutLine_StartPoint(m_Line, Circle_Center, m_Singlelayer, start);
+	}
+	else//此时m_TypeCGLine=2;要按照调整切割引导线的方式生成
+	{
+		//m_CutGuideLine = Get_ChangeCutLine_StartPoint(m_Line, Circle_Center, m_Singlelayer, start);
+	}
+	return m_CutGuideLine;
+
+
+	
+}
+
 //核心代码
 //核心代码
 //核心代码
@@ -695,6 +793,5 @@ Line_para  CutLeadLine::Get_ChangeCutLine_StartPoint(Line_para m_Line, int m_Ope
 
 	return m_CutGuideL;
 }
-
 
 

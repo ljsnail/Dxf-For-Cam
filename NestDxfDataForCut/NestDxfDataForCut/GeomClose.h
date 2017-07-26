@@ -1,5 +1,7 @@
 #pragma once
 #include "GEOMELE.h"
+#define m_CutLineLength  25;
+
 //********************************************************************//
 //第三层结构，要对几何图元进行遍历，按照x0, y0, x1, y1的关系来找到封闭环，每个封闭环用IID来区分
 //封闭环里面的图元应该是有序的排列，并选择其中一个套图元作为封闭环的起点
@@ -36,6 +38,21 @@ typedef struct
 	double y_min;//包络矩形的y方向的最小值
 	double y_max;//包络矩形的y方向的最大值
 }Envelope_Rect;
+//点的数据结构
+typedef struct 
+{
+	double x;
+	double y;
+}Point;
+
+//封闭环包络矩形的控制角点
+typedef struct
+{
+	Point x_min;//包络矩形的x方向的最小值时候的xy值
+	Point x_max;//包络矩形的x方向的最大值时候的xy值
+	Point y_min;//包络矩形的y方向的最小值时候的xy值
+	Point y_max;//包络矩形的y方向的最大值时候的xy值
+}Envelope_RectPoint;
 //********************************************************************//
 //将每个封闭环的双向链表的头结点保存起来。刚开始的时候保存整个DXF的图元的结点所形成的无序双向链表的头结点
 //这些头结点之间在更上一层还会形成以同一个排样dxf图形所有封闭环组成的双向链表，
@@ -43,7 +60,8 @@ typedef struct
 //********************************************************************//
 typedef struct GeomCloseHEAD
 {
-	Envelope_Rect m_GemoClosedLimt;//存储封闭环外包络矩形的控制点
+	Envelope_RectPoint m_GemoClosedLimtPoint;//存储封闭环外包络矩形的控制坐标
+	//Envelope_Rect m_GemoClosedLimt;//存储封闭环外包络矩形的控制点
 	TranLine m_tranline;//存储过渡直线
 	GEOMCCLOSTAPOINT m_geomclose_startpoint;//存储所指向双向链表的起止重合点
 	unsigned int m_NumGeomele;//该链表存有多少个基本图元

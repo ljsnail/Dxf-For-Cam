@@ -2151,15 +2151,30 @@ void  GeomForCut::SetInSideClose(GeomCloseHEAD*pFHtemp, Geom2CloseHeadNest m_G2C
 		break;
 	}
 }
+//ÇóËùÓĞ·â±Õ»·µÄ°üÂç¾ØĞÎµÄ¿ØÖÆ½Çµã
+void GeomForCut::GetLimtofGeomClosed(NestResultDataNode*head)
+{
+	GeomCloseHEAD*pTempCHead, *pFirstCH;
+	pFirstCH = head->FirstGeomClose;
+	//È«²¿±éÀú
+	while (pFirstCH)
+	{
+		GetLimtofGeomClosed(pFirstCH);
+		pFirstCH = pFirstCH->nextGeomcloseNode;
+	}
+}
 //Çó·â±Õ»·µÄ°üÂç¾ØĞÎxyµÄ¼«ÏŞÖµ
 void  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 {
 	GeomEleNode*ptempGelenode;
 	double temp_x_min=0.0, temp_x_max=0.0, temp_y_min=0.0, temp_y_max=0.0;
-	double x_min=0.0, x_max=0.0, y_min=0.0, y_max=0.0;//Ñ°ÕÒ·â±Õ»·1µÄ°üÂç¾ØĞÎµÄ·¶Î§
+	double x_min=0.0, x_max=0.0, y_min=0.0, y_max=0.0;//Ñ°ÕÒ·â±Õ»·µÄ°üÂç¾ØĞÎµÄ·¶Î§
+	double x_min_y = 0.0, x_max_y = 0.0, y_min_x = 0.0, y_max_x = 0.0;//Ñ°ÕÒ·â±Õ»·µÄ°üÂç¾ØĞÎµÄ·¶Î§Ïà¶ÔÓÚµÄ¿ØÖÆ½ÇµãÁíÒ»¸ö×ø±ê
+	double c_x, c_y, c_r;//±£´æÔ²ÀàĞÍµÄÔ²ĞÄÓë°ë¾¶
 	//´ÓµÚÒ»¸ö·â±Õ»·µÄµÚÒ»¸öÍ¼Ôª½Úµã¿ªÊ¼
 	//ÒªµÚÒ»¸ö·â±Õ»·¶ÔÈı½ÇĞÎ£¬ºÍÔ²½øĞĞÇø·Ö
 	ptempGelenode = pTempCHead->FirstGeomele;
+	//ÕâÑùÓöµ½Ö±ÏßÓëÔ²»¡½»»¥µÄÇé¿öÏÂ£¬ÄÇÃ´¾Í¿ÉÄÜ»á³öÏÖ´íÎó£¬ÕâÀïÃ»½â¾öÕâÖÖÎÊÌâ
 	if (3 != ptempGelenode->m_GeomStandData.m_typegeomele)//Èç¹û²»ÊÇÔ²µÄÇé¿öÏÂ
 	{
 		//ÏÈ¸øÒÔÒ»¸ö³õÊ¼»¯µÄÖµ
@@ -2183,10 +2198,12 @@ void  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 				if (temp_x_min <= temp_x_max)
 				{
 					x_min = temp_x_min;
+					x_min_y = temp_y_min;//Õâ¸öÊÇ¸½Ó¹
 				}
 				else
 				{
 					x_min = temp_x_max;
+					x_min_y = temp_y_max;//Õâ¸öÊÇ¸½Ó¹
 				}
 
 			}
@@ -2195,10 +2212,12 @@ void  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 				if (x_max <= temp_x_max)
 				{
 					x_max = temp_x_max;
+					x_max_y = temp_y_max;//Õâ¸öÊÇ¸½Ó¹
 				}
 				else
 				{
 					x_max = temp_x_min;
+					x_max_y = temp_y_min;//Õâ¸öÊÇ¸½Ó¹
 				}
 			}
 			//yµÄlimit
@@ -2207,10 +2226,12 @@ void  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 				if (temp_y_min <= temp_y_max)
 				{
 					y_min = temp_y_min;
+					y_min_x = temp_x_min;
 				}
 				else
 				{
 					y_min = temp_y_max;
+					y_min_x = temp_x_max;
 				}
 
 			}
@@ -2219,10 +2240,12 @@ void  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 				if (y_max <= temp_y_max)
 				{
 					y_max = temp_y_max;
+					y_max_x = temp_x_max;
 				}
 				else
 				{
 					y_max = temp_y_min;
+					y_max_x = temp_x_min;
 				}
 			}
 			ptempGelenode = ptempGelenode->nextGeomeleNode;
@@ -2230,16 +2253,33 @@ void  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 	}
 	else//·â±ÕÊÇÔ²µÄÇé¿öÏÂ£¬ÄÇÃ´¾Í²ÉÓÃ¹ıÔ²ĞÄµÄË®Æ½ÏßºÍ´¹Ö±ÏßÓëÔ²µÄ½»µãµÄÁ½¸öÖµ
 	{
-		;
+		c_x = ptempGelenode->m_GeomStandData.m_circle.m_Circent_x;
+		c_y = ptempGelenode->m_GeomStandData.m_circle.m_Circent_y;
+		c_r = ptempGelenode->m_GeomStandData.m_circle.m_Circle_r;
+		x_min = c_x - c_r;
+		x_max = c_x + c_r;
+		y_min = c_y - c_r;
+		y_max = c_y + c_r;
 	}
+	//½«ÉÏÊöµÄÊıÖµ±£ÁôËÄÎ»Ğ¡Êı
 	x_min = Retain4Decimals(x_min);
 	x_max = Retain4Decimals(x_max);
 	y_min = Retain4Decimals(y_min);
 	y_max = Retain4Decimals(y_max);
-	pTempCHead->m_GemoClosedLimt.x_min = x_min;
-	pTempCHead->m_GemoClosedLimt.x_max = x_max;
-	pTempCHead->m_GemoClosedLimt.y_min = y_min;
-	pTempCHead->m_GemoClosedLimt.y_max = y_max;
+	x_min_y = Retain4Decimals(x_min_y);
+	x_max_y = Retain4Decimals(x_max_y);
+	y_min_x = Retain4Decimals(y_min_x);
+	y_max_x = Retain4Decimals(y_max_x);
+	//ÒÔÏÂÊÇ½«¾ØĞÎ·â±Õ»·µÄËÄ¸ö¿ØÖÆ½ÇµãµÄ×ø±êÖµ±£´æÆğÀ´
+	//Ô²ĞÎµÄ»¹Ã»ÓĞ´¦Àí
+	pTempCHead->m_GemoClosedLimtPoint.x_min.x = x_min;
+	pTempCHead->m_GemoClosedLimtPoint.x_min.y = x_min_y;
+	pTempCHead->m_GemoClosedLimtPoint.x_max.x = x_max;
+	pTempCHead->m_GemoClosedLimtPoint.x_max.x = x_max_y;
+	pTempCHead->m_GemoClosedLimtPoint.y_min.y = y_min;
+	pTempCHead->m_GemoClosedLimtPoint.y_min.x = y_min_x;
+	pTempCHead->m_GemoClosedLimtPoint.y_max.y = y_max;
+	pTempCHead->m_GemoClosedLimtPoint.y_max.x = y_max_x;
 }
 
 //ºËĞÄËã·¨
@@ -2249,7 +2289,7 @@ void  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 Geom2CloseHeadNest  GeomForCut::JudgeCloseHeadNest(GeomCloseHEAD*pTempCHead, GeomCloseHEAD*pTempNextCHead)
 
 {
-	Envelope_Rect m_GeomClosed1, m_GeomClosed2;
+	Envelope_RectPoint m_GeomClosed1, m_GeomClosed2;
 	double x1_min, x1_max, y1_min, y1_max;//Ñ°ÕÒ·â±Õ»·1µÄ°üÂç¾ØĞÎµÄ·¶Î§
 	double x2_min, x2_max, y2_min, y2_max;//Ñ°ÕÒ·â±Õ»·1µÄ°üÂç¾ØĞÎµÄ·¶Î§
 	if (pTempNextCHead == pTempCHead)//ÒòÎª´ÓÍ·¿ªÊ¼£¬¿Ï¶¨»áÓĞÁ½ÕßÏàÍ¬µÄÊ±ºò
@@ -2268,20 +2308,20 @@ Geom2CloseHeadNest  GeomForCut::JudgeCloseHeadNest(GeomCloseHEAD*pTempCHead, Geo
 		}
 
 	}
-	//ÇóÁ½¸ö·â±Õ»·µÄ°üÂç¾ØĞÎµÄ·¶Î§
-	GetLimtofGeomClosed(pTempCHead);
-	GetLimtofGeomClosed(pTempNextCHead);
-	m_GeomClosed1 =pTempCHead->m_GemoClosedLimt;
-	m_GeomClosed2 =pTempNextCHead->m_GemoClosedLimt;
-	//¶ÔÊıÖµ±£ÁôËÄÎ»Ğ¡Êı
-	x1_min = m_GeomClosed1.x_min;
-	x1_max = m_GeomClosed1.x_max;
-	y1_min = m_GeomClosed1.y_min;
-	y1_max = m_GeomClosed1.y_max;
-	x2_min = m_GeomClosed2.x_min;
-	x2_max = m_GeomClosed2.x_max;
-	y2_min = m_GeomClosed2.y_min;
-	y2_max = m_GeomClosed2.y_max;
+	////ÇóÁ½¸ö·â±Õ»·µÄ°üÂç¾ØĞÎµÄ·¶Î§
+	//GetLimtofGeomClosed(pTempCHead);
+	//GetLimtofGeomClosed(pTempNextCHead);
+	m_GeomClosed1 = pTempCHead->m_GemoClosedLimtPoint;
+	m_GeomClosed2 = pTempNextCHead->m_GemoClosedLimtPoint;
+	//½«·â±Õ»·µÄ¾ØĞÎ°üÂç×ø±ê´«³öÀ´£¬×¢ÒâÕâÀï²¢Ã»ÓĞÓÃµ½¿ØÖÆ½Çµã×ø±ê
+	x1_min = m_GeomClosed1.x_min.x;
+	x1_max = m_GeomClosed1.x_max.x;
+	y1_min = m_GeomClosed1.y_min.y;
+	y1_max = m_GeomClosed1.y_max.y;
+	x2_min = m_GeomClosed2.x_min.x;
+	x2_max = m_GeomClosed2.x_max.x;
+	y2_min = m_GeomClosed2.y_min.y;
+	y2_max = m_GeomClosed2.y_max.y;
 	//ÒÔÉÏÒÑ¾­°Ñ°üÂç¾ØĞÎµÄ·¶Î§Çó³öÀ´ÁË
 	//ÏÂÃæ½øĞĞ¶ÔÁ½¸ö¾ØĞÎÊÇ·ñÇ¶Ì×½øĞĞÅĞ¶Ï
 	//Ö÷ÒªÊÇÅĞ¶ÏºóÃæÄÇ¸ö·â±Õ»·ÊÇ²»ÊÇÇ°Ãæ·â±Õ»·µÄ×Ó·â±Õ»·
@@ -2318,23 +2358,20 @@ Geom2CloseHeadNest  GeomForCut::JudgeCloseHeadNest(GeomCloseHEAD*pTempCHead, Geo
 //ÕâÀïÓëÉÏÃæ²»Í¬µÄµØ·½ÔÚÓÚ£¬ÉÏÃæÊÇÖ»ÅĞ¶ÏºóÕßÊÇ·ñÎªÇ°ÕßµÄ×Ó·â±Õ»·µÄÇé¿ö£¬¶øÕâÀïÊÇÅĞ¶ÏÁ½ÕßÖ®¼äµÄÇ¶Ì×¹ØÏµ¡£
 Geom2CloseHeadNest GeomForCut::Judge2KidCloseHNest(GeomCloseHEAD*pHKtemp, GeomCloseHEAD*pHNtemp)
 {
-	Envelope_Rect m_GeomClosed1, m_GeomClosed2;
+	Envelope_RectPoint m_GeomClosed1, m_GeomClosed2;
 	double x1_min, x1_max, y1_min, y1_max;//Ñ°ÕÒ·â±Õ»·1µÄ°üÂç¾ØĞÎµÄ·¶Î§
 	double x2_min, x2_max, y2_min, y2_max;//Ñ°ÕÒ·â±Õ»·1µÄ°üÂç¾ØĞÎµÄ·¶Î§
-	//ÇóÁ½¸ö·â±Õ»·µÄ°üÂç¾ØĞÎµÄ·¶Î§
-	GetLimtofGeomClosed(pHKtemp);
-	GetLimtofGeomClosed(pHNtemp);
-	m_GeomClosed1 = pHKtemp->m_GemoClosedLimt;
-	m_GeomClosed2 = pHNtemp->m_GemoClosedLimt;
-	//¶ÔÊıÖµ±£ÁôËÄÎ»Ğ¡Êı
-	x1_min = m_GeomClosed1.x_min;
-	x1_max = m_GeomClosed1.x_max;
-	y1_min = m_GeomClosed1.y_min;
-	y1_max = m_GeomClosed1.y_max;
-	x2_min = m_GeomClosed2.x_min;
-	x2_max = m_GeomClosed2.x_max;
-	y2_min = m_GeomClosed2.y_min;
-	y2_max = m_GeomClosed2.y_max;
+	m_GeomClosed1 = pHKtemp->m_GemoClosedLimtPoint;
+	m_GeomClosed2 = pHNtemp->m_GemoClosedLimtPoint;
+	//½«·â±Õ»·µÄ¾ØĞÎ°üÂç×ø±ê´«³öÀ´£¬×¢ÒâÕâÀï²¢Ã»ÓĞÓÃµ½¿ØÖÆ½Çµã×ø±ê
+	x1_min = m_GeomClosed1.x_min.x;
+	x1_max = m_GeomClosed1.x_max.x;
+	y1_min = m_GeomClosed1.y_min.y;
+	y1_max = m_GeomClosed1.y_max.y;
+	x2_min = m_GeomClosed2.x_min.x;
+	x2_max = m_GeomClosed2.x_max.x;
+	y2_min = m_GeomClosed2.y_min.y;
+	y2_max = m_GeomClosed2.y_max.y;
 	//ÒÔÉÏÒÑ¾­°Ñ°üÂç¾ØĞÎµÄ·¶Î§Çó³öÀ´ÁË
 	//ÏÂÃæ½øĞĞ¶ÔÁ½¸ö¾ØĞÎÊÇ·ñÇ¶Ì×½øĞĞÅĞ¶Ï
 	//ÕâÀïÒªÅĞ¶ÏÁ½¸ö·â±Õ»·Ö®¼äµÄÇ¶Ì×¹ØÏµ£¬Ò»°ã»áÓĞÈıÖÖ¹ØÏµ£¬·â±ÕÒÔ²»Í¬µÄtypeÀ´´ú±í
@@ -3169,77 +3206,8 @@ double GeomForCut::CalculateSlope(GeomEleNode*pGnode)
 	}
 	return slope;
 }
-//Éú³ÉÇĞ¸îÒıµ¶Ïß
-//ÒªÇø·ÖÖ±Ïß£¬Ô²£¬Ô²»¡µÄ²»Í¬
-CutGuideLine* GeomForCut::CreatCutGuideLine(GeomCloseHEAD*Phead) //Éú³ÉÇĞ¸îÒıµ¶Ïß£¬ÊäÈëÇĞ¸î¿ØÖÆµãµÄÆğµã£¬ÊäÈëµÚÒ»Ìõ»ù±¾Í¼ÔªµÄĞ±ÂÊ£¬×îºóÒ»ÌõÖ±ÏßµÄĞ±ÂÊ£¬ÊäÈëÊÇÅĞ¶ÏÊÇÄÚ»·»¹ÊÇÍâ»·¡£
-{
-	CutGuideLine*newNode = (CutGuideLine*)malloc(sizeof(CutGuideLine));
-	//ÅĞ¶Ï¸Ã·â±Õ»·ÊÇ²»ÊÇÔ²£¬Èç¹ûÊÇÔ²ÄÇÃ´ÇóÇĞ¸îÒıµ¶ÏßµÄ·½Ê½ÓëÆäËûµÄ²»Ò»Ñù
-	GeomEleNode*First_node;//·â±Õ»·µÚÒ»¸ö»ù±¾Í¼Ôª
-	bool m_Singlelayer;//ÅĞ¶ÏÊÇ·ñË«²ã
-	m_Singlelayer = Phead->m_Singlelayer;
-	First_node = Phead->FirstGeomele;
-	if (First_node->m_GeomStandData.m_typegeomele == 3)//ËµÃ÷ÊÇÔ²
-	{
-		newNode = CreatCutGuideLine_Circle(First_node, m_Singlelayer);
-	}
-	else//ËµÃ÷ÊÇÆäËû¶à±ßĞÎµÄÊ±ºò
-	{
-		newNode = CreatCutGuideLine_Polygon(First_node, m_Singlelayer);
-	}
-	return newNode;
-}
-//ÇóÔ²µÄÇĞ¸îÒıµ¶Ïß
-CutGuideLine*GeomForCut::CreatCutGuideLine_Circle(GeomEleNode*Phead, bool m_bilayer)
-{
-	CutGuideLine*newNode = (CutGuideLine*)malloc(sizeof(CutGuideLine));
 
-	return newNode;
-}
-//Çó¶à±ßĞÎ£¨·ÇÔ²£©µÄÇĞ¸îÒıµ¶Ïß
-CutGuideLine*GeomForCut::CreatCutGuideLine_Polygon(GeomEleNode*Phead, bool m_bilayer)
-{
-	//¼ÈÈ»ÊÇ¶à±ßĞÎ£¬ÄÇÃ´¿Ï¶¨ÓĞ²»Ö¹Ò»¸ö»ù±¾Í¼Ôª
-	CutGuideLine*newNode = (CutGuideLine*)malloc(sizeof(CutGuideLine));
-	GeomEleNode*End_node;
-	double x0, y0, x1, y1;
-	double slope_1;//·â±Õ»·µÚÒ»¸ö»ù±¾Í¼ÔªµÄĞ±ÂÊ
-	double slope_2;//·â±Õ»·×îºóÒ»¸ö»ù±¾Í¼ÔªµÄĞ±ÂÊ
-	double a, b, r;//Ô²ĞÄ£¬°ë¾¶
-	End_node = Phead->nextGeomeleNode;
-	while (End_node->nextGeomeleNode)//ÕÒµ½×îºóÒ»¸ö»ù±¾Í¼Ôª
-		End_node = End_node->nextGeomeleNode;	
-	x1 = Phead->m_GeomStandData.GeoEle_start_x0;//ÒÔ·â±Õ»·µÄµÚÒ»¸ö»ù±¾Í¼Ôª×÷ÎªÇĞ¸îÒıµ¶ÏßµÄÄ©Î²
-	y1 = Phead->m_GeomStandData.GeoEle_start_y0;//ÒÔ·â±Õ»·µÄµÚÒ»¸ö»ù±¾Í¼Ôª×÷ÎªÇĞ¸îÒıµ¶ÏßµÄÄ©Î²
-	//ÒªÇø·ÖÊ×Î²½ÚµãÖĞ£¬ÊÇ·ñÓĞÔ²»¡ÕâÖÖÌØÊâµÄÍ¼Ôª´æÔÚ£¬
-	//Èç¹ûÊ×Í¼ÔªÊÇÔ²»¡£¬ÄÇÃ´ÇĞ¸îÒıµ¶Ïß×îºÃÊÇÏàÇĞµÄ·½Ê½£¨µ¥²ãµÄÊ±ºò£¬ÍùÍâÇĞ£©
-	//£¨Ë«²ãµÄÊ±ºò£¬ÍùÀïÇĞ£©£¬ÄÇÃ´¾ÍÊÇÇóÏÒµÄĞ±ÂÊ
-	if (Phead->m_GeomStandData.m_typegeomele==2||End_node->m_GeomStandData.m_typegeomele==2)//Ö»ÒªÓĞÒ»¸öÊÇ£¬¶¼Òª·Ö¿ª´¦Àí
-	{
-		if (Phead->m_GeomStandData.m_typegeomele == 2)//Ê×Í¼ÔªÊÇÔ²»¡
-		{
-			if (m_bilayer)//ÊÇË«²ã£¬ÄÇÃ´¾Í¸ÃÊÇÍùÄÚÇĞ£¬ÇóÊ×£¬Î²½ÚµãµÄĞ±ÂÊ£¬ÓëÆÕÍ¨¶à±ßĞÎÒ»ÑùÇó·¨£¬ËùÒÔÖ»ÇóĞ±ÂÊ£¬ºÍºóÃæÒ»Æğ´¦Àí
-			{
-				slope_1 = CalculateSlope(Phead);
-				slope_2 = CalculateSlope(End_node);
-			}
-			else//µ¥²ã£¬ÇĞ¸îÒıµ¶ÏßÍùÍâÇĞ£¬Õâ¸öÊ±ºò£¬Ó¦¸ÃÊÇÇóÔ²»¡µÄÏàÇĞÏß
-			{
-				//ÇóÔ²»¡µÄÇĞÏß
-			
 
-			}
-		}
-	}
-	//newNode->x0 = x0;
-	//newNode->y0 = y0;
-	//newNode->x1 = x1;
-	//newNode->y1 = y1;
-	//newNode->if_CutGuideLine = true;//×÷ÎªºóĞøµÄÊÇ·ñÇĞ¸îÒıµ¶ÏßÅĞ¶ÏµÄ±ê×¼
-	//newNode->nextGeomcloseNode = Phead;//ÇĞ¸îÒıµ¶ÏßºóÃæ¾ÍÊÇ·â±Õ»·µÄµÚÒ»¸öÍ¼Ôª½Úµã
-	//newNode->prevGeomcloseNode = NULL;//Ç°ÃæÃ»ÓĞÖ¸ÏòÁË£¬ÕâÀïÆäÊµ²»ÒªÒ²Ó¦¸Ã¿ÉÒÔµÄ
-	return newNode;
-}
 //****************************************************************************************//
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -3371,32 +3339,47 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓĞ×Ó·â±Õ»·µ
 	 GeomEleNode*cut_in_Node = (GeomEleNode*)malloc(sizeof(GeomEleNode));//ÇĞ¸îÒıÈëÏß
 	 GeomEleNode*cut_out_Node = (GeomEleNode*)malloc(sizeof(GeomEleNode));//ÇĞ¸îÒı³öÏß
 	GeomCloseHEAD*ptemp;//±¸ÓÃ·â±Õ»·½Úµã
-	GeomEleNode*Fnode,*Enode;
-	Line_para m_startline, m_endline;//·â±Õ»·Ê×Í¼Ôª½ÚµãºÍÎ²Í¼Ôª½ÚµãµÄ»ù±¾Êı¾İ
+	GeomEleNode*Fnode = NULL;
+	GeomEleNode*Enode = NULL;
+	//Line_para m_startline, m_endline;//·â±Õ»·Ê×Í¼Ôª½ÚµãºÍÎ²Í¼Ôª½ÚµãµÄ»ù±¾Êı¾İ
 	Line_para m_cutline;//ÇĞ¸îÒıµ¶ÏßµÄºËĞÄ²ÎÊı
 	double x0_min, y0_min, x0_max, y0_max;
 	double x1_min, y1_min, x1_max, y1_max;
-	bool m_Singlelayer;
+	int m_TypeGemoEle;//ÒòÎªÇĞ¸îÒıµ¶ÏßµÄÉú³ÉÓë·â±Õ»·µÄ×é³É»ù±¾Í¼ÔªÓĞ¹Ø£¬ÆäÖĞÖ±ÏßÀàĞÍÎª1£¬Ô²µÄÀàĞÍÎª2£¬Ô²»¡ÀàĞÍÎª3.
 	int m_TypeCGLine = 1;//ÎªÁËÓëÇĞ¸îÒıµ¶Ïßµ÷ÕûËã·¨ÖĞÉú³ÉÇĞ¸îÒıµ¼Ïß·½Ê½½øĞĞÇø·Ö£¬´ÓÕâÀï½øÈëµÄm_TypeCGLineÎª1£¬´Óµ÷ÕûÄÇ±ß½øÈëµÄm_TypeCGLineÎª2.
-	m_Singlelayer = Phead->m_Singlelayer;
-	//Ö»²âÊÔÖ±ÏßÀàĞÍµÄÍ¼Ôª,²¢²»¿¼ÂÇÊÇ·ñÓĞ½»Éæ£¬²»¿¼ÂÇÔ²
-	Fnode = Phead->FirstGeomele;
-	Enode = Fnode->nextGeomeleNode;
-	while (Enode->nextGeomeleNode)//ÕÒµ½×îºóÒ»¸ö½Úµã
-		Enode = Enode->nextGeomeleNode;
-	//ÒÔÏÂÓÃµÄÊÇ½ÇÆ½·ÖÏß·¨
-	//Ê×Í¼Ôª½Úµã
-	m_startline.x0 = Fnode->m_GeomStandData.GeoEle_start_x0;
-	m_startline.y0 = Fnode->m_GeomStandData.GeoEle_start_y0;
-	m_startline.x1 = Fnode->m_GeomStandData.GeoEle_start_x1;
-	m_startline.y1 = Fnode->m_GeomStandData.GeoEle_start_y1;
-	//Î²Í¼Ôª½Úµã£¬Òª×¢ÒâÊ×Î²¶Ôµ÷
-	m_endline.x0 = Enode->m_GeomStandData.GeoEle_start_x1;
-	m_endline.y0 = Enode->m_GeomStandData.GeoEle_start_y1;
-	m_endline.x1 = Enode->m_GeomStandData.GeoEle_start_x0;
-	m_endline.y1 = Enode->m_GeomStandData.GeoEle_start_y0;
-	//µ÷ÓÃÇĞ¸îÒıµ¶Ïßº¯Êı
-	m_cutline = m_CutLeadLine.Get_CutLeadLine(m_startline, m_endline, m_Singlelayer, m_TypeCGLine);
+	//Ö»²âÊÔÖ±ÏßÀàĞÍµÄÍ¼Ôª,Ã»ÓĞ¿¼ÂÇÔ²¡¢Ô²»¡¡£Ò²Ã»ÓĞ¿¼ÂÇÊÇ·ñÇĞ¸îÒıµ¼ÏßÓĞ½»Éæ¡£
+	//»ñÈ¡»ù±¾Í¼ÔªÀàĞÍ£¬ÎªºóÃæÇĞ¸îÒıµ¶ÏßÉú²úÌá¹©Ìõ¼ş¡£
+	m_TypeGemoEle = Phead->FirstGeomele->m_GeomStandData.m_typegeomele;//»ù±¾Í¼ÔªÀàĞÍÊÇÒ»ÖÖ»ù±¾ÊôĞÔ¡£
+	//¸ù¾İÍ¼ÔªÀàĞÍµ÷ÓÃ²»Í¬µÄÇĞ¸îÒıµ¼ÏßÉú²ú·½Ê½
+	//ÆäÖĞÖ±ÏßĞÍµÄÒÑ¾­½â¾öÁË
+	//Ô²ĞÍµÄ¿ÉÒÔÓÃÁ½µãÁ¬Ïß·¨Éú²ú¡£
+	//Ô²»¡ĞÍµÄ¿ÉÒÔÏÒÀ´´úÌæÔ²»¡È»ºóµ÷ÓÃÖ±ÏßµÄÒıµ¼ÏßÉú²ú·½Ê½¡£
+	switch (m_TypeGemoEle)
+	{
+	case 1:
+		//Ö±ÏßĞÍµÄ»ù±¾Í¼ÔªÇĞ¸îÒıµ¼Ïß´´Ôì¡£
+		Fnode = Phead->FirstGeomele;
+		Enode = Fnode->nextGeomeleNode;
+		while (Enode->nextGeomeleNode)//ÕÒµ½×îºóÒ»¸ö½Úµã
+			Enode = Enode->nextGeomeleNode;
+		m_cutline = CreatCutGuideLINE_Polygon(Phead, m_TypeCGLine);
+		break;
+	case 2:
+		
+		break;
+	case 3:
+		//Ô²ÀàĞÍµÄ»ù±¾Í¼ÔªÇĞ¸îÒıµ¼Ïß´´Ôì¡£
+		Fnode = Phead->FirstGeomele;
+		Enode = Phead->FirstGeomele;
+		m_cutline = CreatCutGuideLine_Circle(Phead, m_TypeCGLine);
+		break;
+
+	default:
+		break;
+	}
+	
+	
+	//ÒÔÉÏÊÇÉú³ÉÁËÇĞ¸îÒıµ¼Ïß£¬ÒÔÏÂÊÇ½«ÇĞ¸îÒıµ¼Ïß¼ÓÈëµ½ÏÖÓĞµÄ·â±Õ»·ÖĞ¡£
 	//½«ÇĞ¸îÒıµ¶ÏßÒ²Ò»²¢±£´æÎªÍ¬Ò»µÄÍ¼Ôª¸ñÊ½
 	cut_in_Node->m_GeomStandData.GeoEle_start_x0 = m_cutline.x0;
 	cut_in_Node->m_GeomStandData.GeoEle_start_y0 = m_cutline.y0;
@@ -3424,6 +3407,76 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓĞ×Ó·â±Õ»·µ
 	cut_out_Node->nextGeomeleNode = NULL;
 	//Èç´Ë·â±Õ»·¾Í¼ÓÉÏÁËÇĞ¸îÒıµ¶Ïß
 }
+ //ºËĞÄ´úÂë//
+ //ÓÉÖ±Ïß¹¹³ÉµÄ·â±Õ»·£¬ÆäÉú³ÉÇĞ¸îÒıµ¼ÏßµÄ·½·¨
+ Line_para GeomForCut::CreatCutGuideLINE_Polygon(GeomCloseHEAD*Phead, int m_TypeCGLine)
+ {
+	 GeomCloseHEAD*ptemp;//±¸ÓÃ·â±Õ»·½Úµã
+	 GeomEleNode*Fnode = NULL;
+	 GeomEleNode*Enode = NULL;
+	 Line_para m_startline, m_endline;//·â±Õ»·Ê×Í¼Ôª½ÚµãºÍÎ²Í¼Ôª½ÚµãµÄ»ù±¾Êı¾İ
+	 Line_para m_cutline;//ÇĞ¸îÒıµ¶ÏßµÄºËĞÄ²ÎÊı
+	 bool m_Singlelayer;
+	 m_Singlelayer = Phead->m_Singlelayer;
+	 Fnode = Phead->FirstGeomele;
+	 Enode = Fnode->nextGeomeleNode;
+	 while (Enode->nextGeomeleNode)//ÕÒµ½×îºóÒ»¸ö½Úµã
+		 Enode = Enode->nextGeomeleNode;
+	 //ÒÔÏÂÓÃµÄÊÇ½ÇÆ½·ÖÏß·¨
+	 //Ê×Í¼Ôª½Úµã
+	 m_startline.x0 = Fnode->m_GeomStandData.GeoEle_start_x0;
+	 m_startline.y0 = Fnode->m_GeomStandData.GeoEle_start_y0;
+	 m_startline.x1 = Fnode->m_GeomStandData.GeoEle_start_x1;
+	 m_startline.y1 = Fnode->m_GeomStandData.GeoEle_start_y1;
+	 //Î²Í¼Ôª½Úµã£¬Òª×¢ÒâÊ×Î²¶Ôµ÷
+	 m_endline.x0 = Enode->m_GeomStandData.GeoEle_start_x1;
+	 m_endline.y0 = Enode->m_GeomStandData.GeoEle_start_y1;
+	 m_endline.x1 = Enode->m_GeomStandData.GeoEle_start_x0;
+	 m_endline.y1 = Enode->m_GeomStandData.GeoEle_start_y0;
+	 //µ÷ÓÃÇĞ¸îÒıµ¶Ïßº¯Êı
+	 m_cutline = m_CutLeadLine.Get_CutLeadLine(m_startline, m_endline, m_Singlelayer, m_TypeCGLine);
+	 return m_cutline;
+ }
+ //ºËĞÄ´úÂë
+ //ÓÉÔ²ĞÍ¹¹³ÉµÄ·â±Õ»·£¬ÆäÉú³ÉÇĞ¸îÒıµ¼ÏßµÄ·½·¨
+ Line_para GeomForCut::CreatCutGuideLine_Circle(GeomCloseHEAD*Phead, int m_TypeCGLine)
+ {
+	 GeomCloseHEAD*ptemp;//±¸ÓÃ·â±Õ»·½Úµã
+	 Line_para m_cutline;//ÇĞ¸îÒıµ¶ÏßµÄºËĞÄ²ÎÊı
+	 Point Last_GClose;//ÉÏÒ»¸ö·â±Õ»·µÄÇĞ¸î¿ØÖÆµã
+	 Point Current_GClose;//µ±Ç°·â±Õ»·µÄÇĞ¸î¿ØÖÆµã
+	 Point Circle_Center;//Ô²ĞÄ×ø±ê
+	 bool m_Singlelayer;
+	 m_Singlelayer = Phead->m_Singlelayer;
+	 //Ô²Í¼ÔªÖ»ÓĞÒ»¸ö·â±Õ»·£¬ËùÒÔÖ»ÓĞÒ»¸ö»ù±¾Í¼Ôª£¬Í·½áµãÓëÎ²½Úµã¶¼ÊÇÍ¬Ò»¸ö
+	
+	 //»ñÈ¡Ô²ĞÄ×ø±ê
+	 Circle_Center.x = Phead->FirstGeomele->m_GeomStandData.m_circle.m_Circent_x;
+	 Circle_Center.y = Phead->FirstGeomele->m_GeomStandData.m_circle.m_Circent_y;
+	 //ÒÔÏÂÓÃµÄÊÇÁ½µãÁ¬Ïß·¨£¬×îÖÕÁ½µãÁ¬Ïß·¨ÊÇÓ¦¸Ã²»¿ÉÈ¡µÄ¡£
+	//ÒªÅĞ¶ÏPheadÊÇ²»ÊÇµÚÒ»¸öÍ¼Ôª£¬
+	 if (!(Phead->prevGeomcloseNode))
+	 {
+		// Èç¹ûµ±Ç°µÄÔ²ÊÇµÚÒ»¸öÍ¼ÔªÄÇÃ´ÉÏÒ»µãÊÇÔÚÔ­µã
+		 Last_GClose.x = 0;
+		 Last_GClose.y = 0;
+	 }
+	 else
+	 {
+		 // Èç¹ûµ±Ç°µÄÔ²²»ÊÇµÚÒ»¸öÍ¼Ôª£¬ÄÇÃ´¾ÍÓĞÉÏÒ»¸ö·â±Õ»·¡£
+		 Last_GClose.x = Phead->prevGeomcloseNode->FirstGeomele->m_GeomStandData.GeoEle_start_x0;
+		 Last_GClose.y = Phead->prevGeomcloseNode->FirstGeomele->m_GeomStandData.GeoEle_start_y0;
+	 }
+	 //ÒÔÉÏÕÒµ½ÁËÁ½µãÁ¬Ïß·¨ÖĞµÄÒ»¸öµã¡£
+	 //Òª°Ñµ±Ç°·â±Õ»·µÄÇĞ¸î¿ØÖÆµã»ñÈ¡
+	 Current_GClose.x = Phead->FirstGeomele->m_GeomStandData.GeoEle_start_x0;
+	 Current_GClose.y = Phead->FirstGeomele->m_GeomStandData.GeoEle_start_y0;
+	 //ÒÔÏÂ½øĞĞÇĞ¸îÒıµ¼ÏßÄ¸ÏßµÄÉú³É
+	 //µ÷ÓÃÇĞ¸îÒıµ¶Ïßº¯Êı
+	 m_cutline=m_CutLeadLine.Get_CutLeadLine(Last_GClose, Current_GClose,Circle_Center, m_Singlelayer, m_TypeCGLine);
+	 return m_cutline;
+ }
+
  ////////////////////////////////////ÇĞ¸îÒıµ¼Ïß¸ÉÉæÅĞ¶Ï//////////////////////////////////////////
  //ºËĞÄ´úÂë£¬ºËĞÄ´úÂë£¬ºËĞÄ´úÂë
  //ÇĞ¸îÒıµ¶Ïß¸ÉÉæÅĞ¶Ï´¦ÀíËã·¨
@@ -3565,4 +3618,414 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead)//ÊäÈëÒ»¸öº¬ÓĞ×Ó·â±Õ»·µ
 	  }
 	  //Èç¹û»¹ÄÜµ½ÕâÁË£¬ËµÃ÷ÉÏÊöµÄ¸ÉÉæÅĞ¶Ï¶¼²»³É¹¦£¬Ò²¾ÍÊÇÃ»ÓĞ¸ÉÉæ¡£
 	  return false;
+  }
+  /////////////////////////////////////////////////////////////////////////////////////////////
+  ///////////ÉÏÃæµÄÇĞ¸îÒıµ¼ÏßÉú³É·½Ê½ÊÇ½ÇÆ½·ÖÏßÒÔ¼°Á½µãÁ¬Ïß·¨//////////////////////////////////////
+  ///////////ÏÂÃæµÄÇĞ¸îÒıµ¼ÏßÉú³É·½Ê½ÊÇÔ²»¡·¨ÓëÇĞÏß·¨//////////////////////////////////////
+  //ÊäÈëÒ»¸ö·â±Õ»·Í·½áµã£¬Ö®ºó¶Ô´Ë·â±Õ»·Í·½áµã½øĞĞÉèÖÃÇĞ¸îÒıµ¼Ïß
+  void  GeomForCut::CreatCutAuxiliaryPath(GeomCloseHEAD*pCHtemp)
+  {
+	  //ÕâÖÖÌí¼ÓÇĞ¸îÒıµ¼ÏßµÄ·½·¨£¬½«Ê¹µÃÔ­À´µÄÖ±Ïß»òÕßÔ²»¡±»´ò¶Ï£¬Ö®ºó·Ö±ğ¼ÓÉÏÇĞ¸îÒıµ¼Ïß£¬Èç´Ë»á¶à³öÈıÌõÍ¼Ôª¡£
+	  //ËùÒÔÒªÏÈÉèÖÃÈı¿éÄÚ´æ¡£
+	 
+	  Line_para m_cutline;//ÇĞ¸îÒıµ¶ÏßµÄºËĞÄ²ÎÊı
+	 
+	  int m_TypeGemoEle;//ÒòÎªÇĞ¸îÒıµ¶ÏßµÄÉú³ÉÓë·â±Õ»·µÄ×é³É»ù±¾Í¼ÔªÓĞ¹Ø£¬ÆäÖĞÖ±ÏßÀàĞÍÎª1£¬Ô²µÄÀàĞÍÎª2£¬Ô²»¡ÀàĞÍÎª3.
+	  int m_TypeCGLine = 1;//ÎªÁËÓëÇĞ¸îÒıµ¶Ïßµ÷ÕûËã·¨ÖĞÉú³ÉÇĞ¸îÒıµ¼Ïß·½Ê½½øĞĞÇø·Ö£¬´ÓÕâÀï½øÈëµÄm_TypeCGLineÎª1£¬´Óµ÷ÕûÄÇ±ß½øÈëµÄm_TypeCGLineÎª2.
+	  //Ö»²âÊÔÖ±ÏßÀàĞÍµÄÍ¼Ôª,Ã»ÓĞ¿¼ÂÇÔ²¡¢Ô²»¡¡£Ò²Ã»ÓĞ¿¼ÂÇÊÇ·ñÇĞ¸îÒıµ¼ÏßÓĞ½»Éæ¡£
+	  //»ñÈ¡»ù±¾Í¼ÔªÀàĞÍ£¬ÎªºóÃæÇĞ¸îÒıµ¶ÏßÉú²úÌá¹©Ìõ¼ş¡£
+	  m_TypeGemoEle = pCHtemp->FirstGeomele->m_GeomStandData.m_typegeomele;//»ù±¾Í¼ÔªÀàĞÍÊÇÒ»ÖÖ»ù±¾ÊôĞÔ¡£
+	  //¸ù¾İÍ¼ÔªÀàĞÍµ÷ÓÃ²»Í¬µÄÇĞ¸îÒıµ¼ÏßÉú²ú·½Ê½
+	  //ÆäÖĞÖ±ÏßĞÍµÄÒÑ¾­½â¾öÁË
+	  //Ô²ĞÍµÄ¿ÉÒÔÓÃÁ½µãÁ¬Ïß·¨Éú²ú¡£
+	  //Ô²»¡ĞÍµÄ¿ÉÒÔÏÒÀ´´úÌæÔ²»¡È»ºóµ÷ÓÃÖ±ÏßµÄÒıµ¼ÏßÉú²ú·½Ê½¡£
+	  switch (m_TypeGemoEle)
+	  {
+	  case 1:
+		  //Ö±ÏßĞÍµÄ»ù±¾Í¼ÔªÇĞ¸îÒıµ¼Ïß´´Ôì¡£
+		  CreatCutAuxiliaryPath_Polygon(pCHtemp, m_TypeCGLine);
+		  break;
+	  case 2:
+
+		  break;
+	  case 3:
+		  //Ô²ÀàĞÍµÄ»ù±¾Í¼ÔªÇĞ¸îÒıµ¼Ïß´´Ôì¡£
+		 
+		  break;
+
+	  default:
+		  break;
+	  }
+  }
+  //¶à±ßĞÎÓëÔ²»¡Ö®Àà½áºÏµÄÔ²»¡ÇĞ¸îÒıµ¼ÏßÉú³É·½Ê½¡£½«ÇĞ¸îÒıµ¼ÏßÖ±½ÓÔÚ´ËÉú³É£¬²»ÔÙÌá¸ßÍâ²¿½Ó¿Ú¡£
+  void GeomForCut::CreatCutAuxiliaryPath_Polygon(GeomCloseHEAD*pCHtemp, int m_TypeCGLine)
+  {
+	  Point P_0, P_1;//±£ÁôÖ±ÏßĞÍ·â±Õ»·µÄ¶Ëµã×ø±ê
+	  Point P_mid;//±£ÁôÖ±ÏßĞÍ·â±Õ»·µÄÖĞµã
+	  Point	P_Arccent_out, P_Arccent_in;//outÊÇÖ¸ÔÚÇøÓòÍâ²¿µÄÔ²»¡Ô²ĞÄ£¬inÔòÊÇÖ¸ÔÚÇøÓòÄÚ²¿µÄÔ²»¡Ô²ĞÄ¡£
+	  Point P_Arccent_use;//Ê¹ÓÃÁËµÄÔ²»¡ÖØµã
+	  GeomEleNode*Fnode = NULL;
+	  GeomEleNode*Enode = NULL;
+	  Line_para m_startline, m_endline;//·â±Õ»·Ê×Í¼Ôª½ÚµãºÍÎ²Í¼Ôª½ÚµãµÄ»ù±¾Êı¾İ
+	  Line_para m_line;//ÇĞ¸îÒıµ¼ÏßµÄÔ²ĞÄËùÔÚÄ¸Ïß
+	  Line_para m_arc_auxi_SEP;//±£´æÔ²»¡ÇĞ¸îÒıµ¼ÏßµÄÆğÖ¹¶Ëµã¡£
+	  double m_startline_k;//Ê×Í¼ÔªµÄĞ±ÂÊ
+	  double m_auxiliary_k;//Ô²»¡Ô²ĞÄËùÔÚÖ±ÏßµÄĞ±ÂÊ£¬ÓëÉÏÒ»¸öĞ±ÂÊÏà³ËÎª-1£¬Á½Ö±Ïß´¹Ö±
+	  double m_x_min, m_x_max, m_y_min, m_y_max;//Í¼ĞÎµÄ°üÂç¾ØĞÎµÄ¿ØÖÆ½Çµã
+	  Arc_Point P_Arccent;
+	  bool m_Singlelayer;
+	  //Ëã·¨Ö÷Ìå
+	  m_Singlelayer = pCHtemp->m_Singlelayer;
+	  Fnode = pCHtemp->FirstGeomele;
+	  P_0.x = Fnode->m_GeomStandData.GeoEle_start_x0;
+	  P_0.y = Fnode->m_GeomStandData.GeoEle_start_y0;
+	  P_1.x = Fnode->m_GeomStandData.GeoEle_start_x1;
+	  P_1.y = Fnode->m_GeomStandData.GeoEle_start_y1;
+	  //¼ÆËãÖĞµã×ø±ê
+	  P_mid.x = (P_0.x + P_1.x) / 2;
+	  P_mid.y = (P_0.y + P_1.y) / 2;
+	  //ÒÔ¸ÃÖĞµã×ø±êÎªÔ²»¡ÓëÖ±ÏßµÄÇĞµã£¬²¢ÇÒÒÔ¸Ãµã×ø±ê¶ÔÖ±Ïß¶Î½øĞĞ»®·Ö£¬·Ö³ÉÁ½°ë
+	  Enode = Fnode->nextGeomeleNode;
+	  while (Enode->nextGeomeleNode)//ÕÒµ½×îºóÒ»¸ö½Úµã
+		  Enode = Enode->nextGeomeleNode;
+	  //ÒÔ·â±Õ»·µÄÍ·½áµã£¬Ö±ÏßµÄÖĞµã£¬ÒÔ¼°ÇĞ¸îÒıµ¼ÏßÏßĞÔ½øÈë´´ÔìÇĞ¸îÒıµ¼Ïß¡£
+	  //Ö±ÏßĞÍÊ×Í¼Ôª½ÚµãµÄÁ½¸ö¶Ëµã
+	  m_startline.x0 = Fnode->m_GeomStandData.GeoEle_start_x0;
+	  m_startline.y0 = Fnode->m_GeomStandData.GeoEle_start_y0;
+	  m_startline.x1 = Fnode->m_GeomStandData.GeoEle_start_x1;
+	  m_startline.y1 = Fnode->m_GeomStandData.GeoEle_start_y1;
+	  //ÏÈÇóÖ±ÏßĞÍÊ×Í¼Ôª½ÚµãµÄĞ±ÂÊ
+	  m_startline_k = m_CutLeadLine.Get_k_twoPoint(m_startline);
+	  //ÔÙÇóÔ²»¡Ô²ĞÄËùÔÚÖ±ÏßµÄĞ±ÂÊ,Á½´¹ÏßÖ®¼äĞ±ÂÊÏà³ËÎª-1
+	  //×¢ÒâÕâÀï¿ÉÄÜ»á³ö´í£¬ÒªÅĞ¶Ïm_startline_kÊÇ·ñÎª0
+	  m_auxiliary_k = -1 / m_startline_k;
+	  //ÏÖÔÚÓĞÁËĞ±ÂÊ£¬Ò²ÓĞÁËµã£¬¿ÉÒÔÉèÖÃµãĞ±Ê½·½³Ìy=kx+b
+	  //ÇóÔ²»¡ÇĞ¸îÒıµ¼ÏßÔ²ĞÄËùÔÚÖ±ÏßµÄÄ¸Ïß
+	  m_line = m_CutLeadLine.Get_CutLine_Point(P_mid, m_auxiliary_k);
+	  //Éú³ÉÇĞ¸îÔ²»¡Òıµ¼Ïß
+	  if (1 == m_TypeCGLine)//³õ´ÎÉú³ÉÇĞ¸îÒıµ¼Ïß
+	  {
+		  P_Arccent = GetArccentPoint(pCHtemp, m_line, P_mid);
+		  //»¹ÒªÅĞ¶ÏÊÇ·ñÒÑ¾­Ñ¡Ôñµ½ÁËºÏÊÊµÄÔ²»¡Ô²ĞÄ£¬ÒòÎªÓĞ¿ÉÄÜÇĞ¸îÄ¸Ïß²»ÊÊºÏ£¬µ¼ÖÂÃ»ÓĞÑ¡Ôñµ½
+		  if (P_Arccent.If_select)
+		  {
+			  //ÏÈ½«Ô²»¡µÄÄÚÍâÖĞĞÄµ¼³öÀ´
+			  P_Arccent_out = P_Arccent.P_arc_out;
+			  P_Arccent_in = P_Arccent.P_arc_in;
+			 
+			  //¸ù¾İÆæÅ¼²ãÀ´Ñ¡Ôñ¡£
+			  if (m_Singlelayer)
+			  {
+				  //Ææ²ã·â±Õ»·£¬ÄÇÃ´½«Ñ¡ÔñÍâÃæµÄÔ²ĞÄ
+				  //ÊäÈëÔ²»¡µÄÔ²ĞÄ£¬ÒÔ¼°·â±Õ»·Ö±Ïß¶ÎµÄĞ±ÂÊ¡£
+				  //Êä³öÔ²»¡µÄÁ½¸ö¶Ëµã£¬ÆäÖĞÇ°ÃæÒ»¸ö¶ËµãµÄxÖµ±È½ÏĞ¡¡£
+				  m_arc_auxi_SEP = m_CutLeadLine.Get_CutLine_Point(P_Arccent_out, m_startline_k);
+				  P_Arccent_use = P_Arccent_out;
+			  }
+			  else
+			  {
+				  //Å¼²ã·â±Õ»·£¬Ñ¡ÔñÄÚ²ãµÄÔ²ĞÄ
+				  //ÊäÈëÔ²»¡µÄÔ²ĞÄ£¬ÒÔ¼°·â±Õ»·Ö±Ïß¶ÎµÄĞ±ÂÊ¡£
+				  //Êä³öÔ²»¡µÄÁ½¸ö¶Ëµã£¬ÆäÖĞÇ°ÃæÒ»¸ö¶ËµãµÄxÖµ±È½ÏĞ¡¡£
+				  m_arc_auxi_SEP = m_CutLeadLine.Get_CutLine_Point(P_Arccent_in, m_startline_k);
+				  P_Arccent_use = P_Arccent_in;
+			  }
+		  }
+		  //Èç¹ûÃ»ÓĞÑ¡Ôñµ½ÔòÒªÖØĞÂÑ¡Ôñ£¬½«Òª½«µÚ¶ş¸öele±ä³ÉµÚÒ»¸öele.
+		  else
+		  {
+			  ;
+		  }
+		  //ÒÔÉÏÒÑ¾­»ñµÃÁËÔ²»¡Òıµ¼ÏßµÄÁ½¸ö¿ØÖÆµã£¬µ«»¹Ã»ÓĞ×ª»»³ÉÔ²»¡£¬Ò²Ã»ÓĞ½«·â±Õ»·µÄµÄ½á¹¹ÖØÕû£¬ÒÔ¼°½«Ô²»¡Ìí¼ÓÉÏÈ¥
+		 //m_arc_auxi_SEPÔ²»¡ÇĞÈëÓëÇĞ³ö¶Ëµã £¬ÓëÖ±ÏßµÄÇĞµã£¬Ô²»¡Ô²ĞÄ£¬·â±Õ»·
+		  //½«ÇĞ¸îÒıµ¼ÏßÌí¼Óµ½·â±Õ»·ÉÏÈ¥£¬²¢ÇÒµ÷Õû·â±Õ»·µÄ»ùÔª¡£
+		  SetCutAuxiliaryPath(m_arc_auxi_SEP, P_mid, P_Arccent_use, pCHtemp);
+	 
+	  }
+	  else//´ËÊ±m_TypeCGLine=2;Òª°´ÕÕµ÷ÕûÇĞ¸îÒıµ¼ÏßµÄ·½Ê½Éú³É
+	  {
+		  ;
+	  }
+	 
+  }
+  //ÊäÈë·â±Õ»·£¬ºÍÇĞ¸îÒıµ¼ÏßÄ¸Ïß£¬ÇóÔ²»¡Ô²ĞÄ×ø±ê¡£
+  Arc_Point GeomForCut::GetArccentPoint(GeomCloseHEAD*pCHtemp, Line_para m_line, Point P_mid)
+  {
+	  Point P_x_min, P_x_max, P_y_min, P_y_max;//·â±Õ»·µÄ°üÂç¾ØĞÎ¿ØÖÆ½Çµã×ø±ê£¬ÆäÖĞÊÇÓÉ¾ØĞÎ°üÂç×ø±êÒÔ¼°¶ÔÓÚµÄ¸¨Öú×ø±ê¹¹³É
+	  Arc_Point P_arccent;
+	  //»ñµÃ·â±Õ»·µÄ¾ØĞÎ°üÂç¿ØÖÆ½Çµã
+	  P_x_min.x = pCHtemp->m_GemoClosedLimtPoint.x_min.x;
+	  P_x_min.y = pCHtemp->m_GemoClosedLimtPoint.x_min.y;
+	  P_x_max.x = pCHtemp->m_GemoClosedLimtPoint.x_max.x;
+	  P_x_max.y = pCHtemp->m_GemoClosedLimtPoint.x_max.y;
+	  P_y_min.x = pCHtemp->m_GemoClosedLimtPoint.y_min.x;
+	  P_y_min.y = pCHtemp->m_GemoClosedLimtPoint.y_min.y;
+	  P_y_max.x = pCHtemp->m_GemoClosedLimtPoint.y_max.x;
+	  P_y_max.y = pCHtemp->m_GemoClosedLimtPoint.y_max.y;
+	  //ÓÉÖĞµãËùÔÚµÄÇøÓòÀ´ÅĞ¶Ï¸Ã´¦Ó¦¸ÃÔõÃ´Ñ¡ÔñÔ²»¡µÄÔ²ĞÄ×ø±ê
+	  //Ô­ÔòÊÇÈç¹ûÖĞµãÎ»ÓÚ¾ØĞÎ°üÂçµÄx_min,Óëx_maxÁ¬ÏßµÄ·¶Î§Ö®ÉÏ£¬y_min,Óëy_maxÁ¬ÏßµÄ·¶Î§Ö®×ó£¨Ò²¾ÍÊÇµÚ¶şÏóÏŞ£©£¬ÄÇÃ´y´óÇÒxĞ¡µÄÄÇ¸öµãÊÇÍâ²¿ÇøÓò£»
+	  //Èç¹ûÄ³¸öµã²»ÄÜÍ¬Ê±¾ß±¸y´óxĞ¡£¬»òÕßyĞ¡x´ó£¬ÄÇÃ´Õâ¸öµã²»ÄÜÈ·¶¨ÊÇ²»ÊÇÔÚÍâÃæ£¬ÒªÉáÆú£¬µ«ÊÇÏÂÒ»¸öÖ±Ïß±ã¿ÉÒÔÈ·¶¨ÁË¡£
+	  //°´ÕÕ·â±Õ»·ÆæÅ¼²ãĞÅÏ¢Éú³ÉÇĞ¸îÒıµ¼Ïß
+	  //Òª½«ÈÎºÎÒ»¸ö·â±Õ»·°´ÕÕËÄ¸ö¿ØÖÆ½Çµã½«Æä»®·ÖÎªËÄ²¿·Ö
+	  //ÒÔ×óÎªA,ÉÏÎªB£¬ÓÒÎªC£¬ÏÂÎªD;
+	  //ÖĞµãÔÚÓÚABÖ®¼ä
+	  if ((P_x_min.x < P_mid.x) && (P_x_min.y < P_mid.y) && (P_mid.x < P_y_max.x) && (P_mid.y < P_y_max.y))
+	  {
+		  //Õâ²¿·ÖÓ¦¸ÃÊÇy´óÍ¬Ê±xĞ¡,ÕâÑùµÄµãÎªÍâ²¿ÇøÓòµÄµã
+		  //m_lineÀïÃæµÄÊı¾İÊÇÒÑ¾­¾­¹ı´¦ÀíµÄ£¬x0ÊÇ±»¶¨ÒåÎª±Èx1Ğ¡µÄ×ø±ê
+		  //m_line.x0 <= m_line.x1ÊÇÄ¬ÈÏµÄ£¬ÉÙ¸öÅĞ¶ÏÌõ¼şÒ²ÄÜ½ÚÊ¡ÔËËã
+		  //Ö»ÓĞÕâ¸ö×ø±êµÄyÊÇ´óµÄ²ÅÄÜÊ±ºò
+		  if (m_line.y0 >= m_line.y1)
+		  {
+			  //ÄÜ½øÀ´£¬ËµÃ÷ÊÇ·ûºÏ¹æÔò
+			  P_arccent.P_arc_out.x = m_line.x0;
+			  P_arccent.P_arc_out.y = m_line.y0;
+			  P_arccent.P_arc_in.x = m_line.x1;
+			  P_arccent.P_arc_in.y = m_line.y1;
+			  P_arccent.If_select = true;
+		  }
+		  //Èç¹ûÊÇÁ½¸ö¶¼ÊÇĞ¡µÄ£¬ÄÇÃ´ËµÃ÷Õâ¸öÇĞ¸îÒıµ¶ÏßµÄÄ¸ÏßÔÚÕâÀï²»ºÏÊÊ
+		  else
+		  {
+			  P_arccent.If_select = false;
+		  }
+	  }
+		  //ÖĞµãÔÚÓÚBCÖ®¼ä
+	  else if ((P_y_max.x < P_mid.x) && (P_mid.y <P_y_max.y) && (P_mid.x < P_x_max.x) && (P_x_max.y< P_mid.y))
+	  {
+		  //ÕâÒ»²¿·ÖÔòÊÇxyÍ¬Ê±¶¼´óµÄÇé¿öÎªÍâ²¿ÇøÓò
+		  //m_lineÀïÃæµÄÊı¾İÊÇÒÑ¾­¾­¹ı´¦ÀíµÄ£¬x0ÊÇ±»¶¨ÒåÎª±Èx1Ğ¡µÄ×ø±ê
+		  //m_line.x0 <= m_line.x1ÊÇÄ¬ÈÏµÄ£¬ÉÙ¸öÅĞ¶ÏÌõ¼şÒ²ÄÜ½ÚÊ¡ÔËËã
+		  if (m_line.y0<=m_line.y1)
+		  {
+			  //ÄÜ½øÀ´£¬ËµÃ÷ÊÇ·ûºÏ¹æÔò
+			  P_arccent.P_arc_out.x = m_line.x1;
+			  P_arccent.P_arc_out.y = m_line.y1;
+			  P_arccent.P_arc_in.x = m_line.x0;
+			  P_arccent.P_arc_in.y = m_line.y0;
+			  P_arccent.If_select = true;
+		  }
+		  else
+		  {
+			  P_arccent.If_select = false;
+		  }
+	  }
+	  //Èç¹ûÊÇ´¦ÓÚCD¶Î
+	  else if ((P_y_min.x < P_mid.x) && (P_y_min.y <P_mid.y) && (P_mid.x < P_x_max.x) && (P_mid.y<P_x_max.y))
+	  {
+		  //ÕâÒ»¶ÎÔòÊÇyĞ¡x´óÎªÍâ²¿
+		  //m_lineÀïÃæµÄÊı¾İÊÇÒÑ¾­¾­¹ı´¦ÀíµÄ£¬x0ÊÇ±»¶¨ÒåÎª±Èx1Ğ¡µÄ×ø±ê
+		  //m_line.x0 <= m_line.x1ÊÇÄ¬ÈÏµÄ£¬ÉÙ¸öÅĞ¶ÏÌõ¼şÒ²ÄÜ½ÚÊ¡ÔËËã
+		  if (m_line.y1<=m_line.y0)
+		  {
+			  //ÄÜ½øÀ´£¬ËµÃ÷ÊÇ·ûºÏ¹æÔò
+			  P_arccent.P_arc_out.x = m_line.x1;
+			  P_arccent.P_arc_out.y = m_line.y1;
+			  P_arccent.P_arc_in.x = m_line.x0;
+			  P_arccent.P_arc_in.y = m_line.y0;
+			  P_arccent.If_select = true;
+		  }
+		  else
+		  {
+			  P_arccent.If_select = false;
+		  }
+	  }
+	  //Èç¹ûÊÇ´¦ÓÚDA¶Î
+	  else if ((P_mid.x <P_y_min.x) && (P_y_min.y <P_mid.y) && (P_x_min.x< P_mid.x) && (P_mid.y<P_x_min.y))
+	  {
+		  //ÕâÒ»¶ÎÔòÊÇxyÍ¬Ê±ÎªĞ¡ÎªÍâ²¿
+		  //m_lineÀïÃæµÄÊı¾İÊÇÒÑ¾­¾­¹ı´¦ÀíµÄ£¬x0ÊÇ±»¶¨ÒåÎª±Èx1Ğ¡µÄ×ø±ê
+		  //m_line.x0 <= m_line.x1ÊÇÄ¬ÈÏµÄ£¬ÉÙ¸öÅĞ¶ÏÌõ¼şÒ²ÄÜ½ÚÊ¡ÔËËã
+		  if (m_line.y0 <= m_line.y1)
+		  {
+			  //ÄÜ½øÀ´£¬ËµÃ÷ÊÇ·ûºÏ¹æÔò
+			  P_arccent.P_arc_out.x = m_line.x0;
+			  P_arccent.P_arc_out.y = m_line.y0;
+			  P_arccent.P_arc_in.x = m_line.x1;
+			  P_arccent.P_arc_in.y = m_line.y1;
+			  P_arccent.If_select = true;
+		  }
+		  else
+		  {
+			  P_arccent.If_select = false;
+		  }
+	  }
+	  //ÒÔÉÏ½«ËÄÖÖÇé¿öµÄÔ²ĞÄÄÚÍâ×ø±êÇø·Ö³öÀ´ÁË
+	  return P_arccent;
+
+  }
+
+  //Õâ¸öº¯Êı½«ÇóµÃÔ²»¡ÇĞ¸îÒıµ¼ÏßµÄ²ÎÊı£¬²¢½«Ô²»¡ÇĞ¸îÒıµ¼ÏßÌí¼Óµ½·â±Õ»·ÉÏ¡£
+  //ÊäÈëÔ²»¡µÄÆğÖ¹µã£¬Ô²»¡µÄÔ²ĞÄ£¬Ô²»¡Óë·â±Õ»·µÄÇĞµã£¬·â±Õ»·¡£
+  void GeomForCut::SetCutAuxiliaryPath(Line_para m_arc_auxi_SEP, Point P_mid, Point P_arccent, GeomCloseHEAD*pCHtemp)
+  {
+	   AuxiliarPath m_auxiliaryPath;//ÓÃÀ´±£´æ¸¨ÖúÏßµÄ
+	  GARC m_arc_auxipath_in, m_arc_auxipath_out;//Ô²»¡ÇĞ¸îÒıÈëÏß£¬Ô²»¡ÇĞ¸îÒı³öÏß
+	  GCIRCLE m_circle;
+	  Point m_GeleStartP, m_GeleEndP;//¼ÇÂ¼·â±Õ»·Ô²»¡Òıµ¼ÏßËùÔÚµÄÖ±ÏßÆäÆğµãÓëÖÕµãµÄĞÅÏ¢
+	  Point m_Pstrat, m_Pend;//´æ´¢Ô²»¡ÇĞ¸îÒıµ¼ÏßµÄÆğÖ¹¶Ëµã
+	  double m_ArcAuxiStartAngle, m_ArcAuxiEndAngle;//Ô²»¡ÇĞ¸îÒıµ¼ÏßµÄÆğÖ¹½Ç¶È
+	  double m_P_midStartAngle, m_P_midEndAngle;//Ô²»¡ÓëÖ±ÏßÇĞµã´¦µÄÆğÖ¹½Ç¶È¡£Ò»°ãÀ´ËµÕâÁ½¸ö½Ç¶ÈÊÇÒ»ÑùµÄ¡£
+	 //Ô²»¡ÇĞ¸îÒıµ¼ÏßµÄ»ù±¾²ÎÊı
+	  m_arc_auxipath_in.Arccent_x = m_arc_auxipath_out.Arccent_x = P_arccent.x;
+	  m_arc_auxipath_in.Arccent_y = m_arc_auxipath_out.Arccent_y = P_arccent.y;
+	  m_arc_auxipath_in.m_Arc_r = m_arc_auxipath_out.m_Arc_r = m_CutLineLength;
+	  //µ«ÊÇ»¹²îÒ»¸öÇĞ¸îÆğÊ¼½ÇÓëÒ»¸öÇĞ¸îÖÕÖ¹½Ç£¬ÓàÏÂµÄ´úÂë¾ÍÊÇÔÚ¼ÆËãÕâÁ½¸ö½Ç
+	  //////////////////////////////////////////////////////////////////////////
+	  //Ô²»¡ÇĞ¸îÒıµ¼ÏßÖĞµÄÔ²²ÎÊı
+	  m_circle.m_Circent_x = P_arccent.x;
+	  m_circle.m_Circent_y = P_arccent.y;
+	  m_circle.m_Circle_r = m_CutLineLength;
+	  //¼Ù¶¨Ô²»¡ÇĞ¸îÒıµ¼ÏßÊÇÓÉx½ÏĞ¡µÄÔ²»¡¶Ëµã¿ªÊ¼ÇĞÆğ
+	  //m_arc_auxi_SEPÀïÃæµÄ²ÎÊıÊÇÒÑ¾­¾­¹ı´¦ÀíµÄ£¬x0±Èx1½ÏĞ¡¡£
+	  //ÔòÈ¡m_arc_auxi_SEPµÄÇ°ÃæÒ»¸öµãÎªÆğµã¡£
+	  m_Pstrat.x = m_arc_auxi_SEP.x0;
+	  m_Pstrat.y = m_arc_auxi_SEP.y0;
+	  m_Pend.x = m_arc_auxi_SEP.x1;
+	  m_Pend.y = m_arc_auxi_SEP.y1;
+	  //ÇóÔ²»¡ÇĞ¸îÒıÈëÏß¶ÔÓ¦µÄÇĞ¸îÆğÊ¼½Ç
+	  m_arc_auxipath_in.m_ArcAngle_start = m_geomele.ForCircleStartAngle(m_Pstrat.x, m_Pstrat.y, m_circle);
+	  //ÒÔÔ²»¡ÓëÖ±ÏßµÄÇĞµã×÷ÎªÔ²»¡ÇĞ¸îÒıµ¼ÏßµÄÖÕµã
+	  //ÇóÔ²»¡ÇĞ¸îÒıÈëÏß¶ÔÓ¦µÄÇĞ¸îÖÕÖ¹½Ç
+	  m_arc_auxipath_in.m_ArcAngle_end = m_geomele.ForCircleStartAngle(P_mid.x, P_mid.y, m_circle);
+	  //ÇóÔ²»¡ÇĞ¸îÒı³öÏß¶ÔÓ¦µÄÆğÊ¼½Ç
+	  //m_arc_auxipath_in.m_ArcAngle_endÍ¬Ê±Ò²ÊÇÔ²»¡ÇĞ¸îÒı³öÏßµÄÆğÊ¼½Ç
+	  m_arc_auxipath_out.m_ArcAngle_start = m_arc_auxipath_in.m_ArcAngle_end;
+	  //ÇóÔ²»¡ÇĞ¸îÒı³öÏß¶ÔÓ¦µÄÖÕÖ¹½Ç
+	  //ÒÔÔ²»¡Á½¸ö¶ËµãÖĞµÄÁíÒ»¸ö¶ËµãÀ´Çó
+	  m_arc_auxipath_out.m_ArcAngle_end = m_geomele.ForCircleStartAngle(m_Pend.x, m_Pend.y, m_circle);
+	  /////////////////////////////////////////////////////////////////////////////////////
+	  //ÒÔÏÂÇóÊµ¼ÊÔ²»¡ÇĞ¸îÒıµ¼ÏßÊÇ·ñ¿ÉÒÔÓëÔ¤ÏëÖĞµÄÇĞ¸îË³ĞòÒ»°ã
+	  //»ñÈ¡Ô²»¡ÇĞ¸îÒıµ¼ÏßÓëÖ®ÏàÇĞµÄÖ±Ïß£¬¼´·â±Õ»·µÄÊ×»ù±¾Í¼Ôª½Úµã
+	  m_GeleStartP.x = pCHtemp->FirstGeomele->m_GeomStandData.GeoEle_start_x0;
+	  m_GeleStartP.y = pCHtemp->FirstGeomele->m_GeomStandData.GeoEle_start_y0;
+	  m_GeleEndP.x = pCHtemp->FirstGeomele->m_GeomStandData.GeoEle_start_x1;
+	  m_GeleEndP.y = pCHtemp->FirstGeomele->m_GeomStandData.GeoEle_start_y1;
+	  //¸ù¾İ·â±Õ»·Ô­À´µÄÇĞ¸îË³Ğò£¬È·¶¨Ô²»¡µÄÇĞÈëÏßÓëÇĞ³öÏß
+	  //Ô­Ôò¾ÍÊÇÔ²»¡µÄ¶ËµãÁ¬ÏßÓëÏàÇĞÖ±ÏßÊÇÆ½ĞĞ¹ØÏµ£¬ËùÒÔÁ½¸öµãµÄÇ÷ÊÆÒ»ÖÂ
+	  //Èô·â±Õ»·µÄÊ×Í¼Ôª½ÚµãµÄÆğµãµÄx±ÈÖÕµãµÄxĞ¡ÔòÊÇÓëÔ¤ÏëÖĞµÄÔ²»¡ÇĞ¸îË³ĞòÒ»ÖÂ£¬Èç¹û²»ÊÇ£¬Ôò¸ÕºÃÏà·´£¬
+	  //µ«ÊÇ¶ÔÓ¦µÄÇĞ¸î½ÇÊÇ²»±äµÄ£¬Ö»ÊÇËµÆğÖ¹Î»ÖÃ±ä»¯
+	  //¸ÕºÃÓëÔ¤ÏëÖĞµÄÏë·¨Ïà·´
+	  if (m_GeleStartP.x >= m_GeleEndP.x)
+	  {
+		  //ÔòÔ²»¡ÇĞ¸îÒıÈëÏßµÄÆğÊ¼½ÇÊÇÉÏÊöÔ¤ÏëÖĞµÄÔ²»¡ÇĞ¸îÒı³öÏßµÄÖÕÖ¹½Ç
+		  m_arc_auxipath_in.m_ArcAngle_start = m_arc_auxipath_out.m_ArcAngle_end;
+		  //µ«Ô²»¡ÇĞ¸îÒıÈëÏßµÄÖÕÖ¹½ÇÊÇ²»±äµÄ£¬ÒòÎªÖÕÖ¹¶Ëµã²»±ä
+		  //µ«Ô²»¡ÇĞ¸îÒı³öÏßµÄÆğÊ¼½ÇÒ²ÊÇ²»±äµÄ£¬ÒòÎªÆğÊ¼¶Ëµã²»±ä
+		  //Ô²»¡ÇĞ¸îÒı³öÏßµÄÖÕÖ¹½ÇÔò±ä³ÉÁËÔ­À´ÇĞ¸îÒıÈëÏßµÄÆğÊ¼½Ç£¬ÓÃÔ­À´µÄ¼ÆËã·½Ê½À´Ëã¡£
+		  m_arc_auxipath_out.m_ArcAngle_end = m_geomele.ForCircleStartAngle(m_Pstrat.x, m_Pstrat.y, m_circle);
+	 //ÄÇÃ´Ô²»¡µÄÇĞÈëµãÒ²ÒªÒò´Ë±äÎªÔ­À´Ô²»¡µÄÇĞ³öµã¡¢ÇĞÈëµãÓëÇĞ³ıµã¶¼Òª±ä»¯
+		  m_Pstrat.x = m_arc_auxi_SEP.x1;
+		  m_Pstrat.y = m_arc_auxi_SEP.y1;
+		  m_Pend.x = m_arc_auxi_SEP.x0;
+		  m_Pend.y = m_arc_auxi_SEP.y0;
+	  }
+	  else//Èç¹û²»ÊÇÉÏÃæÄÇÖÖ£¬Çé¿ö£¬ËµÃ÷ÏÖÊµÇé¿öÓëÔ­À´µÄÇé¿öÊÇÒ»ÑùµÄ¡£²»ÓÃ¹Ü
+	  {
+		  ;
+	  }
+	  //½«Ô²»¡ÇĞ¸îÒıµ¼ÏßÌí¼Óµ½Ò»¸öÍ³Ò»µÄ¸ñÊ½ÀïÃæ£¬Ö®ºó´«µ½Ìí¼ÓµÄº¯ÊıÀï¡£
+	  m_auxiliaryPath.m_IfLine = false;//falseÊÇ´ú±íÔ²»¡
+	  m_auxiliaryPath.m_arc_in = m_arc_auxipath_in;
+	  m_auxiliaryPath.m_arc_out = m_arc_auxipath_out;
+	  m_auxiliaryPath.P_AuxiStart = m_Pstrat;
+	  m_auxiliaryPath.P_AuxiEnd = m_Pend;
+
+	  //ÒÔÉÏÊÇ½«Ô²»¡ÇĞ¸îÒıµ¼ÏßµÄÒıÈëÏßÓëÒı³öÏßµÄ²ÎÊı¶¼ÒÑ¾­¼ÆËãºÃÁË£¬µ«ÊÇ²¢Ã»ÓĞ°ÑÔ²»¡ÇĞ¸îÒıµ¼Ïß±äÎª·â±Õ»·µÄ¹ÌÓĞÒ»»·
+	  //Òò´ËÒªÓÃµ½Ë«ÏòÁ´±í½«Æä¹Ò¿¿¡£
+	  AddAuxiNodeToCH(m_auxiliaryPath, P_mid, pCHtemp);
+
+  }
+  //½«ÇĞ¸îÒıµ¼Ïß×÷Îª·â±Õ»·µÄ¹ÌÓĞ½ÚµãÌí¼Ó½øÈ¥¡£
+  //m_auxiliaryPathÊÇ´æ´¢µÄÇĞ¸îÒıµ¼ÏßµÄÊı¾İĞÅÏ¢£¬P_midÊÇÔ²»¡ÇĞ¸îÒıµ¼ÏßµÄÓë·â±Õ»·µÄÇĞµã,pCHtempÎª·â±Õ»·Í·½áµã
+  //ÔÚÕâ¸öº¯ÊıÀï½«ÇĞ¸îÒıµ¼Ïß¹Ò¿¿µ½·â±Õ»·ÉÏ
+  void  GeomForCut::AddAuxiNodeToCH(AuxiliarPath m_auxiliaryPath, Point P_mid, GeomCloseHEAD*pCHtemp)
+  {
+	  //Ô²»¡ÀàĞÍµÄÇĞ¸îÒıµ¼Ïß¶àÁËÈı¸ùÏß£¬ÆäÖĞÁ½¸öÊÇÔ²»¡ÇĞÈëÏß£¬Ô²»¡ÇĞ³öÏß£¬ÆäÖĞÁ½¸öÊÇ½«Ô­À´µÄÖ±Ïß´ò¶Ï³ÉÎªÁ½¸ùÏß£¬µ«¿ÉÒÔÍ¨¹ıµ÷ÕûÆäÖĞÒ»¸öµÄ¶Ëµã£¬À´ÊµÏÖ¡£Ö»ĞèÒªÁíÍâÌí¼ÓÒ»Ìõ¾ÍºÃ¡£
+	  GeomEleNode*Add_more_Node = (GeomEleNode*)malloc(sizeof(GeomEleNode));//ÇĞ¸îÒıÈëÏß
+	  GeomEleNode*cut_in_Node = (GeomEleNode*)malloc(sizeof(GeomEleNode));//ÇĞ¸îÒıÈëÏß
+	  GeomEleNode*cut_out_Node = (GeomEleNode*)malloc(sizeof(GeomEleNode));//ÇĞ¸îÒı³öÏß
+	 //¶ÔpFirstGele²Ù×÷¾ÍÊÇ¶Ô pCHtemp->FirstGeomele²Ù×÷¡£
+	  GeomEleNode *&pFirstGele = pCHtemp->FirstGeomele;//ÓÃÀ´´æ´¢·â±Õ»·Ô­À´µÄµÚÒ»¸ö»ù±¾Í¼ÔªµÄ£¬½«¸ÃÏß¶ÎÔ­À´µÄÖÕµã±äÎªÇĞµã´¦¡£×¢Òâ£¬ËùÓĞµÄ·â±Õ»·µÄµÚÒ»Ìõ»ù±¾Í¼Ôª¶¼ÊÇ¸Ä±äµÄÁË¡£
+	
+	  //ÏÈÅĞ¶ÏÕâ¸ö·â±Õ»·µÄÇĞ¸îÒıµ¼ÏßÊÇÖ±Ïß»¹ÊÇÔ²»¡
+	  //ÄÜ½øÀ´ËµÃ÷ÊÇÔ²»¡
+	  if (!m_auxiliaryPath.m_IfLine)
+	  {
+		  //ÇĞÈëÏß
+		  cut_in_Node->m_GeomStandData.m_arc = m_auxiliaryPath.m_arc_in;
+		  cut_in_Node->m_GeomStandData.m_typegeomele = 2;//2ÎªÔ²»¡
+		  cut_in_Node->m_GeomStandData.GeoEle_start_x0 = m_auxiliaryPath.P_AuxiStart.x;
+		  cut_in_Node->m_GeomStandData.GeoEle_start_y0 = m_auxiliaryPath.P_AuxiStart.y;
+		  cut_in_Node->m_GeomStandData.GeoEle_start_x1 = P_mid.x;
+		  cut_in_Node->m_GeomStandData.GeoEle_start_y1 = P_mid.y;
+
+		  //ÇĞ³öÏß
+		  cut_out_Node->m_GeomStandData.m_arc = m_auxiliaryPath.m_arc_out;
+		  cut_in_Node->m_GeomStandData.m_typegeomele = 2;//2ÎªÔ²»¡
+		  cut_in_Node->m_GeomStandData.GeoEle_start_x0 = P_mid.x;
+		  cut_in_Node->m_GeomStandData.GeoEle_start_y0 = P_mid.y;
+		  cut_in_Node->m_GeomStandData.GeoEle_start_x1 = m_auxiliaryPath.P_AuxiEnd.x;
+		  cut_in_Node->m_GeomStandData.GeoEle_start_y1 = m_auxiliaryPath.P_AuxiEnd.y;
+
+	  }
+	  else//»òÕßÊÇÖ±Ïß
+	  {
+		  ;
+	  }
+	  //ÒÔÉÏÊÇ½«ÇĞ¸îÒıµ¼Ïß±ä³ÉÁË·â±Õ»·µÄ»ù±¾Í¼Ôª
+	  //½ÓÏÂÀ´Òª½«»ù±¾Í¼ÔªÓë·â±Õ»·ÈÚºÏµ½Ò»Ìå
+	  //ÏÈµ÷Õû·â±Õ»·±¾ÉíµÄ»ù±¾Í¼Ôª
+	  //ÏÖÔÚÖ»´¦ÀíµÄÊÇ¶à±ßĞÎÀàĞÍ
+	  if (1 == pFirstGele->m_GeomStandData.m_typegeomele)//1ÊÇÖ±Ïß¶Î
+	  {
+		  //½«pFirstGeleÖĞµÄÇ°°ë¶ÎÖ±Ïß¶ÎÊı¾İ¸øAdd_more_Node£¬×îºóÕâ¶Î½«³ÉÎª·â±Õ»·µÄµ¹ÊıµÚ¶ş¶Î¡£
+		  //Æğµã¾ÍÊÇ·â±Õ»·Ô­À´µÄÇĞ¸î¿ØÖÆµã
+		  Add_more_Node->m_GeomStandData.m_line.x0 = Add_more_Node->m_GeomStandData.GeoEle_start_x0 = pFirstGele->m_GeomStandData.GeoEle_start_x0;
+		  Add_more_Node->m_GeomStandData.m_line.y0 = Add_more_Node->m_GeomStandData.GeoEle_start_y0 = pFirstGele->m_GeomStandData.GeoEle_start_y0;
+		  //ÖÕµãÊÇÖĞµã£¬Ò²¾ÍÊÇÇĞµã
+		  Add_more_Node->m_GeomStandData.m_line.x1 = Add_more_Node->m_GeomStandData.GeoEle_start_x1 = P_mid.x;
+		  Add_more_Node->m_GeomStandData.m_line.y1 = Add_more_Node->m_GeomStandData.GeoEle_start_y1 = P_mid.y;
+		  //Í¼ÔªµÄÀàĞÍ
+		  Add_more_Node->m_GeomStandData.m_typegeomele = 1;
+		  //½«·â±Õ»·µÄÊ×»ùÔªµÄÆğµã±äÎªP_mid,Ò²¾ÍÊÇ¼õÉÙÒ»°ë¡£//Èç¹ûÒª±ä»ØÀ´Ôò¿ÉÒÔÍ¨¹ı¼ÆËã»òÕß´ÓÕâAdd_more_NodeµÄÆğµã»ñµÃ¡£
+		  pFirstGele->m_GeomStandData.GeoEle_start_x0 = P_mid.x;
+		  pFirstGele->m_GeomStandData.GeoEle_start_y0 = P_mid.y;
+		  //½ÓÏÂÀ´¾ÍÊÇÒª½«ÕâÈı¸öÁíÍâµÄ»ùÓÚÌí¼Óµ½·â±Õ»·ÉÏ£¬²¢µ÷Õû·â±Õ»·µÄ»ùÔªÎ»ÖÃÁË¡£
+		  AddThreeNodeToCH(Add_more_Node, cut_in_Node, cut_out_Node, pCHtemp);
+	  }
+	  else//Èç¹ûÊÇÔ²»¡¶Î£¬ÄÇÃ´ÊÇ²»ÊÇ¿ÉÒÔ½«Æä±äÎªÖ±Ïß¶Î
+	  {
+		  ;
+	  }
+
+
+	 
+  }
+  //½« Èı¸öÇĞ¸î·â±Õ»·µÄ»ùÔª¹Òµ½·â±Õ»·ÉÏ£¬²¢µ÷Õû·â±Õ»·ÖĞµÄ»ùÔªÎ»ÖÃ¡£
+  //ÕâÈı¸öÊÇÔÚÇ°ÃæÌí¼ÓÒ»¸ö£¬ÔÚºóÃæÌí¼ÓÁ½¸ö£¬Ô­À´µÄÎ²»ùÔª³ÉÎªµ¹ÊıµÚÈı¸ö
+  //¼´ÈÎºÎÒ»¸ö·â±Õ»·µÚÒ»¸öºÍ×îºóÒ»¸ö¶¼ÊÇÇĞ¸îÒıµ¼Ïß£¬¶ø
+  void  GeomForCut::AddThreeNodeToCH(GeomEleNode*Add_more_Node, GeomEleNode*cut_in_Node, GeomEleNode*cut_out_Node, GeomCloseHEAD*pCHtemp)
+  {
+	  GeomEleNode*pFtemp,*pEtemp;//±£ÁôÔ­À´·â±Õ»·µÄÊ×½ÚµãÓëÎ²½Úµã
+	  //·â±Õ»·µÄÊ×»ù±¾Í¼ÔªÊÇÒÑ¾­±»´¦ÀíÁËµÄ
+	  pFtemp = pCHtemp->FirstGeomele;
+	  pEtemp = pCHtemp->FirstGeomele;
+	  //Ñ°ÕÒµ½×îºóÒ»¸ö»ù±¾Í¼Ôª£¬Èç¹ûÊÇÔ²ÕâÖÖ·â±Õ»·£¬ÄÇÃ´ÓĞ¿ÉÄÜÊÇÖ»ÓĞÒ»¸ö»ù±¾Í¼ÔªµÄ
+	  while (pEtemp->nextGeomeleNode)
+		  pEtemp = pEtemp->nextGeomeleNode;
+	  //µ÷Õû½Úµã,cut_in_Node³ÉÎªÁËÊ×»ù±¾Í¼Ôª
+	  pCHtemp->FirstGeomele = cut_in_Node;
+	  cut_in_Node->prevGeomeleNode = NULL;
+	  cut_in_Node->nextGeomeleNode = pFtemp;
+	  //Ô­À´µÄ·â±Õ»·Ê×»ùÓÚ³ÉÎªÁËµÚ¶ş¸ö
+	  pFtemp->prevGeomeleNode = cut_in_Node;
+	  //pEtemp³ÉÁËµ¹ÊıµÚÈı¸ö»ùÔª
+	  pEtemp->nextGeomeleNode = Add_more_Node;
+	  Add_more_Node->prevGeomeleNode = pEtemp;
+	  //Add_more_Node³ÉÎªµ¹ÊıµÚ¶ş¸ö,cut_out_Node³ÉÎª×îºóÒ»¸ö
+	  Add_more_Node->nextGeomeleNode = cut_out_Node;
+	  cut_out_Node->prevGeomeleNode = Add_more_Node;
+	  cut_out_Node->nextGeomeleNode = NULL;
+	  //Èç´Ë±ãµ÷ºÃÁË
   }

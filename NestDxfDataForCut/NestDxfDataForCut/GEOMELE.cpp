@@ -42,9 +42,9 @@ GeomStandData GEOMELE::ReadArcData(GARC m_arc)
 		angle_start = PI*m_arc.m_ArcAngle_start / 180.0;
 		angle_end = PI*m_arc.m_ArcAngle_end / 180.0;
 		m_geomstandData.GeoEle_start_x0 = m_arc.Arccent_x + m_arc.m_Arc_r*cos(angle_start);//转换为圆弧的起始端点
-		m_geomstandData.GeoEle_start_y0 = m_arc.Arccent_y + m_arc.m_Arc_r*sin(angle_start);
+		m_geomstandData.GeoEle_start_y0 = m_arc.Arccent_y - m_arc.m_Arc_r*sin(angle_start);
 		m_geomstandData.GeoEle_start_x1 = m_arc.Arccent_x + m_arc.m_Arc_r*cos(angle_end);//转换为圆弧的起始端点
-		m_geomstandData.GeoEle_start_y1 = m_arc.Arccent_y + m_arc.m_Arc_r*sin(angle_end);
+		m_geomstandData.GeoEle_start_y1 = m_arc.Arccent_y - m_arc.m_Arc_r*sin(angle_end);
 		m_geomstandData.m_line = { 0.0, 0.0, 0.0, 0.0 };
 		m_geomstandData.m_circle = { 0.0, 0.0, 0.0 };//假如之前读取过ARC则清空之前保留在这里的数值
 		m_geomstandData.m_typegeomele = 2;//2为圆弧
