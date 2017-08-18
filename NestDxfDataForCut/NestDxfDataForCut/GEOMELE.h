@@ -30,7 +30,7 @@ typedef struct
 	GLINE m_line;//包含三种类型
 	GARC m_arc;
 	GCIRCLE m_circle;
-	//对于切割引刀线还有一个斜率要保存
+	//对于切割引刀线还有一个斜率要保存,对于圆弧切割引导线则有一个中间端点角度要保存（用来判断哪一段圆弧）
 	double k;//默认是9876.5；
 	//////////////
 	unsigned int m_typegeomele;//1为LINE,2为ARC,3为CIRCLE,6为切割引刀线，默认是1

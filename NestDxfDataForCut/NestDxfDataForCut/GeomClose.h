@@ -16,20 +16,7 @@ typedef struct//封闭图元之间的过渡线
 {
 	double prev_x, prev_y, next_x, next_y;//上一封闭图元的xy和下一封闭图元的起点xy
 }TranLine;
-//********************************************************************//
-//对于每一个读取进来的数据都应该划分一块内存来存放它，这个结点作为双向链表的结点
-//先把所有的结点挂在同一个链表上，并把头结点的地址传给一个HEAD结点，之后再对这些结点来划分不同的封闭环
-//********************************************************************//
-typedef struct GeomEleNode//所有的数据进来时候存放的结点
-{
-	GeomStandData m_GeomStandData;//结点里面应该保存了每一个读取进来的数据
-	struct GeomEleNode* prevGeomeleNode;//指向前一个GeomeleNode结点
-	struct GeomEleNode* nextGeomeleNode;//指向后一个GeomeleNode结点
-	unsigned int m_NumGeomEleID;//记录第几个图元
-	unsigned int m_NumGeomCloseID;//记录是第几个封闭环的图元。
-	bool m_AccptGeomEleNode;//判断该结点是否已经被收录的,初始化为false
-}GeomEleNode;
-//封闭环包络矩形
+//储存包络矩形的控制点
 typedef struct
 {
 	double x_min;//包络矩形的x方向的最小值
@@ -37,6 +24,22 @@ typedef struct
 	double y_min;//包络矩形的y方向的最小值
 	double y_max;//包络矩形的y方向的最大值
 }Envelope_Rect;
+//********************************************************************//
+//对于每一个读取进来的数据都应该划分一块内存来存放它，这个结点作为双向链表的结点
+//先把所有的结点挂在同一个链表上，并把头结点的地址传给一个HEAD结点，之后再对这些结点来划分不同的封闭环
+//********************************************************************//
+typedef struct GeomEleNode//所有的数据进来时候存放的结点
+{
+	GeomStandData m_GeomStandData;//结点里面应该保存了每一个读取进来的数据
+	Envelope_Rect m_AuxiLineLimtPoint;//存储切割引导线的包络矩形控制坐标，只在切割引导线上用。
+	struct GeomEleNode* prevGeomeleNode;//指向前一个GeomeleNode结点
+	struct GeomEleNode* nextGeomeleNode;//指向后一个GeomeleNode结点
+	unsigned int m_NumGeomEleID;//记录第几个图元
+	unsigned int m_NumGeomCloseID;//记录是第几个封闭环的图元。
+	bool m_AccptGeomEleNode;//判断该结点是否已经被收录的,初始化为false
+}GeomEleNode;
+//封闭环包络矩形
+
 //点的数据结构
 typedef struct 
 {
@@ -60,7 +63,6 @@ typedef struct
 typedef struct GeomCloseHEAD
 {
 	Envelope_RectPoint m_GemoClosedLimtPoint;//存储封闭环外包络矩形的控制坐标
-	//Envelope_Rect m_GemoClosedLimt;//存储封闭环外包络矩形的控制点
 	TranLine m_tranline;//存储过渡直线
 	GEOMCCLOSTAPOINT m_geomclose_startpoint;//存储所指向双向链表的起止重合点，其实这个就是第一个基本图元的起点，要不要也可以的。本算法基本没用到它。
 	unsigned int m_NumGeomele;//该链表存有多少个基本图元
@@ -74,6 +76,8 @@ typedef struct GeomCloseHEAD
 	bool m_AcceptGeomcloseHEAD;//如果以后要全局最优路径规划的时候，最为每一个封闭环时候已经被规划的标识
 	bool m_KidAcceptGeomCloseHead;//判断子封闭环是否已经再次被确定位置
 	bool m_Singlelayer;//判断封闭环是单还是双，用来处理引刀线。默认是单层
+	int m_Region;//判断封闭环所在的区域，以板材的两条中垂线将板材划分为4块区域，以左上为区域1，右上为区域2，右下为区域4，左下为区域7。组合是3,6,11,8,14
+
 }GeomCloseHEAD;
 class GeomClose
 {

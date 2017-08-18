@@ -167,6 +167,8 @@ public:
 	void GetLimtofGeomClosed(NestResultDataNode*head);
 	//求单个封闭环包络矩形的xy最值
 	void GetLimtofGeomClosed(GeomCloseHEAD*pHtemp);
+	//求所有封闭环的区域属性，即在板材的哪一块区域里。 
+	void GetRigionOfGeomClosed(NestResultDataNode*head);
 	//包络封闭环的数据
 	Envelope_Rect m_GemoClosedLimt;
 	//用包络的方式判断后面的封闭环和前面的封闭环是否有嵌套关系
@@ -249,7 +251,9 @@ public:
 	//输入每一个父封闭环，判断其与子封闭环的切割引导线是否存在干涉现象。
 	void CheckFKCutGuideLINE(GeomCloseHEAD*pFtemp);
 
-	//输入封闭环，保存板材外轮廓的封闭环头文件（父层封闭环一定要与板材封闭环轮廓判断）与平面切割图头结点（不一定能用得上），判断其切割引导线与其他封闭环是否有干涉，如果有则返回封闭头结点，没有则返回NULL
+	//输入封闭环，保存板材外轮廓的封闭环头文件（父层封闭环一定要与板材封闭环轮廓判断）与平面切割图头结点（不一定能用得上），
+	//判断其切割引导线与其他封闭环是否有干涉，如果有则返回封闭头结点，没有则返回NULL
+	//通用的判断算法
 	bool CheckCGLineInter(GeomCloseHEAD*pCHtemp, GeomCloseHEAD*m_ceramic_Head);
 	/////////////////////////////////////////////////////////////////////////////////////////////
 	///////////上面的切割引导线生成方式是角平分线以及两点连线法//////////////////////////////////////

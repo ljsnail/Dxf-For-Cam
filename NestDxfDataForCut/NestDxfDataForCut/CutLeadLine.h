@@ -5,6 +5,7 @@
 #define pii 3.1416;
 //#define m_CutLineLength  25;
 #define EPSILON 0.001
+
 struct Line_para
 {
 	double x0, y0;
@@ -55,11 +56,36 @@ public:
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	//切割引导线干涉判断，输入当前需要判断切割引导线的封闭环，然后判断其与包括自身在内的兄弟封闭环是否干涉。
-	bool JudgeCGLineVSGeomclosedH(GeomCloseHEAD*pCHtemp, GeomCloseHEAD*m_ceramic_Head);
+	bool JudgeCGLineVsGeomclosedH(GeomCloseHEAD*pCHtemp, GeomCloseHEAD*m_ceramic_Head);
 	//切割引导线干涉判断,输入切割引导线与任意一个封闭环，判断其是否干涉，如果干涉，返回true,否则返回false,这是最核心代码
-	bool JudgeCGLineVSOneClosedHead(GeomEleNode*pCGLinetemp, GeomCloseHEAD*pCHtemp, GeomCloseHEAD*m_ceramic_Head);
+	bool JudgeCGLineVsOneClosedHead(GeomEleNode*pCGLine, GeomCloseHEAD*pCHtemp, GeomCloseHEAD*m_ceramic_Head);
 	//干涉的原则是交点在切割引导线的两个点之间。
-	bool If_HaveCGLineInterPoint(GeomEleNode*pCGLinetemp, GeomEleNode*pCGeomtemp);
+	bool If_HaveCGLineInterPoint(GeomEleNode*pCGLine, GeomEleNode*pCGeomtemp);
+	//直线型切割引导线与直线型基本图元的干涉判断
+	bool CheckCGLineVsLine(GeomEleNode*pCGLine, GeomEleNode*pCGeomtemp);
+	//直线型切割引导线与圆基本图元的干涉判断
+	bool CheckCGLineVsCircle(GeomEleNode*pCGLine, GeomEleNode*pCGeomtemp);
+	//圆弧切割引导线与圆基本图元的干涉判断
+	bool CheckCGArcVsCircle(GeomEleNode*pCGLine, GeomEleNode*pCGeomtemp);
+	//圆弧与直线的干涉判断
+	//此函数可以判断直线切割引导线与圆弧基本图元的干涉判断
+	//也可以判断圆弧切割引导线与直线基本图元的干涉判断
+	bool CheckCGLineVsCGArc(GeomEleNode*pCGLine, GeomEleNode*pCGeomtemp);
+
+	//求点到线段之间的距离
+	double CalcuDistance(Point m_point, Point m_LineP1, Point m_LineP2);
+	//求线段与圆的交点
+	//与圆可能存在两个交点，如果存在两个交点在ptInter1和ptInter2都为有效值，如果有一个交点，则ptInter2的值为无效值，此处为65536.0
+	// 线段起点,线段终点,圆心坐标,全局的交点坐标
+	//const的作用为算法内不可改变对应的变量数值
+	bool LineInterCircle(const Point ptStart, const Point ptEnd,const Point ptCenter,const double Radius,Point& ptInter1,Point& ptInter2);
+	
+
+
+	
+	//新提出一种根据矩形包络预判断是否有相交关系，如果有再进一步采用上述算法If_HaveCGLineInterPoint；
+	//用切割引导线的包络矩形与封闭环的包络矩形进行判断
+	bool If_HaveCGLineInterPoint_UseRect(GeomEleNode*pCGLinetemp, GeomCloseHEAD*pCHtemp);
 	//目前只能处理有交点的直线，对于平行的线段并不能进一步区分
 	//输入直线的两个端点值，然后求标准直线的abc三个参数
 	Line_Inter GetLine(Point m_StratPoint, Point m_EndPoint);
@@ -73,10 +99,14 @@ public:
 	//调整切割引刀线中取切割引刀线控制点的方法
 	//此时不管奇层层，都往内取
 	Line_para Get_ChangeCutLine_StartPoint(Line_para m_Line, int m_OpenDirect, Point start);
+	//用于求出用来判断的切割引导线的。
+	GeomEleNode*GetLimtOfAuxiliaryLine(GeomCloseHEAD*pCHtemp);
+	GEOMELE m_geomele;//作为GEOMELE类调用的变量
+
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//新的获取切割引导线的方式///////////////////
 	///////////////////////////////////////////////////////
-
+	
 	
 };
 

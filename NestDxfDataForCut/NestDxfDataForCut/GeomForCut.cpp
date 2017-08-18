@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "GeomForCut.h"
-#define EPSILON 0.018
 #define WEIGHT_ORIGIN 0.1//封闭环到机床原点距离的权重
 #define WEIGHT_PTP 0.9//封闭环到另一个封闭环之间距离的权重
 
@@ -2274,6 +2273,7 @@ void  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 	x_max_y = Retain4Decimals(x_max_y);
 	y_min_x = Retain4Decimals(y_min_x);
 	y_max_x = Retain4Decimals(y_max_x);
+	
 	//以下是将矩形封闭环的四个控制角点的坐标值保存起来
 	//圆形的还没有处理
 	pTempCHead->m_GemoClosedLimtPoint.x_min.x = x_min;
@@ -2285,7 +2285,81 @@ void  GeomForCut::GetLimtofGeomClosed(GeomCloseHEAD*pTempCHead)
 	pTempCHead->m_GemoClosedLimtPoint.y_max.y = y_max;
 	pTempCHead->m_GemoClosedLimtPoint.y_max.x = y_max_x;
 }
-
+//求所有封闭环的区域属性，即在板材的哪一块区域里。 
+//判断封闭环所在的区域，以板材的两条中垂线将板材划分为4块区域，以左上为区域1，右上为区域2，右下为区域4，左下为区域7。组合是3,6,11,8,14
+void GeomForCut::GetRigionOfGeomClosed(NestResultDataNode*head)
+{
+	double G_x_min , G_x_mid , G_x_max , G_y_min , G_y_mid , G_y_max;//保存板材的划分尺寸，按照800来说。
+	double x_min, x_max, y_min, y_max;
+	GeomCloseHEAD*PGHtemp;//封闭环头结点的指代指针
+	GetLimtofGeomClosed(m_ceramic_Head);//求板材的封闭环包络情况
+	G_x_min = m_ceramic_Head->m_GemoClosedLimtPoint.x_min.x;
+	G_x_max = m_ceramic_Head->m_GemoClosedLimtPoint.x_max.x;
+	G_x_mid = (G_x_min + G_x_max) / 2;
+	G_y_min = m_ceramic_Head->m_GemoClosedLimtPoint.y_min.y;
+	G_y_max = m_ceramic_Head->m_GemoClosedLimtPoint.y_max.y;
+	G_y_mid = (G_y_min + G_y_max) / 2;
+	PGHtemp = head->FirstGeomClose;
+	while (PGHtemp)//全部遍历一遍
+	{
+		
+		x_min = PGHtemp->m_GemoClosedLimtPoint.x_min.x;
+		x_max = PGHtemp->m_GemoClosedLimtPoint.x_max.x;
+		y_min = PGHtemp->m_GemoClosedLimtPoint.y_min.y;
+		y_max = PGHtemp->m_GemoClosedLimtPoint.y_max.y;
+		//将封闭环按照区域来划分，按照其包络矩形来看
+		//同时找到跨区域的那些封闭环
+		//以x来划分
+		if ((G_x_min <= x_min) && (x_max <= G_x_mid))//x轴的前半部分
+		{
+			if ((G_y_min <= y_min) && (y_max <= G_y_mid))//y的下半部分
+			{
+				PGHtemp->m_Region = 7;
+			}
+			else if ((G_y_mid <= y_min) && (y_max <= G_y_max))//y的上半部分
+			{
+				PGHtemp->m_Region = 1;
+			}
+			else if ((y_min <= G_y_mid) && (G_y_mid <= y_max))//y的中间部分
+			{
+				PGHtemp->m_Region = 8;//8等于跨了1和7两个界限
+			}
+			
+		}
+		else if ((G_x_mid <= x_min) && (x_max <= G_x_max))//x轴的后半部分
+		{
+			if ((G_y_min <= y_min) && (y_max <= G_y_mid))//y的下半部分
+			{
+				PGHtemp->m_Region = 4;
+			}
+			else if ((G_y_mid <= y_min) && (y_max <= G_y_max))//y的上半部分
+			{
+				PGHtemp->m_Region = 2;
+			}
+			else if ((y_min <= G_y_mid) && (G_y_mid <= y_max))//y的中间部分
+			{
+				PGHtemp->m_Region = 6;//6等于跨了2和4两个区域
+			}
+		}
+		else if ((x_min <= G_x_mid) && (G_x_mid <= x_max))//x的中间部分
+		{
+			if ((G_y_min <= y_min) && (y_max <= G_y_mid))//y的下半部分
+			{
+				PGHtemp->m_Region = 11;//跨了4和7两个区域
+			}
+			else if ((G_y_mid <= y_min) && (y_max <= G_y_max))//y的上半部分
+			{
+				PGHtemp->m_Region = 3;//跨了1和2两个区域
+			}
+			else if ((y_min <= G_y_mid) && (G_y_mid <= y_max))//y的中间部分
+			{
+				PGHtemp->m_Region = 14;//跨了1、2、4、7这些区域。
+			}
+		}
+		PGHtemp = PGHtemp->nextGeomcloseNode;
+	}
+	
+}
 //核心算法
 //核心算法
 //核心算法
@@ -3436,14 +3510,14 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead, bool if_LineAuxiliary)
 	cut_in_Node->m_GeomStandData.GeoEle_start_x1 = m_cutline.x1;
 	cut_in_Node->m_GeomStandData.GeoEle_start_y1 = m_cutline.y1;
 	cut_in_Node->m_GeomStandData.k = m_cutline.k;
-	cut_in_Node->m_GeomStandData.m_typegeomele = 6;//切割引刀线的标准
+	cut_in_Node->m_GeomStandData.m_typegeomele = 61;//直线型切割引刀线的标准
 	//对于直线型的切割引刀线而言，cut_in与cut_out的数据是一样的，但起码位置要调换
 	cut_out_Node->m_GeomStandData.GeoEle_start_x0 = m_cutline.x1;
 	cut_out_Node->m_GeomStandData.GeoEle_start_y0 = m_cutline.y1;
 	cut_out_Node->m_GeomStandData.GeoEle_start_x1 = m_cutline.x0;
 	cut_out_Node->m_GeomStandData.GeoEle_start_y1 = m_cutline.y0;
 	cut_out_Node->m_GeomStandData.k = m_cutline.k;
-	cut_out_Node->m_GeomStandData.m_typegeomele = 6;//切割引刀线的标准
+	cut_out_Node->m_GeomStandData.m_typegeomele = 61;//直线型切割引刀线的标准
 	//重点！！！
 	//从此封闭环的头结点不再是第一个封闭环图元，而是切割引刀线
 	//第二个才是原来共有的图元。
@@ -3541,6 +3615,7 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead, bool if_LineAuxiliary)
 	 GeomCloseHEAD*pKtemp;//存储内部子层封闭环头结点
 	 bool m_IfCGLIeter = false;//存储是否切割引导线干涉判断值,初始化为未干涉
 	 pFtemp = head->FirstGeomClose;
+	 int a=0;
 	 //第一层循环，主循环
 	 while (pFtemp)//第一层封闭环间的循环，遍历到最后一个
 	 {
@@ -3549,15 +3624,17 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead, bool if_LineAuxiliary)
 		 if (!(m_IfHaveKidCH))//如果没有子封闭环
 		 {
 			 //判断要遵循奇层往外，偶层往里判断的原则
-			 m_IfCGLIeter = CheckCGLineInter(pFtemp, m_ceramic_Head);
-			 //进来了就要调好才能出去
-			 while (m_IfCGLIeter)
-			 {
-				 //判断要遵循奇层往外，偶层往里判断的原则
-				 m_CutLeadLine.ChangeCGLine(pFtemp);
 				 m_IfCGLIeter = CheckCGLineInter(pFtemp, m_ceramic_Head);
-			 }
-			 
+				 //进来了说明有干涉，则需要将干涉调整才能跳出循环
+				 while (m_IfCGLIeter)
+				 {
+					 a++;
+					 //判断要遵循奇层往外，偶层往里判断的原则
+					/* m_CutLeadLine.ChangeCGLine(pFtemp);
+					 m_IfCGLIeter = CheckCGLineInter(pFtemp, m_ceramic_Head);*/
+					 m_IfCGLIeter = false;
+				 }
+			
 		 }
 		 else//如果有子封闭环的情况下
 		 {
@@ -3566,7 +3643,7 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead, bool if_LineAuxiliary)
 		 pFtemp = pFtemp->nextGeomcloseNode;
 	 }
  }
- //输入每一个父封闭环，改写其与子封闭环的奇偶性。
+ //输入每一个父封闭环，检查其组内所有封闭环切割引导线是否合适。
  void GeomForCut::CheckFKCutGuideLINE(GeomCloseHEAD*pFtemp)
  {
 	 GeomCloseHEAD*pKtemp;//用来指代子封闭环头结点
@@ -3611,8 +3688,9 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead, bool if_LineAuxiliary)
 
 
   //输入封闭环，判断其切割引导线与其他封闭环是否有干涉，如果有则返回封闭头结点，没有则返回NULL
-  //判断的原则是任何一个封闭环的切割引刀线都要与本身封闭环所在的兄弟封闭环双向链表进行干涉判断
-  //如果是与同层封闭环之间不存在干涉，那么就要根据封闭环的奇偶性判断
+ //判断的原则1是任何一个封闭环都要与一个封闭双向链表判断（奇层则与自身所在的，偶层则与下一层子封闭环所在的）JudgeCGLineVSGeomclosedH
+ //判断的原则2是任何一个封闭环都要与一个封闭环独立判断（奇层则与上一层的父封闭环或板材封闭环，偶层则是与自身封闭环判断）
+ //如果是与同层封闭环之间不存在干涉，那么就要根据封闭环的奇偶性判断
   //判断原则是奇层往外判断，那么就要判断是否与父封闭环也有干涉，或者是第一层父封闭环双向的链表则要判断是否与板材外轮廓有干涉
   //判断原则是偶层往内判断，那么就要判断是否与内部子封闭环双向链表也有干涉的情况与本身的情况
   bool GeomForCut::CheckCGLineInter(GeomCloseHEAD*pCHtemp, GeomCloseHEAD*m_ceramic_Head)
@@ -3623,12 +3701,14 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead, bool if_LineAuxiliary)
 	  GeomEleNode*pCGLinetemp;//存储当前封闭环的切割引导线
 	  bool m_Singlelayer ;
 	  //先判断封闭环与本身所在封闭环双向链表（奇层封闭环）或子封闭环双向链表是否有干涉（偶层封闭环）。
-	  m_IfCGLIeter = m_CutLeadLine.JudgeCGLineVSGeomclosedH(pCHtemp, m_ceramic_Head);
+	 //与一个封闭环双向链表进行判断
+	  m_IfCGLIeter = m_CutLeadLine.JudgeCGLineVsGeomclosedH(pCHtemp, m_ceramic_Head);
 	  if (m_IfCGLIeter)//如果跟本身封闭环双向链表有干涉（奇层封闭环),或与子层封闭环双向链表有干涉（偶层封闭环）
 	  {
 		  return true;//直接退出，不需要进行下一步的判断了。
 	  }
-	  else//说明上面没有干涉，那么就要进行与父层封闭环（奇层封闭环）、板材外轮廓封闭环（奇层封闭环）、自身封闭环进行判断了（偶层封闭环）
+	  //说明上面没有干涉，那么就要进行与父层封闭环（奇层封闭环）、板材外轮廓封闭环（奇层封闭环）、自身封闭环进行判断了（偶层封闭环）
+	  else//进行只与单独的一个封闭环进行判断
 	  {
 		  m_Singlelayer = pCHtemp->m_Singlelayer;
 		  if (m_Singlelayer)//能进来，说明是奇层封闭环，那么就要往外考察
@@ -3658,10 +3738,10 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead, bool if_LineAuxiliary)
 		  {
 			  pHtemp = pCHtemp;
 		  }
-		  pCGLinetemp = pCHtemp->FirstGeomele;
+		  pCGLinetemp = m_CutLeadLine.GetLimtOfAuxiliaryLine(pCHtemp);
 		  //输入当前封闭环的切割引导线，和需要单独判断的封闭环，判断其切割引导线是否有干涉。
-		  m_IfCGLIeter = m_CutLeadLine.JudgeCGLineVSOneClosedHead(pCGLinetemp, pHtemp, m_ceramic_Head);
-		  if (m_IfCGLIeter)//如果跟本身封闭环双向链表有干涉（奇层封闭环),或与子层封闭环双向链表有干涉（偶层封闭环）
+		  m_IfCGLIeter = m_CutLeadLine.JudgeCGLineVsOneClosedHead(pCGLinetemp, pHtemp, m_ceramic_Head);
+		  if (m_IfCGLIeter)//如果跟板材封闭环或上一层父层封闭环有干涉（奇层封闭环),或本身封闭环有干涉（偶层封闭环）
 		  {
 			  return true;//直接退出，不需要进行下一步的判断了。
 		  }
@@ -4251,8 +4331,9 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead, bool if_LineAuxiliary)
 	  GeomEleNode*cut_in_Node = (GeomEleNode*)malloc(sizeof(GeomEleNode));//切割引入线
 	  GeomEleNode*cut_out_Node = (GeomEleNode*)malloc(sizeof(GeomEleNode));//切割引出线
 	 //对pFirstGele操作就是对 pCHtemp->FirstGeomele操作。
-	  GeomEleNode *&pFirstGele = pCHtemp->FirstGeomele;//用来存储封闭环原来的第一个基本图元的，将该线段原来的中点变为切点处。注意，所有的封闭环的第一条基本图元都是改变的了。
-	
+	  GeomEleNode *pFirstGele = pCHtemp->FirstGeomele;//用来存储封闭环原来的第一个基本图元的，将该线段原来的中点变为切点处。注意，所有的封闭环的第一条基本图元都是改变的了。
+	//与上一个的赋值是一样的. GeomEleNode *&pFirstGele = pCHtemp->FirstGeomele;//用来存储封闭环原来的第一个基本图元的，将该线段原来的中点变为切点处。注意，所有的封闭环的第一条基本图元都是改变的了。
+
 	  //先判断这个封闭环的切割引导线是直线还是圆弧
 	  //能进来说明是圆弧
 	  if (!m_auxiliaryPath.m_IfLine)
@@ -4298,7 +4379,7 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead, bool if_LineAuxiliary)
 			  Add_more_Node->m_GeomStandData.m_line.x1 = Add_more_Node->m_GeomStandData.GeoEle_start_x1 = P_mid.x;
 			  Add_more_Node->m_GeomStandData.m_line.y1 = Add_more_Node->m_GeomStandData.GeoEle_start_y1 = P_mid.y;
 			  //图元的类型
-			  Add_more_Node->m_GeomStandData.m_typegeomele = 61;//61为直线型切割引导线的
+			  Add_more_Node->m_GeomStandData.m_typegeomele = 66;//66为原来基本图元中有一部分变成了切割引导线
 			  //将封闭环的首基元的起点变为P_mid,也就是减少一半。//如果要变回来则可以通过计算或者从这Add_more_Node的起点获得。
 			  pFirstGele->m_GeomStandData.m_line.x0 = pFirstGele->m_GeomStandData.GeoEle_start_x0 = P_mid.x;
 			  pFirstGele->m_GeomStandData.m_line.y0 = pFirstGele->m_GeomStandData.GeoEle_start_y0 = P_mid.y;
@@ -4345,7 +4426,8 @@ void GeomForCut::Add_KidCloseCutLine(GeomCloseHEAD*Phead, bool if_LineAuxiliary)
 	  pFtemp->prevGeomeleNode = cut_in_Node;
 	  //以下要根据封闭环的类型要进行添加
 	  //区分圆封闭环，与多边形封闭环。
-	  if (3!=pCHtemp->FirstGeomele->m_GeomStandData.m_typegeomele)//如果不是圆形
+	  //注意现在要拿第二个封闭环来做判断了。
+	  if (3!=pCHtemp->FirstGeomele->nextGeomeleNode->m_GeomStandData.m_typegeomele)//如果不是圆形
 	  {
 		  //pEtemp成了倒数第三个基元
 		  pEtemp->nextGeomeleNode = Add_more_Node;

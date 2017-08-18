@@ -533,6 +533,8 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	//在封闭环奇偶性的确定里封闭环奇偶性后，写入切割引刀线
 	if_LineAuxiliary = false;//直线型切割引导线。
 	m_GeomForCut.Add_CutGuideLine(head, if_LineAuxiliary);
+	//求所有封闭环的区域属性，即在板材的哪一块区域里。 
+	//m_GeomForCut.GetRigionOfGeomClosed(head);//加上这个后，好像太复杂了。
 	//写完切割 引导线之后要进行切割引刀线的干涉判断，以及调整
 	m_GeomForCut.CheckCutGuideLINE(head);
 	//这行代码基本不用//head = m_GeomForCut.ChangeSencondCH2FH(head);//这里先要把第一层板材的去掉，但同时应该是要把第一层板材的数据保存出来的。
@@ -1242,7 +1244,7 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 		GeomEleNode*tempnode;
 		GeomEleNode*PLastNode=NULL;//保存最后一个封闭环的最后一个图元节点
 		int typegeomele;
-			ofstream outfile("D:\\MATLAB\\DXF\\嵌套封闭环.txt", ios_base::out | ios_base::app);//打开并追加
+			ofstream outfile("I:\\MATLAB\\DXF\\嵌套封闭环.txt", ios_base::out | ios_base::app);//打开并追加
 		
 			//用的是封闭环的第一个数据点来作为封闭环之间的空行程来作为封闭环的过渡点
 			tempnode = Htemp->FirstGeomele;//封闭环里的第一个数据结点
@@ -1315,7 +1317,7 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 
 					break;
 					//切割引导线的添加
-				case 6://原本是切割引导线的，但是这里应该是实切直线了。
+				case 61://原本是切割引导线的，但是这里应该是实切直线了。
 				    //typegeomele = 6;//切割引刀线
 					typegeomele = 1;//实切直线
 					x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
@@ -1324,14 +1326,7 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 					y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
 					outfile << typegeomele << "    " << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
 					break;
-				case 61://圆弧切割引导线中的封闭环倒数第二条直线
-					typegeomele = 1;//实切直线
-					x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
-					x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
-					y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
-					y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
-					outfile << typegeomele << "    " << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
-					break;
+		
 				case 62://圆弧切割引导线，要按照太极控制卡的API输出相应的数据
 					typegeomele = 2;//实切圆弧切割引导线
 					Angle_start = tempnode->m_GeomStandData.m_arc.m_ArcAngle_start;
@@ -1404,6 +1399,14 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 						}
 					}
 					outfile << typegeomele << "    " << Angle_cut_start << "    " << Angle_add << "    " << r << "    " << Arccent_x << "    " << Arccent_y << endl;
+					break;
+				case 66://圆弧切割引导线中的封闭环倒数第二条直线
+					typegeomele = 1;//实切直线
+					x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
+					x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
+					y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
+					y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
+					outfile << typegeomele << "    " << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
 					break;
 				default:
 					break;
