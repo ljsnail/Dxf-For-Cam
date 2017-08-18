@@ -67,6 +67,7 @@ CNestDxfDataForCutDlg::CNestDxfDataForCutDlg(CWnd* pParent /*=NULL*/)
 	m_IfDataDisposed = false;
 	m_NewDxf = true;//新图纸
 	k = 0;
+	if_LineAuxiliary = true;//默认为直线型切割引导线
 	//Onstart();//放这里等效于点击了start的button
 	//opengl
 
@@ -530,10 +531,14 @@ bool CNestDxfDataForCutDlg::AdjustGeomCloseNode(NestResultDataNode*head)
 	//先写入封闭环的奇偶性
 	m_GeomForCut.JudgeClosedHead_Odd_even(head);
 	//在封闭环奇偶性的确定里封闭环奇偶性后，写入切割引刀线
-	m_GeomForCut.Add_CutGuideLine(head);
-	//写完切割 引导线之后要进行切割引刀线的判断
-	//m_GeomForCut.CheckCutGuideLINE(head);
-	//head = m_GeomForCut.ChangeSencondCH2FH(head);//这里先要把第一层板材的去掉，但同时应该是要把第一层板材的数据保存出来的。
+	if_LineAuxiliary = false;//直线型切割引导线。
+	m_GeomForCut.Add_CutGuideLine(head, if_LineAuxiliary);
+	//写完切割 引导线之后要进行切割引刀线的干涉判断，以及调整
+	m_GeomForCut.CheckCutGuideLINE(head);
+	//这行代码基本不用//head = m_GeomForCut.ChangeSencondCH2FH(head);//这里先要把第一层板材的去掉，但同时应该是要把第一层板材的数据保存出来的。
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	//新切割引导线的添加类型，圆弧切割引导线的添加
+	
 
 	m_IfDataDisposed = true;
 	return m_IfDataDisposed;
@@ -1130,7 +1135,7 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 		GeomCloseHEAD*Hkidtemp;
 		GeomEleNode*tempnode;
 		bool m_ifHvkidClose;
-		
+
 		//ofstream outfile("I:\\MATLAB\\DXF\\过渡线01.txt");
 		if (m_IfDataDisposed)//数据处理完了，保存才有意义
 			{
@@ -1237,9 +1242,9 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 		GeomEleNode*tempnode;
 		GeomEleNode*PLastNode=NULL;//保存最后一个封闭环的最后一个图元节点
 		int typegeomele;
-			ofstream outfile("I:\\MATLAB\\DXF\\嵌套封闭环.txt", ios_base::out | ios_base::app);//打开并追加
+			ofstream outfile("D:\\MATLAB\\DXF\\嵌套封闭环.txt", ios_base::out | ios_base::app);//打开并追加
 		
-
+			//用的是封闭环的第一个数据点来作为封闭环之间的空行程来作为封闭环的过渡点
 			tempnode = Htemp->FirstGeomele;//封闭环里的第一个数据结点
 			x1_tran = tempnode->m_GeomStandData.GeoEle_start_x0;
 			y1_tran = tempnode->m_GeomStandData.GeoEle_start_y0;
@@ -1309,14 +1314,96 @@ void CNestDxfDataForCutDlg::SaveNestCloseHead()
 					outfile << typegeomele << "    " << Angle_start << "    " << Angle_add << "    " << r << "    " << Arccent_x << "    " << Arccent_y << endl;
 
 					break;
-				case 6:
-					typegeomele = 6;//切割引刀线
-					//typegeomele = 1;//实切直线
+					//切割引导线的添加
+				case 6://原本是切割引导线的，但是这里应该是实切直线了。
+				    //typegeomele = 6;//切割引刀线
+					typegeomele = 1;//实切直线
 					x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
 					x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
 					y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
 					y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
 					outfile << typegeomele << "    " << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
+					break;
+				case 61://圆弧切割引导线中的封闭环倒数第二条直线
+					typegeomele = 1;//实切直线
+					x0 = tempnode->m_GeomStandData.GeoEle_start_x0;
+					x1 = tempnode->m_GeomStandData.GeoEle_start_x1;
+					y0 = tempnode->m_GeomStandData.GeoEle_start_y0;
+					y1 = tempnode->m_GeomStandData.GeoEle_start_y1;
+					outfile << typegeomele << "    " << x0 << "    " << y0 << "    " << x1 << "    " << y1 << endl;
+					break;
+				case 62://圆弧切割引导线，要按照太极控制卡的API输出相应的数据
+					typegeomele = 2;//实切圆弧切割引导线
+					Angle_start = tempnode->m_GeomStandData.m_arc.m_ArcAngle_start;
+					Angle_end = tempnode->m_GeomStandData.m_arc.m_ArcAngle_end;
+					r = tempnode->m_GeomStandData.m_arc.m_Arc_r;
+					Arccent_x = tempnode->m_GeomStandData.m_arc.Arccent_x;
+					Arccent_y = tempnode->m_GeomStandData.m_arc.Arccent_y;
+					if (tempnode->m_GeomStandData.m_IsTranData)//如果将圆弧的起止角度调换了，那么就要调换回来
+					{
+						Angle_cut_start = Angle_end;
+						//if (Angle_start < Angle_end)//起始角小于终止角
+						//{
+						//	Angle_add = Angle_end - Angle_start;
+						//	Angle_add = -Angle_add;//调换了位置则是负的增量角度
+						//}
+						//else//起始角大于终止角
+						//{
+						//	Angle_add = 360 - Angle_start + Angle_end;
+						//	Angle_add = -Angle_add;//调换了位置则是负的增量角度
+						//}
+						if (Angle_start < Angle_end)//起始角小于终止角
+						{
+							if ((Angle_start<90) && (270< Angle_end))//说明终点在第四象限，而起点在第一象限，是正时旋转为针负角；
+							{
+								Angle_add =90;
+							}
+							else//说明是按照正常的逆时针旋转的，为正角
+							{
+								Angle_add = -90;
+							}
+
+						}
+						else//起始角大于终止角
+						{
+							if ((Angle_end<90) && (270< Angle_start))//说明起点在第四象限，而终点在第一象限，是逆时针旋转为针正角；
+							{
+								Angle_add = -90;
+							}
+							else//说明是按照顺时针旋转的，则为负角
+							{
+								Angle_add = 90;
+							}
+						}
+					}
+					else//如果没有调换圆弧的起止角度,与上面的增量角度刚好相反。
+					{
+						Angle_cut_start = Angle_start;
+						if (Angle_start < Angle_end)//起始角小于终止角
+						{
+							if ((Angle_start<90)&&(270< Angle_end))//说明终点在第四象限，而起点在第一象限，是正时旋转为针负角；
+							{
+								Angle_add = -90;
+							}
+							else//说明是按照正常的逆时针旋转的，为正角
+							{
+								Angle_add = 90;
+							}
+
+						}
+						else//起始角大于终止角
+						{
+							if ((Angle_end<90) && (270< Angle_start))//说明起点在第四象限，而终点在第一象限，是逆时针旋转为针正角；
+							{
+								Angle_add = 90;
+							}
+							else//说明是按照顺时针旋转的，则为负角
+							{
+								Angle_add =- 90;
+							}
+						}
+					}
+					outfile << typegeomele << "    " << Angle_cut_start << "    " << Angle_add << "    " << r << "    " << Arccent_x << "    " << Arccent_y << endl;
 					break;
 				default:
 					break;

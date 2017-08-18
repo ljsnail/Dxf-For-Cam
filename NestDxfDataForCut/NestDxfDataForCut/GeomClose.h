@@ -1,6 +1,6 @@
 #pragma once
 #include "GEOMELE.h"
-#define m_CutLineLength  25;
+#define m_CutLineLength 25;
 
 //********************************************************************//
 //第三层结构，要对几何图元进行遍历，按照x0, y0, x1, y1的关系来找到封闭环，每个封闭环用IID来区分
@@ -10,7 +10,6 @@
 typedef struct//封闭环的起点，作为下一层次形成全局搜索路径时候的判断点。
 {
 	double colse_start_x0, colse_start_y0;//这里寻找的时候应该要有的原则是按照最左和最下的原则去找。靠近原点
-
 }GEOMCCLOSTAPOINT;
 //将两个封闭图元的起点存到这里，使之形成一条过渡直线
 typedef struct//封闭图元之间的过渡线
@@ -63,7 +62,7 @@ typedef struct GeomCloseHEAD
 	Envelope_RectPoint m_GemoClosedLimtPoint;//存储封闭环外包络矩形的控制坐标
 	//Envelope_Rect m_GemoClosedLimt;//存储封闭环外包络矩形的控制点
 	TranLine m_tranline;//存储过渡直线
-	GEOMCCLOSTAPOINT m_geomclose_startpoint;//存储所指向双向链表的起止重合点
+	GEOMCCLOSTAPOINT m_geomclose_startpoint;//存储所指向双向链表的起止重合点，其实这个就是第一个基本图元的起点，要不要也可以的。本算法基本没用到它。
 	unsigned int m_NumGeomele;//该链表存有多少个基本图元
 	unsigned int GEOMCLOSE_ID;//作为每一个封闭环的标识，在切割时候与类里面的标识对应，作为调用标志
 	struct GeomEleNode*FirstGeomele;//指向双向链表GeomEleNode的头结点

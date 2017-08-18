@@ -29,6 +29,7 @@ GeomEleNode* GeomClose::CreatGeomEleNode(GeomStandData m_geomstandData)
 GeomCloseHEAD*GeomClose::CreatGeomCloseHEAD(int GEOMCLOSE_ID)
 {
 	GeomCloseHEAD*newNode = (GeomCloseHEAD*)malloc(sizeof(GeomCloseHEAD));
+	newNode->m_GemoClosedLimtPoint = { { -9999, -9999 }, { -9999, -9999 }, { -9999, -9999 }, { -9999, -9999 }};//复合数据结构的初始化。
 	newNode->m_tranline = { 0.0, 0.0, 0.0, 0.0 };
 	newNode->m_geomclose_startpoint = { 0.0, 0.0 };
 	newNode->GEOMCLOSE_ID = GEOMCLOSE_ID;

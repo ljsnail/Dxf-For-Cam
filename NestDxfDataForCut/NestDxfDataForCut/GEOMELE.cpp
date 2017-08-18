@@ -83,7 +83,7 @@ double GEOMELE::ForCircleStartAngle(double inter_x, double inter_y, GCIRCLE m_ci
 {
 	//要按照四个象限去区分数据
 	double a, b, r;
-	double m_CircleStartAngle, m_abs_y;
+	double m_CircleStartAngle=-9999, m_abs_y;
 	a = m_circle.m_Circent_x;
 	b = m_circle.m_Circent_y;
 	r = m_circle.m_Circle_r;

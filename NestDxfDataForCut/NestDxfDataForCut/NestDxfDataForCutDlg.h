@@ -122,5 +122,8 @@ public:
 	GeomCloseHEAD*pTheFirstLevelCloseHead;
 	bool m_NewDxf;//当第一次进入读取数据时候x0_tran，y0_tran应该为0.0，和每打开一张图片时候，都应该为0.0;
 	int k;
+public:
+	//切割引导线相关
+	bool if_LineAuxiliary;//是否为直线型切割引导线，作为切割引导线类型判断的标志，默认为TRUE；
 
 };

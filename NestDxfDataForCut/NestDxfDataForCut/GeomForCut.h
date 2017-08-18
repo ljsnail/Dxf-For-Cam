@@ -74,6 +74,7 @@ typedef struct
 	Point P_arc_out;//外部区域的圆心
 	Point P_arc_in;//内部区域的圆心
 	bool If_select;//记录是否已经选择到了，默认是false，如果选择到了则是true.
+	int m_belong;//记录圆弧的切点处于封闭环的哪一块区域，以x_min点为A,y_min点为B，x_max点为C,y_max点为D;其中AB之间为1，BC为2，CD为3，DA为4.
 }Arc_Point;
 //切割引导线的数据结构
 //包含了圆弧与直线等类型的切割引导线
@@ -223,7 +224,7 @@ public:
 	//输入每一个父封闭环，改写其与子封闭环的奇偶性
 	void KidClosedHead_Odd_even(GeomCloseHEAD*pFtemp);
 	//输入头文件，添加切割引刀线，这是在已经确定了切割控制点之后，也就是在完成了贪婪算法，多重嵌套识别算法，调节切割控制点之后
-	void Add_CutGuideLine(NestResultDataNode*head);
+	void Add_CutGuideLine(NestResultDataNode*head, bool if_LineAuxiliary);
 	CutGuideLine*CreatCutGuideLine_Circle(GeomEleNode*Pnode,bool m_bilayer); //求圆的切割引刀线
 	double CalculateSlope(GeomEleNode*pGnode);//输入一个基本图元数据结构，求解其首图元和尾图元直线的斜率
 	//以上求切割引刀线的方式过于复杂了
@@ -231,7 +232,7 @@ public:
 	//即是根据封闭环识别之后的逻辑关系，和切割顺序，进行切割引刀线的添加
 	void CreatCutGuideLINE(GeomCloseHEAD*Phead);//输入每一个封闭环，然后对其进行切割 引刀线的添加。
 	bool IfIncludeKidClose(GeomCloseHEAD*Phead);//输入一个封闭环，判断是否有子封闭环
-	void Add_KidCloseCutLine(GeomCloseHEAD*Phead);//输入一个含有子封闭环的封闭环，给它添加切割引刀线
+	void Add_KidCloseCutLine(GeomCloseHEAD*Phead, bool if_LineAuxiliary);//输入一个含有子封闭环的封闭环，给它添加切割引刀线
 	//还是要分直线，圆，圆弧的切割引导线的生成方式的不同。
 	//由直线构成的封闭环，其生成切割引导线的方法
 	Line_para CreatCutGuideLINE_Polygon(GeomCloseHEAD*Phead, int m_TypeCGLine);
@@ -255,21 +256,31 @@ public:
 	///////////下面的切割引导线生成方式是圆弧法与切线法//////////////////////////////////////
 	//输入一个封闭环头结点，之后对此封闭环头结点进行设置切割引导线
 	void CreatCutAuxiliaryPath(GeomCloseHEAD*pCHtemp);
-	//多边形与圆弧之类结合的圆弧切割引导线生成方式。将切割引导线直接在此生成，不再提高外部接口。
+	//多边形与圆弧之类结合的圆弧切割引导线生成方式。将切割引导线直接在此生成，不再提供外部接口。
 	void CreatCutAuxiliaryPath_Polygon(GeomCloseHEAD*pCHtemp, int m_TypeCGLine);
+	//圆类型的切割引导线的生成方式。将切割引导线直接在此生成，不再提供外部接口。
+	void CreatCutAuxiliaryPath_Circle(GeomCloseHEAD*pCHtemp, int m_TypeCGLine);
+
 	//输入封闭环，圆弧与封闭环的切点，切割引导线母线，求圆弧圆心坐标。
 	Arc_Point GetArccentPoint(GeomCloseHEAD*pCHtemp, Line_para m_line, Point P_mid);
 	//这个函数将求得圆弧切割引导线的参数，并将圆弧切割引导线添加到封闭环上。
-	//输入圆弧的起止点，圆弧的圆心，圆弧与封闭环的切点，封闭环。
-	//在这个函数里设置切割引导线
+	//输入圆弧的起止点，圆弧与封闭环的切点，圆弧的圆心，封闭环。
+	//多边形的封闭环，在这个函数里设置切割引导线
 	void SetCutAuxiliaryPath(Line_para m_arc_auxi_SEP, Point P_mid, Point P_arccent, GeomCloseHEAD*pCHtemp);
+	//这个函数将求得圆弧切割引导线的参数，并将圆弧切割引导线添加到封闭环上。
+	//输入圆弧的起止点，圆弧的切点所在的区域，圆弧的圆心，圆封闭环。
+	//注意这与上面的函数少了圆弧与封闭环的切点参数，但是多了切点所在的区域。
+	//圆形的封闭环，在这个函数里设置切割引导线
+	void SetCutAuxiliaryPath(Line_para m_arc_auxi_SEP, int m_belong, Point P_arccent, GeomCloseHEAD*pCHtemp);
 	//将切割引导线作为封闭环的固有节点添加进去。
 	//m_auxiliaryPath是存储的切割引导线的数据信息，P_mid是圆弧切割引导线的与封闭环的切点,pCHtemp为封闭环头结点
 	//在这个函数里将切割引导线挂靠到封闭环上
+	//注意这是挂靠多边形类的封闭环的。
 	void AddAuxiNodeToCH(AuxiliarPath m_auxiliaryPath, Point P_mid, GeomCloseHEAD*pCHtemp);
 	//将 三个切割封闭环的基元挂到封闭环上，并调整封闭环中的基元位置。
 	void AddThreeNodeToCH(GeomEleNode*Add_more_Node, GeomEleNode*cut_in_Node, GeomEleNode*cut_out_Node, GeomCloseHEAD*pCHtemp);
-
+	//因为第一个基本图元的垂线不合格，需要第二个基本图元变成第一个基本图元
+	GeomCloseHEAD*ChangeSecendEleToFirst(GeomCloseHEAD*pCHtemp);
 
 };
 
